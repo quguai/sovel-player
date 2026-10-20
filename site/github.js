@@ -85,7 +85,7 @@ export function releaseView(state, copy, language) {
   if (release.asset) info.push(`${(release.asset.size / 1024 / 1024).toFixed(1)} MB`, release.asset.name);
   else info.push(copy.noPackage);
   return {
-    title: `Sovel HiFi ${release.tag}`, description: info.join(' · '),
+    title: `Sovel HiFi ${release.tag.replace(/^v(?=\d)/, '')}`, description: info.join(' · '),
     channel: release.preview ? copy.beta : copy.stable, asset: release.asset,
     href: release.asset?.url ?? release.url, notes: release.url,
     button: release.asset ? copy.download : copy.viewReleases,

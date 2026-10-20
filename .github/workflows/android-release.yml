@@ -100,7 +100,7 @@ jobs:
             echo "Release already exists. Publish a new version instead of replacing installed update assets."
             exit 1
           fi
-          args=(--draft --verify-tag --title "Sovel HiFi $RELEASE_TAG" --generate-notes)
+          args=(--draft --verify-tag --title "Sovel HiFi ${RELEASE_TAG#v}" --generate-notes)
           if [ "$PREVIEW" = true ]; then args+=(--prerelease --latest=false); fi
           gh release create "$RELEASE_TAG" release/* "${args[@]}"
           gh release edit "$RELEASE_TAG" --draft=false

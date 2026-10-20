@@ -219,7 +219,7 @@ export function SettingsHome({
         />
         <SettingRow
           title="版本更新"
-          value={updates.release ? updates.release.tag : installedApp.version}
+          value={updates.release ? updates.release.version : installedApp.version}
           onPress={() => open("updates")}
         />
         <SettingRow

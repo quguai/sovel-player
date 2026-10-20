@@ -12,7 +12,7 @@ test('downloads the published universal APK and renders its actual version and s
   const normalized = normalizeRelease(release({ assets: [apk('sovel-arm64.apk'), apk()] }));
   const view = releaseView({ release: normalized }, labels.en, 'en');
   assert.equal(view.href, apk().browser_download_url);
-  assert.equal(view.title, 'Sovel HiFi v0.1.0');
+  assert.equal(view.title, 'Sovel HiFi 0.1.0');
   assert.match(view.description, /10\.0 MB/);
   assert.equal(view.channel, 'STABLE');
 });

@@ -55,7 +55,7 @@ export function UpdateSettings() {
           {u.release && u.packageInfo && (
             <View style={s.release} accessibilityLabel="可用更新">
               <View style={s.heroTop}>
-                <Text style={s.releaseTitle}>{u.release.tag}</Text>
+                <Text style={s.releaseTitle}>{u.release.version}</Text>
                 <Text style={s.small}>{bytes(u.packageInfo.size)}</Text>
               </View>
               <Text style={s.small}>
