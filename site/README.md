@@ -68,6 +68,7 @@ For this Workers deployment, bind `sovel.quguai.cn` under **Settings → Domains
 - Prefer `/releases/latest` (latest stable release). If no stable release exists, read the newest published entry from the first 20 releases and clearly label prereleases **Preview**.
 - A published, uploaded universal `.apk` is preferred. A single APK is also supported and its actual filename is shown. If several ABI-specific APKs exist without a universal package, link to the release so visitors can choose the correct file.
 - Display the actual tag, publication date and package size. Download points to the asset’s `browser_download_url`, not a guessed tag or filename. Release notes link to that specific release.
+- All “Get Sovel” entries download the APK directly in the current tab. Clicking while release information is loading waits for the resolved URL; it does not scroll to the download section. The buttons show “View releases” only when a direct APK is unavailable.
 - No release: show an explicit coming-soon state with Releases/source links. API timeout, rate limit or invalid response: show a GitHub fallback instead of claiming no release exists.
 - Each successful API response is cached in that browser tab’s session storage for five minutes. Failed requests are not cached. Changes may take up to five minutes to appear in an already-open session; reload after the cache expires.
 - The API timeout is eight seconds per request. Stars and release requests fail independently. Only HTTPS links under this repository’s GitHub Releases paths are accepted.

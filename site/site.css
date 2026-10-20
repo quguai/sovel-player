@@ -44,6 +44,7 @@ button:active,.button:active{transform:scale(.97)}
 .hero-actions{display:flex;align-items:center;gap:25px;margin-top:34px}
 .button{display:inline-flex;align-items:center;justify-content:center;gap:19px;min-height:50px;padding:13px 21px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid transparent;transition:background-color 160ms ease,transform 160ms var(--ease)}
 .button-gold{background:var(--gold);color:#27291f}
+[data-release-download][aria-busy="true"]{cursor:progress}
 .button .icon{width:17px;height:17px}
 .text-link{display:inline-flex;align-items:center;gap:9px;font-size:12px;min-height:44px;transition:color 160ms ease}
 .text-link .icon{width:17px;height:17px}

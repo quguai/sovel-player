@@ -91,3 +91,34 @@ export function releaseView(state, copy, language) {
     button: release.asset ? copy.download : copy.viewReleases,
   };
 }
+
+// A click before the release request finishes waits for the actual asset URL.
+export function bindReleaseDownloads(links) {
+  let ready = false;
+  let pending = null;
+  for (const link of links) {
+    link.addEventListener('click', event => {
+      if (ready || event.defaultPrevented || event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      pending = link;
+    });
+  }
+  return (view, copy) => {
+    ready = Boolean(view);
+    for (const link of links) {
+      link.setAttribute('aria-busy', String(!ready));
+      link.removeAttribute('target');
+      link.querySelector('span').textContent = view?.button ?? copy.checkingRelease;
+      if (!view) continue;
+      link.href = view.href;
+      if (view.asset) link.setAttribute('download', view.asset.name);
+      else link.removeAttribute('download');
+      link.querySelector('use')?.setAttribute('href', view.asset ? '#download-icon' : '#arrow-up');
+    }
+    if (ready && pending) {
+      const link = pending;
+      pending = null;
+      link.click();
+    }
+  };
+}

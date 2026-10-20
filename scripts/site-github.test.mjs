@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeRelease, releaseView, loadGitHub } from '../site/github.js';
+import { normalizeRelease, releaseView, loadGitHub, bindReleaseDownloads } from '../site/github.js';
 import { labels } from '../site/copy.js';
 
 test.beforeEach(() => { try { sessionStorage.clear(); } catch { /* Node without web storage. */ } });
@@ -62,4 +62,56 @@ test('rate limiting preserves working stars and provides a Releases fallback', a
     assert.equal(state.error, true);
     assert.equal(releaseView(state, labels.en, 'en').href, 'https://github.com/quguai/sovel-player/releases');
   } finally { globalThis.fetch = original; }
+});
+
+function downloadLink() {
+  const link = new EventTarget();
+  const attributes = new Map([['target', '_blank']]);
+  const label = { textContent: 'Get Sovel' };
+  link.setAttribute = (key, value) => attributes.set(key, value);
+  link.removeAttribute = key => attributes.delete(key);
+  link.querySelector = selector => selector === 'span' ? label : null;
+  link.navigations = [];
+  link.click = () => {
+    if (link.dispatchEvent(new Event('click', { cancelable: true }))) link.navigations.push(link.href);
+  };
+  return Object.assign(link, { attributes, label });
+}
+
+test('every download entry uses the APK directly without opening another tab', () => {
+  const links = Array.from({ length: 3 }, downloadLink);
+  const update = bindReleaseDownloads(links);
+  update(releaseView({ release: normalizeRelease(release()) }, labels.en, 'en'), labels.en);
+  for (const link of links) {
+    link.click();
+    assert.deepEqual(link.navigations, [apk().browser_download_url]);
+    assert.equal(link.attributes.has('target'), false);
+    assert.equal(link.attributes.get('download'), apk().name);
+    assert.equal(link.label.textContent, labels.en.download);
+  }
+});
+
+test('an early click waits for release metadata and triggers only one APK download', () => {
+  const link = downloadLink();
+  const update = bindReleaseDownloads([link]);
+  update(null, labels.zh);
+  link.click();
+  link.click();
+  assert.deepEqual(link.navigations, []);
+  assert.equal(link.label.textContent, labels.zh.checkingRelease);
+  assert.equal(link.attributes.get('aria-busy'), 'true');
+  const view = releaseView({ release: normalizeRelease(release({ prerelease: true })) }, labels.zh, 'zh');
+  update(view, labels.zh);
+  update(view, labels.en);
+  assert.deepEqual(link.navigations, [apk().browser_download_url]);
+  assert.equal(link.attributes.get('aria-busy'), 'false');
+});
+
+test('unavailable downloads show an explicit Releases fallback instead of an APK label', () => {
+  const link = downloadLink();
+  const update = bindReleaseDownloads([link]);
+  update(releaseView({ error: true }, labels.zh, 'zh'), labels.zh);
+  assert.equal(link.label.textContent, labels.zh.viewReleases);
+  assert.equal(link.attributes.has('download'), false);
+  assert.equal(link.href, 'https://github.com/quguai/sovel-player/releases');
 });

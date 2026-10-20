@@ -53,7 +53,7 @@ export const labels = {
     title: 'Sovel HiFi — A little closer to your music.',
     description: 'Sovel HiFi is an open-source music player for the collection you own. A thoughtful local library, expressive vinyl visuals, and room to listen.',
     star: 'Star Sovel HiFi on GitHub', starCount: 'GitHub stars', download: 'Download Android APK', noRelease: 'The first release is on its way.', noReleaseBody: 'No installable package has been published yet. Follow the project or build from source.', releaseError: 'Check the latest release on GitHub.', releaseErrorBody: 'We couldn’t load release information. You can still open Releases directly.', viewReleases: 'View releases', releaseNotes: 'Release notes ↗', releaseHistory: 'Release history ↗', comingSoon: 'COMING SOON', stable: 'STABLE', beta: 'PREVIEW', noPackage: 'This release has no Android APK. Open the release for available files.',
-    loading: 'Loading material…', loadError: 'Could not load this material. Try again.',
+    checkingRelease: 'Getting download…', loading: 'Loading material…', loadError: 'Could not load this material. Try again.',
   },
   zh: {
     black: '纯黑胶', smoke: '烟熏透明', blue: '冰蓝反光',
@@ -64,6 +64,6 @@ export const labels = {
     title: 'Sovel HiFi — 离音乐近一点。',
     description: 'Sovel HiFi 是一款开源音乐播放器，为自己的音乐收藏提供用心设计的曲库、可定制黑胶外观与独立歌词空间。',
     star: '在 GitHub 为 Sovel HiFi 点 Star', starCount: 'GitHub Star 数', download: '下载 Android APK', noRelease: '首个版本准备中', noReleaseBody: '目前尚未发布可安装的包。可以关注项目，或从源码构建体验。', releaseError: '前往 GitHub 查看最新版本。', releaseErrorBody: '暂时无法获取版本信息，仍可直接访问 Releases 页面。', viewReleases: '查看 Releases', releaseNotes: '更新说明 ↗', releaseHistory: '版本发布记录 ↗', comingSoon: '即将发布', stable: '正式版', beta: '预览版', noPackage: '此版本暂未提供 Android APK，可前往 Release 查看其他文件。',
-    loading: '正在加载材质…', loadError: '材质加载失败，请重试。',
+    checkingRelease: '正在获取下载地址…', loading: '正在加载材质…', loadError: '材质加载失败，请重试。',
   },
 };

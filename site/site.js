@@ -1,6 +1,6 @@
 import { zh, labels } from './copy.js';
 import { initStory } from './story.js';
-import { loadGitHub, releaseView, repositoryUrl } from './github.js';
+import { loadGitHub, releaseView, repositoryUrl, bindReleaseDownloads } from './github.js';
 
 const preview = document.querySelector('#record-preview');
 const playButton = document.querySelector('#record-play');
@@ -16,6 +16,7 @@ const localized = [...document.querySelectorAll('[data-i18n], [data-i18n-html]')
   english: element.hasAttribute('data-i18n-html') ? element.innerHTML : element.textContent,
 }));
 const paths = { black: './assets/record-black.png', smoke: './assets/record-smoke.png', blue: './assets/record-blue.png' };
+const refreshDownloads = bindReleaseDownloads(document.querySelectorAll('[data-release-download]'));
 
 function readPreference(key) {
   try { return localStorage.getItem(`sovel-site-${key}`); } catch { return null; }
@@ -115,15 +116,12 @@ function refreshGitHub() {
   count.textContent = github.stars === null ? '—' : new Intl.NumberFormat(language).format(github.stars);
   star.setAttribute('aria-label', `${copy.star}${github.stars === null ? '' : ` · ${github.stars} ${copy.starCount}`}`);
   const view = releaseView(github, copy, language);
+  refreshDownloads(view, copy);
   document.querySelector('#release-card').setAttribute('aria-busy', String(github.release === undefined && !github.error));
   if (view) {
     document.querySelector('#release-title').textContent = view.title;
     document.querySelector('#release-status').textContent = view.description;
     document.querySelector('#release-channel').textContent = view.channel;
-    const download = document.querySelector('#release-download');
-    download.href = view.href;
-    download.querySelector('span').textContent = view.button;
-    download.querySelector('use').setAttribute('href', view.asset ? '#download-icon' : '#arrow-up');
     const notes = document.querySelector('#release-notes');
     notes.href = view.notes ?? `${repositoryUrl}/releases`;
     notes.textContent = view.notes ? copy.releaseNotes : copy.releaseHistory;
