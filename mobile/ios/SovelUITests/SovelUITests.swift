@@ -244,7 +244,8 @@ final class SovelUITests: XCTestCase {
     selectPlayerStyle("唱片")
     capture("03-vinyl")
     if element("喜欢这首歌").exists { tap("喜欢这首歌") }
-    tap("暂停")
+    // A 24-second fixture may finish while XCTest navigates the appearance panel.
+    if element("暂停").exists { tap("暂停") }
     tap("查看完整歌词")
     XCTAssertTrue(element("播放到：听见，属于自己的声音").waitForExistence(timeout: 10))
     capture("04-lyrics")

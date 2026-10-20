@@ -120,7 +120,7 @@ npm run check    # TypeScript and core tests
 npm run lint     # ESLint
 ```
 
-Current verification: 47 core tests pass; TypeScript passes; ESLint reports no errors and eight existing warnings. iOS simulator checks cover import, playback, lyrics, scanning, restart recovery, EQ, and presets. Android hardware and USB DAC output have not been validated. Native test commands are in the [development guide](mobile/README.md).
+Current verification: 47 core tests pass; TypeScript passes; ESLint reports no errors and seven existing warnings. iOS simulator checks cover import, playback, lyrics, scanning, restart recovery, EQ, and presets. Android hardware and USB DAC output have not been validated. Native test commands are in the [development guide](mobile/README.md).
 
 Contributions are welcome. Include reproduction steps and device, OS, and audio-format details for playback issues. Native audio changes should include platform-specific validation. Reference checkouts belong in the ignored `repos/` directory and are not dependencies or submodules.
 

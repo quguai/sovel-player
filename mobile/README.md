@@ -138,7 +138,7 @@ npm run check
 npm run lint
 ```
 
-The current baseline is 47 passing core tests, a passing TypeScript check, and zero ESLint errors with eight existing warnings. Tests use real SQLite and WAV/FLAC/DSF metadata fixtures; they cover scanning, cancellation/offline behavior, source identity, schema upgrades, history, queue restoration, backups, lyrics offsets, discovery, and placeholders.
+The current baseline is 54 passing core tests, a passing TypeScript check, and zero ESLint errors with seven existing warnings. Tests use real SQLite and WAV/FLAC/DSF metadata fixtures; they cover scanning, cancellation/offline behavior, source identity, schema upgrades, history, queue restoration, backups, lyrics offsets, discovery, and placeholders.
 
 Optional JS bundle export checks:
 
