@@ -18,6 +18,22 @@ jobs:
       preview: ${{ steps.version.outputs.preview }}
     steps:
       - uses: actions/checkout@v4
+      - name: Check release signing configuration
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          missing=0
+          for key in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing repository Actions secret: $key"
+              missing=1
+            fi
+          done
+          exit "$missing"
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -31,7 +47,9 @@ jobs:
       - name: Derive version from tag
         id: version
         run: node scripts/release.mjs prepare
-      - run: npm ci
+      - name: Install npm dependencies
+        timeout-minutes: 15
+        run: npm ci --no-audit --no-fund --fetch-retries=2 --fetch-timeout=30000 --timing
       - run: npm run lint
       - run: npm run check
       - name: Install Android SDK components
