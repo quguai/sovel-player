@@ -239,13 +239,6 @@ export function LibraryScreen({
             <Button disabled={busy} onPress={() => importMusic("files")}>
               导入本地音乐
             </Button>
-            <Button
-              secondary
-              disabled={busy}
-              onPress={() => importMusic("samples")}
-            >
-              先听两段原创试听曲
-            </Button>
           </View>
         </View>
       )}

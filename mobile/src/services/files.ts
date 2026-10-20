@@ -1,6 +1,5 @@
 import { Directory, File, FileMode, Paths } from "expo-file-system";
 import { Platform } from "react-native";
-import { Asset } from "expo-asset";
 import {
   isAudio,
   type Entry,
@@ -207,13 +206,4 @@ export async function copySelectedFiles() {
   for (const source of selected)
     await copySafely(new File(source.uri), source.name);
   return selected.length;
-}
-export async function importSamples() {
-  for (const [module, name] of [
-    [require("../../assets/sample.wav"), "Sovel - 初见.wav"],
-    [require("../../assets/sample.flac"), "Sovel - 微光.flac"],
-  ] as const) {
-    const asset = await Asset.fromModule(module).downloadAsync();
-    await copySafely(new File(asset.localUri!), name);
-  }
 }

@@ -39,7 +39,7 @@ Do this only when ready to publish. `.github/workflows/android-release.yml` trig
 2. Installs locked npm dependencies and applies the project's native audio patches.
 3. Runs lint, TypeScript checks and tests.
 4. Builds a signed universal release APK for `armeabi-v7a`, `arm64-v8a`, and `x86_64`, including the JS bundle and assets. This APK does not need Metro or Expo Go.
-5. Verifies the APK signature and generates `update.json` and `SHA256SUMS`.
+5. Verifies the APK signature, rejects packaged WAV/FLAC/DSF test audio, and generates `update.json` and `SHA256SUMS`.
 6. Uploads all assets to a draft GitHub Release and then publishes it. Beta/RC tags become prereleases.
 
 The APK and update files are also retained as a workflow artifact for 14 days. Builds stop if signing secrets are missing. Existing releases are not overwritten; use a new tag. If publishing fails after creating a draft, inspect and remove the incomplete draft before rerunning the failed publish job.

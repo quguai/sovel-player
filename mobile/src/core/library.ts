@@ -48,7 +48,7 @@ export class Library {
     await this.db.execAsync("PRAGMA user_version=4");
     await this.saveSource({
       id: "local",
-      name: "Sovel 试听与应用文件",
+      name: "Sovel 应用文件",
       kind: "managed",
       uri: "sovel:music",
     });

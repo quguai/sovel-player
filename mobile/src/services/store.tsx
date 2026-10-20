@@ -602,14 +602,12 @@ function useStore() {
       for (const source of selected) await library.current!.saveSource(source);
       await restoreSources();
     });
-  const importMusic = (kind: "files" | "folder" | "samples" | "copy") =>
+  const importMusic = (kind: "files" | "folder" | "copy") =>
     run(async () => {
       setProgress(
-        kind === "samples"
-          ? "正在准备试听音乐…"
-          : kind === "copy"
-            ? "选择要复制到应用的音乐"
-            : "请选择音乐来源，直接索引原文件",
+        kind === "copy"
+          ? "选择要复制到应用的音乐"
+          : "请选择音乐来源，直接索引原文件",
       );
       if (kind === "files" || kind === "folder") {
         const selected = await files.selectSources(kind === "folder");
@@ -619,8 +617,7 @@ function useStore() {
           ids.push((await library.current!.saveSource(source)).id);
         await scanWork("incremental", ids);
       } else {
-        if (kind === "samples") await files.importSamples();
-        else if (!(await files.copySelectedFiles())) return;
+        if (!(await files.copySelectedFiles())) return;
         await scanWork("incremental", ["local"]);
       }
     });

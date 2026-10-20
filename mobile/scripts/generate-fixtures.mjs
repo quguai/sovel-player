@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
+fs.mkdirSync(path.join(root, "tests/fixtures"), { recursive: true });
 const safe = (n) =>
   Buffer.from([(n >>> 21) & 127, (n >>> 14) & 127, (n >>> 7) & 127, n & 127]);
 const frame = (name, data) =>
@@ -94,7 +95,7 @@ const wave = Buffer.concat([
 const size = Buffer.alloc(4);
 size.writeUInt32LE(wave.length);
 fs.writeFileSync(
-  path.join(root, "assets/sample.wav"),
+  path.join(root, "tests/fixtures/sample.wav"),
   Buffer.concat([Buffer.from("RIFF"), size, wave]),
 );
 execFileSync("ffmpeg", [
@@ -102,7 +103,7 @@ execFileSync("ffmpeg", [
   "-v",
   "error",
   "-i",
-  path.join(root, "assets/sample.wav"),
+  path.join(root, "tests/fixtures/sample.wav"),
   "-i",
   path.join(root, "assets/artwork/mountain.jpg"),
   "-map",
@@ -123,7 +124,7 @@ execFileSync("ffmpeg", [
   "album=声音手记",
   "-metadata",
   `lyrics=${lyrics}`,
-  path.join(root, "assets/sample.flac"),
+  path.join(root, "tests/fixtures/sample.flac"),
 ]);
 // Valid small DSF with ID3 at EOF, used only for metadata tests.
 const dsd = Buffer.alloc(28);

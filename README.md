@@ -32,7 +32,7 @@ Actual iOS simulator screenshots using the project's original listening samples.
 | Area | Current status |
 | --- | --- |
 | Local files and folders | Implemented; iOS access-in-place and restart recovery verified |
-| WAV / FLAC | Metadata and iOS playback verified with bundled samples |
+| WAV / FLAC | Metadata and iOS playback verified with development fixtures |
 | DSF | ID3 tags, artwork, and lyrics parsing verified; playback not enabled |
 | Other audio formats | Platform- and codec-dependent; no blanket compatibility claim |
 | Ten-band EQ | Native integration on both platforms; iOS processing and presets verified |
@@ -75,7 +75,7 @@ npm run android
 
 `npm start` runs Metro separately. Custom native modules require a native development build; **Expo Go is not sufficient**. Native projects are committed, so routine development does not require Prebuild. Installation and start scripts apply the maintained audio integrations automatically.
 
-On an empty library, choose **先听两段原创试听曲** to import two original 24-second WAV/FLAC samples with artwork and timed lyrics. For your own music, open **设置 → 文件扫描** (Settings → File scanning) and select a source.
+Open **设置 → 文件扫描** (Settings → File scanning) and select your own music files or folders. Development audio fixtures remain in `mobile/tests/fixtures` for tests; they are not included in the app or downloaded by it.
 
 ## Explore the browser demo
 

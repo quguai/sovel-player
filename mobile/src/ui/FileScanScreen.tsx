@@ -299,18 +299,11 @@ export function FileScanScreen({ onBack }: { onBack: () => void }) {
         )}
         <SettingRow
           title="更多导入方式"
-          note="原创试听、应用内副本与远程曲库"
+          note="应用内副本与远程曲库"
           onPress={() => setMore(!more)}
         />
         {more && (
           <View style={{ gap: 14, marginTop: 16 }}>
-            <Button
-              secondary
-              disabled={busy}
-              onPress={() => importMusic("samples")}
-            >
-              导入两段原创试听曲
-            </Button>
             <Button
               secondary
               disabled={busy}

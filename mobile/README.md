@@ -45,14 +45,14 @@ npm run android
 
 The pre-release rename uses a new application identity and database without runtime migration from the earlier brand. Database schema upgrades are separate from branding, and ordinary scans update the existing database.
 
-## Listening samples
+## Development audio fixtures
 
-Choose **先听两段原创试听曲** on an empty library, or **设置 → 文件扫描 → 更多导入方式 → 导入两段原创试听曲**. The project includes two original synthesized 24-second samples:
+The repository retains two original synthesized 24-second audio fixtures for development and metadata tests. They live only under `tests/fixtures`, are not bundled into the app, and have no in-app download/import shortcut. For simulator playback tests, install the app, run `sh scripts/prepare-listening-fixtures.sh`, then scan the app files through Settings → File scanning.
 
 | File | Embedded title / artist / album | Audio |
 | --- | --- | --- |
-| `assets/sample.wav` | 初见 / Sovel / 声音手记 | PCM WAV, 16-bit, 44.1 kHz, stereo |
-| `assets/sample.flac` | 微光 / Sovel / 声音手记 | FLAC, 16-bit, 44.1 kHz, stereo |
+| `tests/fixtures/sample.wav` | 初见 / Sovel / 声音手记 | PCM WAV, 16-bit, 44.1 kHz, stereo |
+| `tests/fixtures/sample.flac` | 微光 / Sovel / 声音手记 | FLAC, 16-bit, 44.1 kHz, stereo |
 
 Both include artwork and timed lyrics. They are interaction/metadata fixtures, not commercial recordings or Hi-res masters. `npm run fixtures` regenerates them; generating FLAC requires FFmpeg. `tests/tagged.dsf` is a metadata fixture and is not a playable DSD demonstration.
 
@@ -68,7 +68,7 @@ Selecting files or adding a folder indexes the original audio without copying or
 - A folder grant can discover new songs and same-name `.lrc` files. A single-file grant indexes only selected files.
 - Moves/renames currently create new path identities; previous records remain missing. Overlapping sources can create duplicate index entries without duplicating audio.
 - Offline storage, revoked permissions, and removed files retain index/favorite records. Reconnect and rescan; select the source again if its grant has expired.
-- **复制音乐到应用** is an explicit optional copy action. Listening samples are also prepared inside the app. iOS exposes this directory in Files → Sovel HiFi → Music.
+- **复制音乐到应用** is an explicit optional copy action. iOS exposes this directory in Files → Sovel HiFi → Music.
 - Cloud file providers may download/cache files themselves. This implementation targets local, randomly readable files and does not mirror remote music libraries.
 
 All sources share one database. Scanning first enumerates the entire selected scope and applies filters, then imports against one fixed total. Settings include minimum file size, hidden content, and subfolder inclusion. Source-management selection does not automatically start a scan; quick import actions also perform an incremental scan.

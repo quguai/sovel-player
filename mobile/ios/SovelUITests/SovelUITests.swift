@@ -211,13 +211,18 @@ final class SovelUITests: XCTestCase {
     XCTAssertTrue(element("专辑切换为卡片").exists)
     tap("专辑切换为卡片")
   }
+  func scanListeningFixtures() {
+    tap("设置", timeout: 30); tap("文件扫描"); tap("增量扫描")
+    XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "最近扫描")).firstMatch.waitForExistence(timeout: 15), app.debugDescription)
+    tap("返回设置"); tap("返回音乐库")
+    XCTAssertTrue(element("打开播放页面").waitForExistence(timeout: 10), "Seed the simulator with scripts/prepare-listening-fixtures.sh before playback UI tests")
+  }
   func testLocalLibraryAndPlayback() throws {
     continueAfterFailure = false
     XCUIDevice.shared.orientation = .portrait
     app.launch()
     XCTAssertTrue(element("设置").waitForExistence(timeout: 30))
-    if element("先听两段原创试听曲").exists { tap("先听两段原创试听曲") }
-    else { tap("设置"); tap("文件扫描"); tap("更多导入方式"); tap("导入两段原创试听曲"); tap("返回设置"); tap("返回音乐库") }
+    scanListeningFixtures()
     XCTAssertTrue(element("打开播放页面").waitForExistence(timeout: 30), app.debugDescription)
     capture("01-library")
     tap("按歌曲浏览");tap("播放 初见");tap("暂停")
@@ -311,7 +316,7 @@ final class SovelUITests: XCTestCase {
     continueAfterFailure = false
     XCUIDevice.shared.orientation = .portrait
     app.launch()
-    if element("先听两段原创试听曲").waitForExistence(timeout: 3) { tap("先听两段原创试听曲") }
+    if !element("打开播放页面").waitForExistence(timeout: 3) { scanListeningFixtures() }
     tap("设置", timeout: 30); tap("高级设置"); tap("单曲循环"); tap("返回设置")
     let background = app.switches["后台播放"]
     XCTAssertTrue(background.exists)

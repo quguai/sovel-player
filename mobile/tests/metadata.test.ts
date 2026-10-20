@@ -4,8 +4,8 @@ import { open, readFile } from "node:fs/promises";
 import { readMetadata } from "../src/core/metadata";
 import { parseLyrics, currentLyric } from "../src/core/lyrics";
 for (const path of [
-  "assets/sample.wav",
-  "assets/sample.flac",
+  "tests/fixtures/sample.wav",
+  "tests/fixtures/sample.flac",
   "tests/tagged.dsf",
 ])
   test(`reads tags, cover and lyrics from ${path} using ranged I/O`, async () => {

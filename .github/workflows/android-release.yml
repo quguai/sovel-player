@@ -89,6 +89,7 @@ jobs:
       - name: Verify APK signature and prepare update manifest
         run: |
           "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose android/app/build/outputs/apk/release/app-release.apk
+          node scripts/check-listening-assets.mjs android/app/build/outputs/apk/release/app-release.apk
           node scripts/release.mjs package
       - uses: actions/upload-artifact@v4
         with:
