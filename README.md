@@ -6,7 +6,7 @@
 
 Sovel HiFi is an open-source, cross-platform music player being built for local and remote libraries. It combines a charcoal-and-gold library, customizable vinyl visuals, and a dedicated lyrics view with a focus on the music you own.
 
-**Development preview.** Local-library features are implemented, with playback and native EQ verified on the iOS simulator. Android code is included; Android builds and hardware behavior still need validation. Remote libraries and dedicated HiFi output are on the roadmap. The app UI currently uses Simplified Chinese; documentation is available in English and Chinese.
+**Development preview.** Local-library features are implemented, with playback and native EQ verified on the iOS simulator. Signed Android APK builds are verified in GitHub Actions; Android device playback and hardware behavior still need validation. Remote libraries and dedicated HiFi output are on the roadmap. The app UI currently uses Simplified Chinese; documentation is available in English and Chinese.
 
 ## A look inside
 
@@ -120,7 +120,7 @@ npm run check    # TypeScript and core tests
 npm run lint     # ESLint
 ```
 
-Current verification: 47 core tests pass; TypeScript passes; ESLint reports no errors and seven existing warnings. iOS simulator checks cover import, playback, lyrics, scanning, restart recovery, EQ, and presets. Android hardware and USB DAC output have not been validated. Native test commands are in the [development guide](mobile/README.md).
+Current verification: 54 core tests pass; TypeScript passes; ESLint reports no errors and seven existing warnings. iOS simulator checks cover import, playback, lyrics, scanning, restart recovery, EQ, and presets. Android hardware and USB DAC output have not been validated. Native test commands are in the [development guide](mobile/README.md).
 
 Contributions are welcome. Include reproduction steps and device, OS, and audio-format details for playback issues. Native audio changes should include platform-specific validation. Reference checkouts belong in the ignored `repos/` directory and are not dependencies or submodules.
 

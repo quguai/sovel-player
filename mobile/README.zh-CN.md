@@ -146,7 +146,7 @@ npm run lint
 npx expo export --platform ios --platform android --output-dir artifacts/bundles
 ```
 
-资源导出不代表 Android 原生编译或设备播放通过。现有 iOS 模拟器检查覆盖导入、真实进度、WAV／FLAC 切换、歌词、扫描、重启恢复、EQ／预设、原生定时、备份流程与曲库视图；改名回归通过本地播放／重启和 EQ 测试。Android SDK／构建与硬件验证仍待完成。
+资源导出不代表 Android 原生编译或设备播放通过。现有 iOS 模拟器检查覆盖导入、真实进度、WAV／FLAC 切换、歌词、扫描、重启恢复、EQ／预设、原生定时、备份流程与曲库视图；改名回归通过本地播放／重启和 EQ 测试。`v0.1.0-beta.4` 已通过 [GitHub Actions](https://github.com/quguai/sovel-player/actions/runs/39416673982) 验证 Android 签名 APK 构建及测试音频排除；Android 真机播放与硬件验证仍待完成。
 
 原生 DSP 测试：
 

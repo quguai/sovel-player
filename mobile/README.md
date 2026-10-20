@@ -146,7 +146,7 @@ Optional JS bundle export checks:
 npx expo export --platform ios --platform android --output-dir artifacts/bundles
 ```
 
-Bundle export does not verify native Android compilation or device playback. Current iOS simulator checks cover import, actual playback progress, WAV/FLAC switching, lyrics, scanning, restart recovery, EQ/presets, native sleep timing, backup flows, and collection views. The rename regression passed local playback/restart and EQ tests. Android SDK/build and hardware validation remain outstanding.
+Bundle export does not verify native Android compilation or device playback. Current iOS simulator checks cover import, actual playback progress, WAV/FLAC switching, lyrics, scanning, restart recovery, EQ/presets, native sleep timing, backup flows, and collection views. The rename regression passed local playback/restart and EQ tests. The signed Android release build and exclusion of test audio are verified by [GitHub Actions](https://github.com/quguai/sovel-player/actions/runs/39416673982) for `v0.1.0-beta.4`. Android device playback and hardware validation remain outstanding.
 
 Native DSP test:
 
