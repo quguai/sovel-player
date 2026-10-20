@@ -4,6 +4,10 @@
 
 React Native and TypeScript implementation of Sovel HiFi. This directory contains the application, committed iOS/Android projects, native audio extensions, and tests. The browser demo at the repository root is a separate visual reference.
 
+## Android releases
+
+The root [Android release workflow](../.github/workflows/android-release.yml) runs on `v*` tags, validates the version, runs checks, builds a signed APK and publishes the APK plus update manifest to GitHub Releases. Configure the four signing secrets before creating a release tag. [Release setup and update behavior](../docs/android-releases.md).
+
 ## Setup
 
 Use a Node.js version matching [package.json](package.json): `^22.13.0 || ^24.3.0 || >=26.0.0`, and npm. iOS needs macOS, Xcode, and CocoaPods. Android needs JDK 21, the Android SDK, and a device or emulator.

@@ -43,6 +43,10 @@ Sovel HiFi 是一款正在开发的开源跨平台音乐播放器，面向本地
 
 界面中的源文件位深、采样率不代表 DAC 实际输出。元数据解析、音频解码和输出能力分别核对。具体限制见[移动端开发说明](mobile/README.zh-CN.md)。
 
+## 版本发布与更新
+
+推送 `vX.Y.Z` 标签后，GitHub Actions 自动检查、构建正式签名 APK 并发布到 GitHub Releases；Beta / RC 标签发布为测试版。Android GitHub 版在「设置 → 版本更新」支持检查版本、发布说明、校验下载及用户确认安装。首次发布前需配置签名 Secrets，见[发布配置说明](docs/android-releases.md)。正式对外发布前仍需在 Android 真机验证覆盖升级。
+
 ## 构建原生应用
 
 使用 [mobile/package.json](mobile/package.json) 声明支持的 Node.js，例如 22.x 中的 22.13 或更新版本，以及 npm。iOS 需要 macOS、Xcode 与 CocoaPods；Android 需要 JDK 21、Android SDK 和设备或模拟器。

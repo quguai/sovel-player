@@ -43,6 +43,10 @@ Actual iOS simulator screenshots using the project's original listening samples.
 
 File bit depth and sample rate describe the source, not the DAC output. Metadata parsing, decoding, and output capabilities are tracked separately. See the [mobile development guide](mobile/README.md) for details.
 
+## Releases and updates
+
+Push a `vX.Y.Z` tag to build a signed Android APK and publish a GitHub Release. Beta/RC tags publish prereleases. The GitHub Android build includes version checks, release notes, verified downloads and user-confirmed installation under Settings → 版本更新. Release signing secrets must be configured first; see the [release setup guide](docs/android-releases.md). Android device upgrade verification is still required before public distribution.
+
 ## Build the native app
 
 Use a Node.js version supported by [mobile/package.json](mobile/package.json), such as 22.13+ on the 22.x line, and npm. iOS requires macOS, Xcode, and CocoaPods. Android requires JDK 21, the Android SDK, and a device or emulator.

@@ -4,6 +4,10 @@
 
 Sovel HiFi 的 React Native + TypeScript 实现。本目录包含应用、已提交的 iOS／Android 工程、原生音频扩展与测试；根目录网页 DEMO 为独立的视觉参考。
 
+## Android 发布与更新
+
+根目录的 [Android 发布流水线](../.github/workflows/android-release.yml) 监听 `v*` 标签，验证版本、执行检查、构建签名 APK 并发布到 GitHub Releases。GitHub Android 版支持「设置 → 版本更新」。首次发布需配置 4 个签名 Secrets，详见[发布配置及更新行为](../docs/android-releases.md)。
+
 ## 运行
 
 使用 [package.json](package.json) 声明的 Node.js：`^22.13.0 || ^24.3.0 || >=26.0.0`，以及 npm。iOS 需要 macOS、Xcode、CocoaPods；Android 需要 JDK 21、Android SDK 和设备或模拟器。

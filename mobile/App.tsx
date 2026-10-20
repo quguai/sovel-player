@@ -14,6 +14,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import { MusicProvider, useMusic } from "./src/services/store";
+import { UpdatesProvider, useUpdates } from "./src/services/appUpdates";
 import { artUri } from "./src/services/files";
 import { Action } from "./src/ui/components";
 import { Cover, palette as p } from "./src/ui/visuals";
@@ -42,6 +43,8 @@ function Shell() {
     setError,
     prefs,
   } = useMusic();
+  const updates = useUpdates();
+  const [updateEntry, setUpdateEntry] = useState(false);
   const playerPage = page === "player";
   const uri = artUri(current?.artwork);
   useEffect(() => {
@@ -112,7 +115,10 @@ function Shell() {
                   setPlayerPanel("player");
                   setPage("player");
                 }}
-                onSettings={() => setPage("settings")}
+                onSettings={() => {
+                  setUpdateEntry(false);
+                  setPage("settings");
+                }}
                 onQueue={() => setQueue(true)}
               />
             ) : page === "player" ? (
@@ -125,6 +131,7 @@ function Shell() {
               />
             ) : page === "settings" ? (
               <SettingsScreen
+                initialSection={updateEntry ? "updates" : "root"}
                 onBack={() => setPage("library")}
                 onSources={() => setPage("sources")}
               />
@@ -135,6 +142,24 @@ function Shell() {
             )}
           </View>
         )}
+        {updates.release &&
+          updates.release.tag !== updates.prefs.ignoredTag &&
+          page !== "settings" && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="查看新版本"
+              onPress={() => {
+                setUpdateEntry(true);
+                setPage("settings");
+              }}
+              style={styles.banner}
+            >
+              <Text style={{ color: p.gold, flex: 1, fontSize: 12 }}>
+                Sovel {updates.release.tag} 已发布
+              </Text>
+              <Text style={{ color: p.gold, fontSize: 12 }}>查看更新 ›</Text>
+            </Pressable>
+          )}
         {busy && page !== "sources" && (
           <View style={styles.banner}>
             <ActivityIndicator color={p.gold} size="small" />
@@ -228,7 +253,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <MusicProvider>
-        <Shell />
+        <UpdatesProvider>
+          <Shell />
+        </UpdatesProvider>
       </MusicProvider>
     </SafeAreaProvider>
   );

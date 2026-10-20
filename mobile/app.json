@@ -45,6 +45,10 @@
     ],
     "experiments": {
       "typedRoutes": false
+    },
+    "extra": {
+      "githubRepository": "quguai/sovel-player",
+      "distribution": "github"
     }
   }
 }

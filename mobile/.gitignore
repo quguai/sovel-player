@@ -44,3 +44,8 @@ android/build/
 android/app/build/
 android/local.properties
 artifacts/
+
+# Release output and signing material
+/release/
+*.keystore
+!android/app/debug.keystore

@@ -2,6 +2,13 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+def releaseAppConfig = new groovy.json.JsonSlurper().parse(file('../../app.json')).expo
+def signingEnvironment = ['SOVEL_KEYSTORE_PATH', 'SOVEL_KEYSTORE_PASSWORD', 'SOVEL_KEY_ALIAS', 'SOVEL_KEY_PASSWORD']
+def hasReleaseSigning = signingEnvironment.every { System.getenv(it) }
+if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } && !hasReleaseSigning) {
+    throw new GradleException('Release signing is required. Set SOVEL_KEYSTORE_PATH, SOVEL_KEYSTORE_PASSWORD, SOVEL_KEY_ALIAS and SOVEL_KEY_PASSWORD. Never distribute debug-signed builds.')
+}
+
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
 /**
@@ -92,12 +99,20 @@ android {
         applicationId 'cn.quguai.music.sovel'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "0.1.0"
+        versionCode((releaseAppConfig.android.versionCode ?: 1) as Integer)
+        versionName releaseAppConfig.version
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
     signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(System.getenv('SOVEL_KEYSTORE_PATH'))
+                storePassword System.getenv('SOVEL_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('SOVEL_KEY_ALIAS')
+                keyPassword System.getenv('SOVEL_KEY_PASSWORD')
+            }
+        }
         debug {
             storeFile file('debug.keystore')
             storePassword 'android'
@@ -110,9 +125,7 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

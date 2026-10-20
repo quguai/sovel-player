@@ -1,3 +1,5 @@
+import { UpdateSettings } from "./UpdateSettings";
+import { installedApp, useUpdates } from "../services/appUpdates";
 import React, { useState } from "react";
 import {
   View,
@@ -25,6 +27,7 @@ export type SettingsSection =
   | "peq"
   | "usb"
   | "language"
+  | "updates"
   | "about"
   | "backup"
   | "history";
@@ -37,6 +40,7 @@ export const settingsTitles: Record<SettingsSection, string> = {
   peq: "参数均衡器 · PEQ",
   usb: "USB 输出",
   language: "语言设置",
+  updates: "版本更新",
   about: "关于 Sovel HiFi",
   backup: "备份与恢复",
   history: "听歌记录与偏好",
@@ -121,6 +125,7 @@ export function SettingsHome({
   open: (section: SettingsSection) => void;
   onSources: () => void;
 }) {
+  const updates = useUpdates();
   const {
     tracks,
     prefs,
@@ -213,8 +218,13 @@ export function SettingsHome({
           onPress={() => open("backup")}
         />
         <SettingRow
+          title="版本更新"
+          value={updates.release ? updates.release.tag : installedApp.version}
+          onPress={() => open("updates")}
+        />
+        <SettingRow
           title="关于 Sovel HiFi"
-          value="0.1.0"
+          value={installedApp.version}
           onPress={() => open("about")}
         />
       </SettingGroup>
@@ -324,6 +334,7 @@ export function AdvancedAudioSettings() {
 }
 export function SettingsInfo({ section }: { section: SettingsSection }) {
   const [details, setDetails] = useState(false);
+  if (section === "updates") return <UpdateSettings />;
   if (section === "sleep") return <SleepSettings />;
   if (section === "backup") return <BackupSettings />;
   if (section === "history") return <ListeningHistoryScreen />;
@@ -388,7 +399,7 @@ export function SettingsInfo({ section }: { section: SettingsSection }) {
       </Text>
       <Text style={s.intro}>收藏声音，慢慢聆听。</Text>
       <SettingGroup title="应用信息">
-        <SettingRow title="版本" value="0.1.0 · 开发预览" />
+        <SettingRow title="版本" value={installedApp.version} />
         <SettingRow title="曲库" note="SQLite 本地索引；引用原音频文件" />
         <SettingRow
           title="设计与实现参考"

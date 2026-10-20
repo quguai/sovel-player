@@ -30,6 +30,17 @@ final class SovelUITests: XCTestCase {
   func capture(_ name: String) {
     let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
   }
+  func testUpdateSettingsOnIOS() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("设置", timeout: 30); tap("版本更新")
+    XCTAssertTrue(app.staticTexts["Sovel HiFi"].exists)
+    XCTAssertTrue(element("查看 GitHub 发布记录").exists)
+    XCTAssertFalse(element("下载更新").exists)
+    capture("updates-ios-channel")
+    tap("返回设置")
+    XCTAssertTrue(element("关于 Sovel HiFi").exists)
+  }
   func testListeningHistoryCoverageAndBackground() {
     continueAfterFailure = false
     XCUIDevice.shared.orientation = .portrait

@@ -892,11 +892,13 @@ export function LyricsScreen({ onQueue }: { onQueue: () => void }) {
 export function SettingsScreen({
   onBack,
   onSources,
+  initialSection = "root",
 }: {
   onBack: () => void;
   onSources: () => void;
+  initialSection?: SettingsSection;
 }) {
-  const [section, setSection] = useState<SettingsSection>("root");
+  const [section, setSection] = useState<SettingsSection>(initialSection);
   const title = settingsTitles[section];
   // Submenus consume Android Back before the surrounding library screen does.
   useEffect(() => {
