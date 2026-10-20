@@ -1,213 +1,132 @@
-# Sovel HiFi
+<p align="center"><img src="mobile/assets/icon.png" width="88" alt="Sovel HiFi icon" /></p>
+<h1 align="center">Sovel HiFi</h1>
+<p align="center">Your music. Your library. Your listening space.</p>
+<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
-Sovel HiFi 是一款开源跨平台 HiFi 音乐播放器，专注本地与远程曲库，以精致的界面和可定制的黑胶体验，让音乐收藏更易管理，让聆听更有乐趣。
+Sovel HiFi is an open-source, cross-platform music player being built for local and remote libraries. It combines a charcoal-and-gold library, customizable vinyl visuals, and a dedicated lyrics view with a focus on the music you own.
 
-Sovel HiFi is an open-source, cross-platform HiFi music player for local and remote libraries, featuring a refined interface and customizable vinyl visuals. Built to make your music collection a pleasure to explore and enjoy.
+**Development preview.** Local-library features are implemented, with playback and native EQ verified on the iOS simulator. Android code is included; Android builds and hardware behavior still need validation. Remote libraries and dedicated HiFi output are on the roadmap. The app UI currently uses Simplified Chinese; documentation is available in English and Chinese.
 
-- 产品名称：**Sovel HiFi**；界面字标：**Sovel**。
-- GitHub 仓库名称：`sovel-player`。
-- Android application ID / iOS Bundle ID：`cn.quguai.music.sovel`；URL scheme：`sovel`。
-- 本地 SQLite：`sovel.db`。项目尚未发布，品牌切换采用新应用身份与新数据库，不包含旧品牌的运行时迁移或兼容分支；后续数据库结构升级仍需正常维护。音乐重新导入时默认引用原文件。
+## A look inside
 
-项目包含浏览器设计 DEMO 和 `mobile/` 中的 **React Native + TypeScript 原生应用**。原生版本已接入本地原文件索引、SQLite 扫描、真实 WAV / FLAC 播放、独立歌词和外观设置，使用方法见 [原生应用说明](mobile/README.md)。
+| Music library | Vinyl player | Synchronized lyrics |
+| :---: | :---: | :---: |
+| <img src="docs/images/library.png" width="240" alt="Dark music library with gold accents and album cards" /> | <img src="docs/images/vinyl.png" width="240" alt="Centered vinyl record with a slim tonearm" /> | <img src="docs/images/lyrics.png" width="240" alt="Dedicated lyrics view with the current line highlighted" /> |
 
-`localhost:4786` 仍然是原来的网页设计预览；它不会自动变成原生应用，也不共享原生 SQLite 曲库。以下页面设计以两端共用的视觉方向为准，后半部分保留远程曲库与 HiFi 输出的后续规划。
+Actual iOS simulator screenshots using the project's original listening samples. The browser demo is a separate design preview.
 
-## 已确定的设计边界
+## What you can use today
 
-- **主页、音乐库、选歌页：黑金。** 暗灰底色、香槟金强调；本地收藏优先。
-- **播放页：参考 Apple Music。** 封面或唱片、歌曲信息、两句简短歌词、进度与底部五个控制（播放模式、上一首、播放 / 暂停、下一首、队列）；不显示音量滑块或下载、评论等操作行。使用封面对应的柔和配色和白色控件，不沿用曲库黑金。
-- **歌词页：独立页面。** 同步的歌曲与进度、大字歌词、当前行高亮、点击定位；播放页左滑进入，歌词页右滑返回，也可点击简短歌词进入。
-- **横竖屏：分别排版。** 横屏播放页采用封面与控制分栏；歌词仍为独立页面。
+- **Bring your own files.** Index authorized files and folders in place. Copying audio into the app is a separate, explicit action.
+- **Scan without rebuilding your library.** Discover files first, then import against a fixed total. Incremental and full scans preserve favorites and preferences, with filters for size, hidden files, and subfolders.
+- **Browse your collection.** Albums, songs, artists, folders, search, favorites, and independently remembered card/list views for albums and artists.
+- **Make playback your own.** Cover, vinyl, and immersive views; nine record materials, two tonearms, cartridge colors, stylus lighting, and three rotation speeds.
+- **Read and adjust lyrics.** Separate lyrics and song-information pages, timestamp highlighting, tap-to-seek, and per-song timing adjustments.
+- **Pick up where you left off.** Restore the queue, order, track, and position after restart, initially paused. Background playback, lock-screen controls, and a native sleep timer are included.
+- **Shape the sound.** Native ten-band EQ, six built-in presets, custom presets, preamp control, and automatic headroom. iOS processing is verified; Android integration awaits validation.
+- **Keep preferences local.** SQLite stores the library and listening history. Export settings and EQ presets to JSON and restore after a preview. Local discovery uses library tags, favorites, and listening history.
 
-## 保留的三种主页风格
+## Capability status
 
-| 方案 | 布局重点 | 适合的使用习惯 |
-| --- | --- | --- |
-| 唱片馆 | 主视觉 + 专辑网格 | 按封面浏览、完整听专辑 |
-| 曲库 | 歌曲 / 专辑 / 艺术家 / 文件夹入口 + 列表 | 收藏较多，习惯明确分类 |
-| 静听 | 继续聆听的大封面 + 简洁列表 | 打开就听，减少首页信息 |
+| Area | Current status |
+| --- | --- |
+| Local files and folders | Implemented; iOS access-in-place and restart recovery verified |
+| WAV / FLAC | Metadata and iOS playback verified with bundled samples |
+| DSF | ID3 tags, artwork, and lyrics parsing verified; playback not enabled |
+| Other audio formats | Platform- and codec-dependent; no blanket compatibility claim |
+| Ten-band EQ | Native integration on both platforms; iOS processing and presets verified |
+| Background playback / sleep timer | Native implementation; iOS simulator checks passed; real-device checks remain |
+| SMB / WebDAV / DLNA / OpenSubsonic | Planned |
+| PEQ / AutoEQ / ReplayGain | Planned |
+| USB exclusive output / DoP / native DSD | Planned; requires Android and DAC validation |
+| Bit-perfect / guaranteed gapless playback | Not verified or promised by the current build |
 
-三种主页全部保留，共用同一套播放功能和独立歌词页。进入「设置 → 样式设置 → 主页布局」选择唱片馆、曲库或静听。播放页右上角衣服图标打开「播放外观」面板，在专辑封面、唱片和沉浸大图间选择。主页布局与播放风格独立保存，刷新后保留选择。
+File bit depth and sample rate describe the source, not the DAC output. Metadata parsing, decoding, and output capabilities are tracked separately. See the [mobile development guide](mobile/README.md) for details.
 
-播放区横向排列「歌曲详情 / 正在播放 / 完整歌词」三个页面。默认停在中间，左滑查看歌词，右滑查看详情；顶部圆点是可点击的页面锚点，固定位置并指示当前页面，与外观模式无关。详情页在歌手与专辑入口下平铺两列专辑卡片，封面右下角显示曲库收录的歌曲数，名称与歌手在封面下方。默认显示四张，「全部」或歌手入口展开专辑网格；点击卡片查看对应专辑曲目，支持逐级返回。随后展示音频参数、猜你喜欢和文件信息；详情页暂不展示专辑艺术家、曲目 / 碟号、歌词行数等标签摘要；文件部分仅显示文件名、文件路径、修改时间，长路径完整换行。浏览器无法取得文件路径时会明确标注。歌手入口使用 34px 圆形头像，专辑入口使用方形封面，保持紧凑的 48px 行高；无歌手照片时显示人物占位。歌手作品、专辑曲目和曲库内相关歌曲可点选播放；不填充线上歌手资料或虚构推荐。歌曲标题下方合并显示「歌手 · 专辑」，专辑名采用较淡颜色，长文本在单行内省略。 播放、歌词、详情三个页面共用同一套进度条和五按钮控制，竖屏底部位置一致。
+## Build the native app
 
-曲库底部使用一条无边框迷你播放条，下方保留「音乐库 / 我喜欢 / 设置」文字导航。深色底部主体不透出列表内容，仅上沿渐隐融入页面；播放条保留轻微毛玻璃和香槟金控件。左侧小黑胶随播放旋转、暂停停住。小屏竖屏占用 100 点（另计底部安全区与间距），横屏将播放条和导航并排，压缩至 52 点。
+Use a Node.js version supported by [mobile/package.json](mobile/package.json), such as 22.13+ on the 22.x line, and npm. iOS requires macOS, Xcode, and CocoaPods. Android requires JDK 21, the Android SDK, and a device or emulator.
 
-「设置 → 样式设置」可选择九种唱片材质：纯黑胶、烟熏透明、冰蓝反光、石墨磨砂、珠光贝母、暮色渐变、琥珀透胶、樱花粉胶和翡翠流光，并独立选择简约 / 经典机械唱臂、唱头颜色、针尖灯光与转速。唱片页保持大尺寸居中，统一从右上角衣服图标展开外观面板；唱片模式下继续提供材质、唱臂、唱头颜色、灯光和转速，点选即时预览并自动保存。横屏时面板位于右下方，保留左侧唱片预览。
+```sh
+git clone https://github.com/quguai/sovel-player.git
+cd sovel-player/mobile
+npm ci
+```
 
-## 本地预览
+For iOS:
 
-需要 Node.js 20.11 或更新版本；无第三方依赖，无需安装包。
+```sh
+cd ios
+pod install
+cd ..
+npm run ios
+```
+
+For Android:
+
+```sh
+npm run android
+```
+
+`npm start` runs Metro separately. Custom native modules require a native development build; **Expo Go is not sufficient**. Native projects are committed, so routine development does not require Prebuild. Installation and start scripts apply the maintained audio integrations automatically.
+
+On an empty library, choose **先听两段原创试听曲** to import two original 24-second WAV/FLAC samples with artwork and timed lyrics. For your own music, open **设置 → 文件扫描** (Settings → File scanning) and select a source.
+
+## Explore the browser demo
+
+From the repository root:
 
 ```sh
 npm run dev
 ```
 
-打开 http://localhost:4786 。端口被占用时可使用 `PORT=4787 npm run dev`。
+Open [localhost:4786](http://localhost:4786). No dependency installation is needed for the preview. It listens on the local machine only; use `PORT=4787 npm run dev` to change the port.
 
-- 顶部可快速切换三种主页；设置内也提供同样的选择，使用「横屏 / 竖屏」和「单页体验 / 三屏总览」比较。
-- 「全屏预览」打开无外框模式，会根据浏览器宽高切换横竖屏布局。
-- 可直接访问 `/?device=1&theme=obsidian&page=player&art=vinyl`；`page` 支持 `library`、`player`、`lyrics`、`about`，`art` 支持 `cover`、`vinyl`、`immersive`。
-- 方案参数：`obsidian` 为唱片馆，`paper` 为曲库，`flow` 为静听；这些内部标识不代表三套配色。
-- 本地音频从「设置 → 音乐与存储 → 导入音乐」选择。文件只在当前浏览器读取，刷新后需要重新选择。
+The browser demo has its own state and does not share the native SQLite library. Demonstration tracks and quality labels are illustrative; native audio processing and hardware output are not represented by this preview.
 
-当前服务器仅监听本机，不对局域网公开；「全屏预览」是浏览器中的布局预览，并非已经部署到安卓设备。
+## Development
 
-## 可以体验的交互
+| Component | Implementation |
+| --- | --- |
+| UI and application logic | React Native 0.88, React 19.3, TypeScript, Expo SDK 58 |
+| Library and preferences | SQLite via `expo-sqlite` |
+| Metadata | `music-metadata` with a random-access tokenizer |
+| Playback | `expo-audio` 58.0.9, AVFoundation on iOS, Media3 on Android |
+| Graphic EQ | Shared C++ DSP with platform-native integration |
+| File access | Android SAF and an iOS security-scoped bookmark module |
 
-- 播放 / 暂停、上一首 / 下一首、拖动进度、随机 / 循环队列。
-- 收藏、歌曲 / 专辑 / 艺术家筛选、搜索、示例文件夹。
-- 彩胶随播放旋转，唱臂随进度向内移动，拖动进度时同步；暂停停止旋转并收针，暂停时唱臂停靠在盘面外侧，恢复播放时返回对应位置。支持系统减少动态效果偏好。
-- 播放页两句歌词、左右滑动切换独立歌词页、歌词定位、字号切换；进度条保留独立拖动操作。
-- 本地音频文件试听；15 分钟睡眠定时。
-- 主页偏好、播放外观、唱片材质、唱臂、唱头颜色、灯光与收藏保存在本机浏览器。
+```text
+mobile/       React Native app, native projects, DSP, and tests
+docs/         Implementation notes, reference reviews, and screenshots
+design/       Icon and artwork explorations
+previews/     Browser design-preview images
+app.js        Browser interaction demo
+styles.css    Browser demo styling
+```
 
-示例歌曲、艺术家、歌词和音质信息为设计演示内容，没有真实歌曲音源。播放示例只推进演示时间。导入音频由浏览器解码，不代表 Android、USB DAC 或无重采样能力；不解析音频标签、内嵌封面或 LRC。当前封面配色是为四张示例图片人工配好的颜色，尚未实现真实封面取色。
+From `mobile/`:
 
-USB 输出链路弹窗明确标注为概念展示，未连接或检测真实硬件。
+```sh
+npm run check    # TypeScript and core tests
+npm run lint     # ESLint
+```
 
-## 正式应用方案：React Native + TypeScript
+Current verification: 47 core tests pass; TypeScript passes; ESLint reports no errors and eight existing warnings. iOS simulator checks cover import, playback, lyrics, scanning, restart recovery, EQ, and presets. Android hardware and USB DAC output have not been validated. Native test commands are in the [development guide](mobile/README.md).
 
-按用户选择，共用界面、曲库模型和业务逻辑使用 React Native / TypeScript。保留 Android 与 iOS 原生工程，用有类型的原生模块接口连接音频、文件访问和系统服务。当前网页继续作为设计对照，第一版页面与交互已迁移为 React Native 组件。当前实际依赖、验证与限制以 mobile/README.md 为准；下表中的扩展原生后端属于后续规划。
+Contributions are welcome. Include reproduction steps and device, OS, and audio-format details for playback issues. Native audio changes should include platform-specific validation. Reference checkouts belong in the ignored `repos/` directory and are not dependencies or submodules.
 
-| 部分 | 计划采用的方案 | 职责 |
-| --- | --- | --- |
-| 界面与业务 | React Native + TypeScript | 现有三种主页、三种播放外观、九种唱片材质、两种唱臂、独立歌词、横竖屏、多音源管理 |
-| 曲库 | 统一 SQLite 数据库 | 按来源索引歌曲、专辑、艺术家，记录扫描任务；收藏、歌单、播放记录独立保存 |
-| 元数据 | 原生 C++ TagLib 集成，先验证样本 | 读取用户已经写入文件的标签、封面和歌词；后台解析，向 TS 返回规范化结果与缓存引用 |
-| Android 播放 | Kotlin + Media3 播放服务，独立 USB 输出后端 | 常规本地 / 网络播放、锁屏和后台；USB 能力检测与硬件适配 |
-| iOS 播放 | Swift + AVFoundation / Core Audio | 本地 / 网络音频、后台与系统控制；扩展解码后的音频输出 |
-| 扩展格式 | 按需集成原生解码库，评估裁剪构建的 FFmpeg 等 | 系统链路不能直接播放的格式，重点验证 DSF / DSD；最终依赖与版本由双端构建及样本测试决定 |
+## Roadmap
 
-TS 负责控制命令和状态展示。实时解码与 PCM / DSD 数据传输留在原生音频层；后台服务持有实际播放状态，不依赖页面或 JS 定时器维持播放。TagLib 负责元数据，不能替代音频解码器。RN 原生接口采用 Turbo Native Modules / Codegen 的有类型契约，具体构建组合待原生验证后锁定。
+- Connect remote libraries through SMB, WebDAV, DLNA/UPnP, and OpenSubsonic; evaluate additional server adapters separately.
+- Validate Android playback, SAF/SD-card access, interruptions, and background behavior on real devices.
+- Extend decoding and output for DSD and additional lossless formats, with explicit per-device capabilities.
+- Develop and verify Android USB exclusive output and vendor-specific internal DAC paths.
+- Add PEQ, AutoEQ import, ReplayGain, playback transitions, and additional app languages.
 
-### 设置中的音乐来源
+## Credits and license
 
-远程功能以 **读取曲库并在本机播放** 为当前范围。来源适配器共用统一的曲库入口，可同时保存多个服务器或目录，不为每个来源新建一套数据库。
+Licensed under the [MIT License](LICENSE). Existing third-party notices, including the [Expo starter notice](mobile/LICENSE), are retained.
 
-| 来源 | 规划用途 | 实施顺序建议 |
-| --- | --- | --- |
-| 本地文件 / 授权目录 | Android 存储与 SD 卡目录，iOS 文件导入或系统授权位置 | 首批 |
-| SMB 2/3 | NAS、电脑共享文件夹 | 首批 |
-| WebDAV | 通过兼容服务读取目录与文件 | 首批 |
-| DLNA / UPnP MediaServer | 发现局域网音乐服务器，浏览曲库并读取音频资源 | 首批 |
-| Subsonic / OpenSubsonic | 连接提供兼容音乐 API 的服务器，例如 Navidrome | 后续扩展 |
-| Jellyfin / Emby | 分别实现其服务器连接器 | 后续扩展 |
-| SFTP | 通过文件服务器浏览与读取音乐 | 后续扩展 |
+[NeriPlayer](https://github.com/cwuom/NeriPlayer), [MusicFree](https://github.com/maotoumao/MusicFree), and [Auxio](https://github.com/oxycblt/auxio) informed feature and behavior research; their GPL/AGPL implementation code was not copied into this project. [music-metadata](https://github.com/Borewit/music-metadata) is an actual dependency. See the [reference inventory](docs/upstream-references.md) and [feature review](docs/feature-adoption-review.md) (Chinese).
 
-设置入口为「音乐来源 → 添加来源 → 选择类型 → 地址 / 授权 → 测试连接 → 选择目录或曲库 → 首次扫描」。每个来源显示连接状态、歌曲数、最近扫描、错误摘要，并提供增量扫描、全量扫描、强制刷新标签、移除来源。也可对所有来源启动扫描，但分别记录成功与失败。导入曲库默认建立索引；下载到设备 / 离线缓存是独立操作。
-
-各适配器声明目录枚举、稳定资源 ID、版本标识、增量游标、随机读取 / Range、原始文件访问等能力。源文件协议可以直接解析内嵌标签；DLNA 与音乐服务器可能只返回其索引过的字段或转码资源，需标注元数据来源，原文件可访问时再补读。无原文件访问能力时不承诺读出全部内嵌标签。
-
-远程播放优先请求原文件，区分原始流、服务器转码和本机解码输出。音质展示来自实际探测和已知链路信息，无法确认的输出参数显示未知。凭据存入平台安全存储；数据库保留凭据引用，日志不记录密码或带凭据的完整地址。
-
-### 全量、增量扫描与数据库
-
-**新增来源、全量扫描和增量扫描都不清空数据库。** 使用统一数据库中的 `source_id` 隔离来源，使用持久的曲目 ID 关联收藏、歌单和历史。
-
-| 操作 | 行为 | 用户数据 |
-| --- | --- | --- |
-| 首次扫描 | 建立该来源的文件 / 资源索引，提取可用标签 | 其他来源与用户数据保留 |
-| 增量扫描 | 使用来源支持的变更游标或版本信息处理新增、修改及可靠的删除事件 | 已有曲目身份及用户数据保留 |
-| 全量扫描 | 完整枚举选定来源，核对新增、变化、缺失；重新读取符合规则的标签、封面与歌词 | 就地更新索引，保留收藏、歌单、历史 |
-| 强制刷新标签 | 重新读取选定范围的元数据，不依赖旧的修改时间 / 版本缓存 | 曲目 ID 和用户数据保留 |
-| 重建索引 | 仅作为数据库异常时的修复功能，保留身份映射与用户数据后重建派生索引 | 不作为普通扫描步骤 |
-
-实现规则：
-
-- 没有服务端变更接口的来源，增量扫描仍可能遍历目录，但只重新解析新增或变化的文件。比较稳定资源 ID、大小、修改时间及可用的 ETag / 版本信息；这些信号不可靠或标签修改未改变信号时，使用强制刷新标签。首次扫描不逐首计算完整音频哈希。
-- 曲目使用应用生成的稳定 ID；来源和资源身份另外映射，播放 URL 不作主键。可靠文件 ID 或内容证据可以帮助识别移动 / 改名；无法确认时不猜测合并，不按歌曲名称自动合并不同版本。
-- 每次扫描记录范围、任务状态和检查点。批量事务写入，提交后才推进游标，可取消、失败重试和恢复；同一来源的扫描串行执行。
-- 只有完整、成功、覆盖明确的枚举，或可靠的显式删除事件，才可把该范围内的旧资源标为缺失。断网、授权失效、分页失败、取消和解析失败均不得被当成删除；来源不支持可靠核对时保留旧记录。
-- 缺失资源先标记不可用，保留曲目身份与用户关联。移除来源也不删除远端文件；是否清理本机缓存与索引另行选择。
-- 文件索引、元数据缓存和用户数据分层。数据库结构升级用迁移完成；扫描不需要反复创建数据库。
-
-### 内嵌元数据与音频格式
-
-用户已整理并写入音乐文件的元数据是主要依据。默认只读，不自动在线匹配或覆盖；读取标题、多艺术家、专辑艺术家、专辑、碟号 / 曲号、日期、流派、作曲者、封面、歌词及可用音频参数。标签与文件属性不一致时保留原始标签并分别展示探测结果。缺失字段可用服务器信息或文件名补充，记录来源。
-
-| 格式范围 | 元数据目标 | 播放验证重点 |
-| --- | --- | --- |
-| FLAC | Vorbis Comments、内嵌图片及歌词字段 | 无损 PCM 解码、位深 / 采样率、跳转 |
-| WAV | ID3v2、RIFF INFO 等可用标签与图片 / 歌词 | 先覆盖常见 PCM WAV；编码、位深及容器变体分别测试 |
-| DSF | ID3v2、图片、歌词与 DSD 文件参数 | DSD 解码为 PCM 供通用输出；Android USB 下另验 DoP / 原生 DSD |
-| ALAC / AIFF | 对应容器的标签、封面和音频属性 | 双端无损解码与跳转 |
-| APE / WavPack / DFF | 按标签库支持范围解析，允许文件本身无完整标签 | 原生扩展解码、设备性能与兼容性 |
-| MP3 / AAC / Ogg / Opus | 常见有损格式标签与图片 | 常规播放和无缝切换能力 |
-
-支持某扩展名不等于支持其所有编码或设备输出模式。DSF 可播放、DSD 转 PCM、DoP 和原生 DSD 分别记录能力；DSD 转 PCM 显示实际输出，不称为原生 DSD 或位完美。内嵌歌词可能没有时间轴，只有含有效时间戳的歌词才能同步高亮，普通文本按静态歌词显示。
-
-标签读取需要可寻址的数据源，不能只读取每个文件的固定头部。远程读取使用范围请求或协议原生随机读取，按能力进行受限缓存；不支持时展示限制并按需缓存原文件，避免扫描默认下载整个远程曲库。封面缩略图缓存到文件，按需加载，避免通过 JS 传输大量图片或音频数据。
-
-格式支持属于实施目标，需用用户实际打标工具产出的样本验证。验收分别覆盖元数据、播放、跳转、后台、网络中断恢复、实际输出参数，不以浏览器演示结果作为依据。
-
-### Android HiFi 输出验证
-
-Media3 负责常规播放并不自动提供 USB 独占；UI 框架和底层音频输出方案需要分别评估。
-
-USB 独占有两类值得验证的路径：
-
-1. Android 14+ 的首选混音器 / `BIT_PERFECT` API。位完美模式是可选设备能力，不能只凭系统版本承诺支持。
-2. 原生 USB 音频驱动。需要 USB Host、兼容 DAC、传输与设备适配，以及必要的驱动研发或授权。
-
-HiFi 播放器的**内置 DAC**与**外接 USB DAC**应分开验证；内置高解析输出依赖厂商音频实现或 SDK。后续拿到具体设备后，再检查原始采样率、位深、无重采样、切歌和后台稳定性。
-
-USB 独占与位完美分别验证；独占设备本身不能证明解码、音量、DSP 和输出链路没有修改音频。该模块与跨平台曲库接口独立，按检测到的设备能力启用。
-
-### 实施与验收顺序
-
-1. 建立 RN / TS 双端工程和原生模块契约，迁移已有设计，完成真实本地播放与 SQLite 曲库；同时用 FLAC / WAV / DSF 样本验证原生标签解析与播放路线。
-2. 完成来源管理、首次 / 全量 / 增量扫描及强制刷新标签，验证重扫保留收藏和歌单、断网不删库、变更标签可刷新、取消后可恢复。
-3. 逐一接入首批远程协议，每个协议验收原始文件访问、可读取的标签范围、扫描效率、跳转与断线恢复；再扩展音乐服务器 API。
-4. Android USB 输出尽早进行独立真机验证，确认目标播放器、DAC、系统版本与可用 SDK；通过验证后接入统一播放控制和输出信息展示。
-
-RN 工程及本地来源的第一版已实现。当前元数据使用 music-metadata 的随机读取接口，原生队列使用 expo-audio；TagLib、专用解码、远程扫描与 USB 后端尚未接入。
-
-## 参考资料
-
-- [Apple Music 歌词说明](https://support.apple.com/zh-cn/105076)：播放与独立歌词之间的切换、同步歌词。
-- [海贝音乐 Android 用户手册](https://guide.hiby.com/docs/guides/hibymusic/hibymusic_android_guide/)：歌曲、专辑、歌手、文件夹等本地分类。
-- [FiiO Music](https://www.fiio.com/app)：本地播放器功能参考。
-- [NeriPlayer](https://github.com/cwuom/NeriPlayer)：研究其配色、歌词、本地管理和音频输出思路；未复制其实现代码。
-- [Android：USB 首选混音器与位完美模式](https://source.android.com/docs/core/audio/preferred-mixer-attr?hl=zh-cn)。
-- [React Native 原生模块与 TypeScript Codegen](https://reactnative.dev/docs/turbo-native-modules-introduction)。
-- [Media3 支持格式](https://developer.android.com/media/media3/exoplayer/supported-formats)、[Media3 后台播放](https://developer.android.com/media/media3/session/background-playback)。
-- [TagLib 格式与标签支持](https://taglib.org/api/)、[TagLib 可裁剪格式构建](https://github.com/taglib/taglib/blob/master/INSTALL.md)。
-- [FFmpeg DSD 解码实现](https://ffmpeg.org/doxygen/8.0/dsddec_8c_source.html)：扩展解码路线的参考，尚未集成。
-- [OpenSubsonic 原始流与转码参数](https://opensubsonic.netlify.app/docs/endpoints/stream/)。
-- [USB Audio Player PRO](https://www.extreamsd.com/index.php/products/usb-audio-player-pro)：原生 USB 驱动路线的产品实例。
-
-封面为概念排版，照片取自 Unsplash，并缓存到本地以便离线预览：
-
-- [海面](https://images.unsplash.com/photo-1475924156734-496f6cac6ec1)
-- [山景](https://images.unsplash.com/photo-1464822759023-fed622ff2c3b)
-- [森林](https://images.unsplash.com/photo-1441974231531-c6227db76b6e)
-- [沙丘](https://images.unsplash.com/photo-1509316785289-025f5b846b35)
-
-唱头配色提供原色、银白、香槟金、酒红、冰蓝、墨绿；与唱片材质、唱臂样式和针尖灯光独立保存。底部面板和设置页的唱臂缩略图同步预览当前配色。
-
-简约唱臂使用细长金属杆、小圆转轴和紧凑唱头；经典机械款仍可独立选择。两款各自校准转轴、进度扫角和唱头配色区域。新透明贴图位于 `mobile/assets/turntable/tonearm-slim.png`，完整生成提示词记录在同目录的 `tonearm-slim.provenance.json`。预览链接可添加 `arm=simple` 直接查看新版。
-
-## 验证
-
-`npm run check` 检查脚本语法。浏览器中已检查三种主页、切歌与配色、收藏筛选、搜索、歌词定位、黑胶播放 / 暂停，以及 360×640 竖屏和 640×360 横屏。使用临时生成的 3 秒静音 WAV 验证本地导入、时长、播放结束和暂停。
-
-本轮还检查了唱片主题下的双向滑动、简短歌词入口、播放进度与唱臂同步、暂停收针，以及 360×640 竖屏和 640×360 横屏的播放 / 歌词布局。浏览器未报告运行错误。
-
-播放页右上角已检查完整轮换一圈、全程无弹窗、刷新保留播放风格，且不改变主页布局。主页布局设置内保留三种主页选项，唱片材质有独立设置入口。此前也检查了全屏预览链接的偏好记忆、360×640 与 640×360 布局及唱臂停靠位置。
-
-现有底部样式面板已核对 390×844、375×667、844×390 和 640×360：单图片入口、九种材质、两种唱臂、灯光、即时预览及偏好保存正常；面板支持关闭按钮、点击外侧与 Escape 收起，适配减少动态效果。桌面画框会滚动至可见区域，再将面板定位在播放器底部。
-
-原型尚未经过安卓真机或真实 USB DAC 测试。
-
-### 设置与扫描更新（2026-10-20）
-
-设置首页现在提供直接入口。扫描先统计所有来源，再按固定总数显示导入进度，不复制音频。增量复用未变标签，全量重新读取；规则过滤不会删除已经入库的歌曲。详见 [开源实现参考与能力边界](docs/settings-and-scan-references.md)。
-
-
-### 本地参考仓库与 Git
-
-项目根目录已初始化 Git；`mobile/` 保留其已有的独立 Git 仓库及历史。当前尚未合并两个仓库的版本历史，也未创建新的提交。
-
-开源参考源码统一放在 `repos/`，整个目录已加入根目录 `.gitignore`，不作为本工程依赖或子模块。仓库版本和借鉴记录见 [参考仓库目录](docs/upstream-references.md)。
+Generated icon, turntable, and placeholder assets include provenance records in [mobile/assets](mobile/assets). Listening samples are synthesized by this project. Browser concept photography comes from Unsplash: [ocean](https://images.unsplash.com/photo-1475924156734-496f6cac6ec1), [mountains](https://images.unsplash.com/photo-1464822759023-fed622ff2c3b), [forest](https://images.unsplash.com/photo-1441974231531-c6227db76b6e), and [desert](https://images.unsplash.com/photo-1509316785289-025f5b846b35).
