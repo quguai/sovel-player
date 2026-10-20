@@ -9,6 +9,10 @@ public final class SovelAccessModule: Module {
   public func definition() -> ModuleDefinition {
     Name("SovelAccess")
 
+    AsyncFunction("listDirectory") { (uri: String) -> [[String: Any]] in
+      try SovelDirectoryReader.list(uri)
+    }.runOnQueue(.global(qos: .utility))
+
     AsyncFunction("pick") { (directory: Bool, promise: Promise) in
       guard self.pickerDelegate == nil else {
         promise.reject("PICKER_BUSY", "文件选择器已经打开")

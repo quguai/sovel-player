@@ -39,6 +39,7 @@
     "test": "tsx --test tests/*.test.ts",
     "test:dsd:native": "bash native/dsd/tests/run-native.sh",
     "test:dsd:extractor": "bash native/dsd/tests/run-jvm.sh",
+    "test:scan:native": "bash modules/sovel-access/tests/run.sh",
     "check": "npm run typecheck && npm test",
     "fixtures": "node scripts/generate-fixtures.mjs",
     "postinstall": "node scripts/patch-audio-equalizer.mjs && node scripts/patch-audio-playback.mjs",

@@ -1,1 +1,1 @@
-{"platforms":["ios"],"ios":{"modules":["SovelAccessModule"]}}
+{"platforms":["ios","android"],"ios":{"modules":["SovelAccessModule"]},"android":{"modules":["expo.modules.sovelaccess.SovelAccessModule"]}}

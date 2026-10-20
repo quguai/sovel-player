@@ -8,10 +8,10 @@ import {
   type Track,
   type ScanRules,
 } from "../core/types";
-import { excludesPath } from "../core/scanRules";
+import { discoverDirectory } from "../core/directoryScan";
 import { readMetadata } from "../core/metadata";
 import { parseLyrics } from "../core/lyrics";
-import { pickInPlace, restoreAccess } from "./access";
+import { pickInPlace, restoreAccess, readDirectory } from "./access";
 export const music = new Directory(Paths.document, "Music");
 const art = new Directory(Paths.document, "Artwork");
 const roots = new Map<string, SourceStatus>();
@@ -94,42 +94,13 @@ export async function enumerate(
       lyricUri,
     };
   }
-  async function walk(dir: Directory, prefix = "") {
-    if (signal?.aborted) throw new Error("扫描已取消");
-    onDiscover?.(entries.length, prefix);
-    const children = dir.list();
-    const lyrics = new Map(
-      children
-        .filter((c) => c instanceof File && /\.lrc$/i.test(c.name))
-        .map((c) => [c.name.toLowerCase(), c.uri]),
-    );
-    for (const [index, child] of children.entries()) {
-      if (signal?.aborted) throw new Error("扫描已取消");
-      const path = prefix + child.name;
-      if (child instanceof Directory) {
-        if (!rules || (rules.includeSubfolders && !excludesPath(path, rules)))
-          await walk(child, `${path}/`);
-      } else if (isAudio(child.name))
-        entries.push(
-          entry(
-            child,
-            path,
-            lyrics.get(child.name.replace(/\.[^.]+$/, ".lrc").toLowerCase()),
-          ),
-        );
-      if (index % 100 === 0) {
-        onDiscover?.(entries.length, path);
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  }
+  if (signal?.aborted) throw new Error("扫描已取消");
   if (active.kind === "file")
     entries.push(entry(new File(active.uri), active.name));
   else {
     const dir = active.kind === "managed" ? music : new Directory(active.uri);
     if (!dir.exists) throw new Error("音乐目录不可访问，已保留原有曲库");
-    await walk(dir);
+    return discoverDirectory(dir.uri, readDirectory, signal, rules, onDiscover);
   }
   onDiscover?.(entries.length, "");
   return entries.sort((a, b) => a.path.localeCompare(b.path));
@@ -148,7 +119,7 @@ export async function parseFile(entry: Entry, sourceId: string) {
     handle = file.open(FileMode.ReadOnly);
   const { metadata, picture, artistPicture } = await readMetadata(
     {
-      size: file.size,
+      size: entry.size > 0 ? entry.size : (handle.size ?? 0),
       read: async (position, length) => {
         handle.offset = position;
         return handle.readBytes(length);

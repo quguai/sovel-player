@@ -29,7 +29,7 @@ function setup() {
       }
     },
   };
-  return { lib: new Library(db), sqlite, writes };
+  return { lib: new Library(db), sqlite, writes, db };
 }
 const entry = (path: string, size = 100, mtime = 1): Entry => ({
   path,
@@ -41,6 +41,43 @@ const parse = async (e: Entry) => ({
   title: `标题 ${e.mtime}`,
 });
 const progress = () => {};
+test("bulk import writes 64-row batches, keeps favorites and rolls back cancelled writes", async () => {
+  const { lib, writes, db } = setup();
+  await lib.init();
+  const entries = Array.from({ length: 130 }, (_, i) => entry(`${i}.flac`));
+  await lib.scan("full", async () => entries, parse, progress);
+  assert.equal(
+    writes.filter((sql) => sql.startsWith("INSERT INTO tracks")).length,
+    3,
+  );
+  const first = (await lib.list())[0];
+  await lib.favorite(first.id, true);
+  await lib.scan("full", async () => entries, parse, progress);
+  assert.equal(
+    (await lib.list()).find((t) => t.id === first.id)?.favorite,
+    true,
+  );
+  const before = await lib.list();
+  const controller = new AbortController();
+  const original = db.runAsync;
+  db.runAsync = async (sql, ...params) => {
+    const result = await original(sql, ...params);
+    if (sql.startsWith("INSERT INTO tracks")) controller.abort();
+    return result;
+  };
+  await assert.rejects(
+    lib.scan(
+      "full",
+      async () => entries.map((e) => ({ ...e, mtime: 2 })),
+      parse,
+      progress,
+      controller.signal,
+    ),
+    /取消/,
+  );
+  assert.deepEqual(await lib.list(), before);
+});
+
 test("scan bounds concurrent parsers and counts completions even when a file fails", async () => {
   const { lib } = setup();
   await lib.init();
@@ -71,7 +108,7 @@ test("scan bounds concurrent parsers and counts completions even when a file fai
       if (count) paths.push(path);
     },
   );
-  assert.equal(peak, 4);
+  assert.equal(peak, 8);
   assert.equal(active, 0);
   assert.deepEqual(
     done,
@@ -104,7 +141,7 @@ test(
       async (e) => {
         await new Promise<void>((resolve) => {
           releases.push(resolve);
-          if (releases.length === 4) ready();
+          if (releases.length === 8) ready();
         });
         return parse(e);
       },
@@ -131,7 +168,7 @@ test(
     );
     releases.slice(1).forEach((release) => release());
     await rejected;
-    assert.equal(releases.length, 4, "no new file starts after cancellation");
+    assert.equal(releases.length, 8, "no new file starts after cancellation");
     assert.deepEqual(await lib.list(), before);
     await lib.scan(
       "incremental",

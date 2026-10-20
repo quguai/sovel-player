@@ -199,7 +199,7 @@ export class Library {
       let cursor = 0,
         completed = 0,
         stopped = false;
-      // Four parsers bound open handles and concurrent cover buffers. JavaScript
+      // Eight parsers bound open handles and concurrent cover buffers. JavaScript
       // still runs on one thread; file I/O can overlap without an unbounded fan-out.
       const worker = async () => {
         let sinceYield = 0,
@@ -260,7 +260,7 @@ export class Library {
       // Drain in-flight readers even on cancellation/error before releasing the
       // scan lock. No worker can continue writing artwork into a subsequent scan.
       const workers = await Promise.allSettled(
-        Array.from({ length: Math.min(4, entries.length) }, worker),
+        Array.from({ length: Math.min(8, entries.length) }, worker),
       );
       for (const result of workers)
         if (result.status === "rejected") throw result.reason;
@@ -286,18 +286,26 @@ export class Library {
             sourceId,
             entry.path,
           );
-        for (const { entry, metadata, id } of changed)
+        // Keep each statement below SQLite's conservative 999-parameter limit.
+        // One bridge round trip per 64 rows, instead of one per song.
+        for (let start = 0; start < changed.length; start += 64) {
+          if (signal?.aborted) throw new Error("扫描已取消，曲库未改动");
+          const batch = changed.slice(start, start + 64);
           await this.db.runAsync(
-            `INSERT INTO tracks(id,source_id,uri,path,size,mtime,metadata,available) VALUES (?,?,?,?,?,?,?,1)
+            `INSERT INTO tracks(id,source_id,uri,path,size,mtime,metadata,available) VALUES ${batch.map(() => "(?,?,?,?,?,?,?,1)").join(",")}
           ON CONFLICT(source_id,path) DO UPDATE SET size=excluded.size,mtime=excluded.mtime,metadata=excluded.metadata,uri=excluded.uri,available=1`,
-            id,
-            sourceId,
-            entry.uri || "",
-            entry.path,
-            entry.size,
-            entry.mtime,
-            JSON.stringify(metadata),
+            ...batch.flatMap(({ entry, metadata, id }) => [
+              id,
+              sourceId,
+              entry.uri || "",
+              entry.path,
+              entry.size,
+              entry.mtime,
+              JSON.stringify(metadata),
+            ]),
           );
+        }
+        if (signal?.aborted) throw new Error("扫描已取消，曲库未改动");
         await this.db.runAsync(
           "UPDATE scans SET status='complete',report=? WHERE id=?",
           JSON.stringify(report),
