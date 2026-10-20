@@ -17,6 +17,9 @@ import { EqualizerScreen } from "./EqualizerScreen";
 import { BackupSettings } from "./BackupSettings";
 import { Button } from "./components";
 import { ListeningHistoryScreen } from "./ListeningHistoryScreen";
+import { supportsDsf } from "../services/playbackSupport";
+import { dsdLicense } from "../core/thirdPartyNotices";
+import { pcmRates } from "../core/dsd";
 
 export type SettingsSection =
   | "root"
@@ -29,6 +32,7 @@ export type SettingsSection =
   | "language"
   | "updates"
   | "about"
+  | "dsd"
   | "backup"
   | "history";
 export const settingsTitles: Record<SettingsSection, string> = {
@@ -42,6 +46,7 @@ export const settingsTitles: Record<SettingsSection, string> = {
   language: "语言设置",
   updates: "版本更新",
   about: "关于 Sovel HiFi",
+  dsd: "DSD 模式",
   backup: "备份与恢复",
   history: "听歌记录与偏好",
 };
@@ -198,6 +203,14 @@ export function SettingsHome({
       </SettingGroup>
       <SettingGroup title="播放与系统">
         <SettingRow
+          title="DSD 模式"
+          note="PCM / DoP / Native 与转换采样率"
+          value={
+            supportsDsf ? `PCM · ${prefs.dsd.pcmRate / 1000} kHz` : "仅索引"
+          }
+          onPress={() => open("dsd")}
+        />
+        <SettingRow
           title="高级设置"
           note="播放方式、歌词、过渡与回放增益"
           onPress={() => open("playback")}
@@ -219,7 +232,9 @@ export function SettingsHome({
         />
         <SettingRow
           title="版本更新"
-          value={updates.release ? updates.release.version : installedApp.version}
+          value={
+            updates.release ? updates.release.version : installedApp.version
+          }
           onPress={() => open("updates")}
         />
         <SettingRow
@@ -324,21 +339,18 @@ export function AdvancedAudioSettings() {
         note="读取标签并调整音量的处理链尚未接入"
         value="未接入"
       />
-      <SettingRow
-        title="DSD 模式"
-        note="目前可读取 DSF / DFF 标签；解码与直通待接入"
-        value="仅索引"
-      />
     </SettingGroup>
   );
 }
 export function SettingsInfo({ section }: { section: SettingsSection }) {
   const [details, setDetails] = useState(false);
+  const [licenses, setLicenses] = useState(false);
   if (section === "updates") return <UpdateSettings />;
   if (section === "sleep") return <SleepSettings />;
   if (section === "backup") return <BackupSettings />;
   if (section === "history") return <ListeningHistoryScreen />;
   if (section === "effects") return <EqualizerScreen />;
+  if (section === "dsd") return <DsdSettingsPanel />;
   if (section === "peq")
     return (
       <SettingGroup title="耳机校正">
@@ -406,6 +418,11 @@ export function SettingsInfo({ section }: { section: SettingsSection }) {
           value={details ? "收起" : "展开"}
           onPress={() => setDetails(!details)}
         />
+        <SettingRow
+          title="解码器开源许可"
+          value={licenses ? "收起" : "查看"}
+          onPress={() => setLicenses(!licenses)}
+        />
       </SettingGroup>
       {details && (
         <Text selectable style={s.note}>
@@ -414,6 +431,73 @@ export function SettingsInfo({ section }: { section: SettingsSection }) {
           本次借鉴设计与行为，未拷入上述项目的 GPL 源码。
         </Text>
       )}
+      {licenses && (
+        <Text selectable style={s.note}>
+          {dsdLicense}
+        </Text>
+      )}
+    </>
+  );
+}
+function DsdSettingsPanel() {
+  const { prefs, setDsdRate } = useMusic();
+  const [saving, setSaving] = useState(false);
+  return (
+    <>
+      <Text style={s.intro}>选择 DSD 的播放方式，让输出匹配你的设备。</Text>
+      <SettingGroup title="输出模式">
+        <SettingRow
+          title="PCM"
+          note="DSD 转为浮点 PCM，经系统音频输出；可使用均衡器"
+          value={supportsDsf ? "使用中" : "需 Android 完整版"}
+        />
+        <SettingRow
+          title="DoP"
+          note="将 DSD 封装为 PCM 帧传输，需要兼容 DAC 与直通链路"
+          value="尚未接入"
+        />
+        <SettingRow
+          title="Native"
+          note="原生 DSD 输出，需要设备或 USB 专用输出接口"
+          value="尚未接入"
+        />
+      </SettingGroup>
+      <SettingGroup title="DSD → PCM 采样率">
+        {pcmRates.map((rate) => (
+          <SettingRow
+            key={rate}
+            title={`${rate / 1000} kHz`}
+            note={
+              rate === 176400
+                ? "默认 · 音质与负载平衡"
+                : rate === 352800
+                  ? "输出数据量更大，需要设备支持"
+                  : undefined
+            }
+            value={prefs.dsd.pcmRate === rate ? "已选择" : ""}
+            onPress={
+              !supportsDsf || saving
+                ? undefined
+                : async () => {
+                    setSaving(true);
+                    try {
+                      await setDsdRate(rate);
+                    } finally {
+                      setSaving(false);
+                    }
+                  }
+            }
+          />
+        ))}
+      </SettingGroup>
+      <Text style={s.note}>
+        {saving ? "正在应用采样率，保留队列与播放位置…\n" : ""}
+        支持 DSF 单声道 /
+        立体声，DSD64、128、256、512 共用上方选择的采样率。调整采样率会重新载入播放队列，可能短暂停顿。
+        {"\n"}少数 48 kHz 系列 DSD 会对应转换为 48 / 96 / 192 / 384 kHz。
+        {"\n"}这里设置的是解码后的 PCM 采样率；设备系统仍可能重采样。DFF、DoP 与
+        Native 暂不可用。
+      </Text>
     </>
   );
 }

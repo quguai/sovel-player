@@ -5,11 +5,15 @@ import { Library, type Database } from "../src/core/library";
 import { fallbackMetadata, type Entry } from "../src/core/types";
 function setup() {
   const sqlite = new DatabaseSync(":memory:");
+  const writes: string[] = [];
   const db: Database = {
     execAsync: async (s) => {
       sqlite.exec(s);
     },
-    runAsync: async (s, ...p) => sqlite.prepare(s).run(...p),
+    runAsync: async (s, ...p) => {
+      writes.push(s);
+      return sqlite.prepare(s).run(...p);
+    },
     getAllAsync: async <T>(s: string, ...p: any[]) =>
       sqlite.prepare(s).all(...p) as T[],
     getFirstAsync: async <T>(s: string, ...p: any[]) =>
@@ -25,7 +29,7 @@ function setup() {
       }
     },
   };
-  return { lib: new Library(db), sqlite };
+  return { lib: new Library(db), sqlite, writes };
 }
 const entry = (path: string, size = 100, mtime = 1): Entry => ({
   path,
@@ -37,6 +41,142 @@ const parse = async (e: Entry) => ({
   title: `标题 ${e.mtime}`,
 });
 const progress = () => {};
+test("scan bounds concurrent parsers and counts completions even when a file fails", async () => {
+  const { lib } = setup();
+  await lib.init();
+  let active = 0,
+    peak = 0;
+  const done: number[] = [];
+  const paths: string[] = [];
+  const entries = Array.from({ length: 13 }, (_, i) => entry(`${i}.flac`));
+  const report = await lib.scan(
+    "full",
+    async () => entries,
+    async (e) => {
+      active++;
+      peak = Math.max(peak, active);
+      try {
+        await new Promise((resolve) =>
+          setTimeout(resolve, e.path === "0.flac" ? 20 : 1),
+        );
+        if (e.path === "2.flac") throw new Error("broken tag");
+        return parse(e);
+      } finally {
+        active--;
+      }
+    },
+    (count, total, path) => {
+      assert.equal(total, entries.length);
+      done.push(count);
+      if (count) paths.push(path);
+    },
+  );
+  assert.equal(peak, 4);
+  assert.equal(active, 0);
+  assert.deepEqual(
+    done,
+    Array.from({ length: 14 }, (_, i) => i),
+  );
+  assert.equal(new Set(paths).size, 13);
+  assert.equal(report.added, 13);
+  assert.deepEqual(report.errors, [{ path: "2.flac", message: "broken tag" }]);
+  assert.equal((await lib.list()).length, 13);
+});
+
+test(
+  "cancelling concurrent parsing drains readers and holds the scan lock until they finish",
+  { timeout: 2000 },
+  async () => {
+    const { lib } = setup();
+    await lib.init();
+    await lib.scan("full", async () => [entry("old.flac")], parse, progress);
+    const before = await lib.list();
+    const controller = new AbortController();
+    let ready!: () => void;
+    const started = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const releases: (() => void)[] = [];
+    let settled = false;
+    const task = lib.scan(
+      "full",
+      async () => Array.from({ length: 12 }, (_, i) => entry(`${i}.flac`)),
+      async (e) => {
+        await new Promise<void>((resolve) => {
+          releases.push(resolve);
+          if (releases.length === 4) ready();
+        });
+        return parse(e);
+      },
+      progress,
+      controller.signal,
+    );
+    const rejected = assert.rejects(task, /扫描已取消/);
+    void task.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    await started;
+    controller.abort();
+    releases[0]();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(settled, false);
+    await assert.rejects(
+      lib.scan("full", async () => [], parse, progress),
+      /扫描正在进行/,
+    );
+    releases.slice(1).forEach((release) => release());
+    await rejected;
+    assert.equal(releases.length, 4, "no new file starts after cancellation");
+    assert.deepEqual(await lib.list(), before);
+    await lib.scan(
+      "incremental",
+      async () => [entry("old.flac")],
+      parse,
+      progress,
+    );
+  },
+);
+
+test("unchanged incremental scans avoid track writes but refresh changed URIs and offline entries", async () => {
+  const { lib, writes } = setup();
+  await lib.init();
+  const entries = Array.from({ length: 100 }, (_, i) => ({
+    ...entry(`${i}.flac`),
+    uri: `content://music/${i}`,
+  }));
+  await lib.scan("full", async () => entries, parse, progress);
+  writes.length = 0;
+  const report = await lib.scan(
+    "incremental",
+    async () => entries,
+    async () => assert.fail("unchanged tags must not be read"),
+    progress,
+  );
+  assert.equal(report.unchanged, 100);
+  assert.equal(
+    writes.filter((sql) => /^(UPDATE|INSERT INTO) tracks\b/.test(sql)).length,
+    0,
+  );
+  const updated = entries.map((e, i) =>
+    i ? e : { ...e, uri: "content://renewed/0" },
+  );
+  await lib.scan("incremental", async () => updated, parse, progress);
+  assert.equal((await lib.list())[0].uri, "content://renewed/0");
+  await lib.scan("full", async () => [], parse, progress);
+  await lib.scan(
+    "incremental",
+    async () => updated,
+    async () => assert.fail("reappearing unchanged tags need no parsing"),
+    progress,
+  );
+  assert.ok((await lib.list()).every((t) => t.available));
+});
+
 test("incremental/full/forced tag refresh retain identity, favorite and preferences", async () => {
   const { lib } = setup();
   await lib.init();
@@ -497,14 +637,24 @@ test("cancelling discovery writes no sources, even after earlier sources were fu
 });
 
 test("lyric offsets and playback session survive full rescans and repeated schema initialization", async () => {
-  const {lib} = setup(); await lib.init();
+  const { lib } = setup();
+  await lib.init();
   await lib.scan("full", async () => [entry("song.flac")], parse, progress);
   const id = (await lib.list())[0].id;
   await lib.setLyricOffset(id, -0.4);
-  await lib.set("playbackSession", {queueIds: [id], position: 8});
-  await lib.scan("full", async () => [entry("song.flac", 200, 2)], parse, progress);
+  await lib.set("playbackSession", { queueIds: [id], position: 8 });
+  await lib.scan(
+    "full",
+    async () => [entry("song.flac", 200, 2)],
+    parse,
+    progress,
+  );
   await lib.init();
-  assert.deepEqual(await lib.lyricOffsets(), {[id]: -0.4});
-  assert.deepEqual(await lib.get("playbackSession", null), {queueIds: [id], position: 8});
-  await lib.setLyricOffset(id, 0); assert.equal((await lib.lyricOffsets())[id], 0);
+  assert.deepEqual(await lib.lyricOffsets(), { [id]: -0.4 });
+  assert.deepEqual(await lib.get("playbackSession", null), {
+    queueIds: [id],
+    position: 8,
+  });
+  await lib.setLyricOffset(id, 0);
+  assert.equal((await lib.lyricOffsets())[id], 0);
 });

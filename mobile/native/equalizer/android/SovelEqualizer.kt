@@ -6,6 +6,7 @@ import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
@@ -31,6 +32,16 @@ internal object SovelEqualizer {
 
 @UnstableApi
 internal class SovelEqualizerRenderers(context: Context): DefaultRenderersFactory(context) {
+  init {
+    // Prefer a hardware-accelerated system codec when one is exposed. Keep the
+    // platform's order within each group and retry another codec if init fails.
+    // This does not add DSF extraction, Native DSD output or hardware offload.
+    setMediaCodecSelector { mimeType, secure, tunneling ->
+      MediaCodecSelector.DEFAULT.getDecoderInfos(mimeType, secure, tunneling)
+        .sortedByDescending { it.hardwareAccelerated }
+    }
+    setEnableDecoderFallback(true)
+  }
   override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioOutputPlaybackParams: Boolean): AudioSink? {
     val sink=super.buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParams) ?: return null
     return if (SovelEqualizer.available) SovelEqualizerSink(sink) else sink

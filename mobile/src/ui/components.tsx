@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import {
   AccessibilityInfo,
+  ActivityIndicator,
   PanResponder,
   Pressable,
   StyleSheet,
@@ -30,6 +31,7 @@ export function Action({
   selected = false,
   style,
   disabled = false,
+  busy = false,
 }: {
   icon: string;
   label: string;
@@ -39,12 +41,13 @@ export function Action({
   selected?: boolean;
   style?: ViewStyle;
   disabled?: boolean;
+  busy?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ selected, disabled }}
+      accessibilityState={{ selected, disabled, busy }}
       disabled={disabled}
       onPress={onPress}
       hitSlop={3}
@@ -65,6 +68,19 @@ export function Action({
         color={color}
         filled={selected && icon === "heart"}
       />
+      {busy && (
+        <ActivityIndicator
+          size="small"
+          color={color}
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            right: -3,
+            top: -3,
+            transform: [{ scale: 0.65 }],
+          }}
+        />
+      )}
     </Pressable>
   );
 }
@@ -212,8 +228,15 @@ export function Progress() {
 export function Transport({ onQueue }: { onQueue: () => void }) {
   const { width, height } = useWindowDimensions();
   const dense = height < 740 || width > height;
-  const { status, toggle, skipTrack, prefs, cyclePlaybackMode, current } =
-    useMusic();
+  const {
+    controlPlaying,
+    playbackLoading,
+    toggle,
+    skipTrack,
+    prefs,
+    cyclePlaybackMode,
+    current,
+  } = useMusic();
   return (
     <View
       style={{
@@ -237,8 +260,9 @@ export function Transport({ onQueue }: { onQueue: () => void }) {
         disabled={!current}
       />
       <Action
-        icon={status.playing ? "pause" : "play"}
-        label={status.playing ? "暂停" : "播放"}
+        icon={controlPlaying ? "pause" : "play"}
+        label={controlPlaying ? "暂停" : "播放"}
+        busy={playbackLoading}
         onPress={toggle}
         size={31}
         disabled={!current}
@@ -332,7 +356,8 @@ export function MiniPlayer({
   compact?: boolean;
   landscape?: boolean;
 }) {
-  const { current, toggle, status, prefs } = useMusic();
+  const { current, toggle, status, prefs, controlPlaying, playbackLoading } =
+    useMusic();
   if (!current) return null;
   return (
     <FrostedSurface
@@ -368,8 +393,9 @@ export function MiniPlayer({
         </Text>
       </Pressable>
       <Action
-        icon={status.playing ? "pause" : "play"}
-        label={status.playing ? "暂停" : "播放"}
+        icon={controlPlaying ? "pause" : "play"}
+        label={controlPlaying ? "暂停" : "播放"}
+        busy={playbackLoading}
         onPress={toggle}
         size={20}
         color={palette.gold}

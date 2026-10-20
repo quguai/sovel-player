@@ -1,6 +1,7 @@
 import { defaults, type Preferences } from "./types";
 import { normalizeEqualizer } from "./equalizer";
 import { normalizeScanRules } from "./scanRules";
+import { normalizeDsd } from "./dsd";
 
 export function normalizePreferences(input: unknown): Preferences {
   const p =
@@ -68,5 +69,6 @@ export function normalizePreferences(input: unknown): Preferences {
     ),
     scanRules: normalizeScanRules(p.scanRules || undefined),
     equalizer: normalizeEqualizer(p.equalizer),
+    dsd: normalizeDsd(p.dsd),
   };
 }

@@ -82,6 +82,7 @@ export function restoreSession(
   saved: PlaybackSession,
   tracks: Track[],
   checkpoint?: PlaybackCheckpoint | null,
+  isPlayable: (track: Track) => boolean = canPlay,
 ) {
   const byId = new Map(tracks.map((t) => [t.id, t]));
   const validCheckpoint = checkpointFor(saved, checkpoint);
@@ -90,7 +91,7 @@ export function restoreSession(
     : saved.currentId;
   const ordered = saved.queueIds
     .map((id) => byId.get(id))
-    .filter((t): t is Track => !!t && canPlay(t));
+    .filter((t): t is Track => !!t && isPlayable(t));
   const start = Math.max(0, saved.queueIds.indexOf(wanted));
   const rotated = [
     ...saved.queueIds.slice(start),
@@ -115,7 +116,7 @@ export function restoreSession(
       ...saved.queueIds.filter((id) => !originalSet.has(id)),
     ]
       .map((id) => byId.get(id))
-      .filter((t): t is Track => !!t && canPlay(t)),
+      .filter((t): t is Track => !!t && isPlayable(t)),
     unavailable: saved.queueIds.length - ordered.length,
   };
 }

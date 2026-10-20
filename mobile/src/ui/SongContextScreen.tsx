@@ -7,7 +7,8 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { canPlay, type Track } from "../core/types";
+import type { Track } from "../core/types";
+import { canPlay, supportsDsf } from "../services/playbackSupport";
 import { useMusic } from "../services/store";
 import { PlaybackControls } from "./components";
 import { trackDetails, type DetailRow } from "../core/trackDetails";
@@ -294,7 +295,12 @@ export function SongContextScreen({
               {!landscape && renderAlbums()}
               <Text style={styles.sectionHeading}>音频参数</Text>
               <View style={styles.audioGrid}>
-                {details.audio.map(([label, value]) => (
+                {[
+                  ...details.audio,
+                  ...(current.format.toUpperCase() === "DSF" && supportsDsf
+                    ? [["播放方式", "DSD → PCM · 软件解码"]]
+                    : []),
+                ].map(([label, value]) => (
                   <View key={label} style={styles.audioCell}>
                     <Text style={styles.caption}>{label}</Text>
                     <Text selectable style={styles.audioValue}>

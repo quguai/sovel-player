@@ -149,10 +149,32 @@ export class Library {
       job = await this.db.getFirstAsync<{ id: number }>(
         "SELECT last_insert_rowid() AS id",
       );
+      // Only load the source being scanned, not every library and favorite.
+      const rows = await this.db.getAllAsync<{
+        id: string;
+        path: string;
+        size: number;
+        mtime: number;
+        uri: string;
+        metadata: string;
+        available: number;
+      }>(
+        "SELECT id,path,size,mtime,uri,metadata,available FROM tracks WHERE source_id=?",
+        sourceId,
+      );
       const old = new Map(
-        (await this.list())
-          .filter((t) => t.sourceId === sourceId)
-          .map((t) => [t.path, t]),
+        rows.map((row) => [
+          row.path,
+          {
+            ...(JSON.parse(row.metadata) as Metadata),
+            id: row.id,
+            path: row.path,
+            size: row.size,
+            mtime: row.mtime,
+            uri: row.uri,
+            available: !!row.available,
+          },
+        ]),
       );
       // Enumeration must succeed completely before absence can be interpreted as missing.
       const discovered = await enumerate();
@@ -173,42 +195,75 @@ export class Library {
         at: Date.now(),
       };
       progress(0, entries.length, "");
-      for (const [i, entry] of entries.entries()) {
-        if (signal?.aborted) throw new Error("扫描已取消，曲库未改动");
-        seen.add(entry.path);
-        const previous = old.get(entry.path);
-        if (
-          mode === "incremental" &&
-          previous &&
-          previous.size === entry.size &&
-          previous.mtime === entry.mtime &&
-          entry.mtime > 0 &&
-          !previous.warning
-        ) {
-          report.unchanged++;
-        } else {
-          let metadata: Metadata;
-          try {
-            metadata = await parse(entry);
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : String(error);
-            report.errors.push({ path: entry.path, message });
-            metadata = {
-              ...(previous || fallbackMetadata(entry.path)),
-              warning: message,
-            };
+      const reactivated: Entry[] = [];
+      let cursor = 0,
+        completed = 0,
+        stopped = false;
+      // Four parsers bound open handles and concurrent cover buffers. JavaScript
+      // still runs on one thread; file I/O can overlap without an unbounded fan-out.
+      const worker = async () => {
+        let sinceYield = 0,
+          lastYield = Date.now();
+        try {
+          while (!stopped && cursor < entries.length) {
+            if (signal?.aborted) throw new Error("扫描已取消，曲库未改动");
+            const entry = entries[cursor++];
+            const previous = old.get(entry.path);
+            if (
+              mode === "incremental" &&
+              previous &&
+              previous.size === entry.size &&
+              previous.mtime === entry.mtime &&
+              entry.mtime > 0 &&
+              !previous.warning
+            ) {
+              report.unchanged++;
+              if (!previous.available || previous.uri !== (entry.uri || ""))
+                reactivated.push(entry);
+            } else {
+              let metadata: Metadata;
+              try {
+                metadata = await parse(entry);
+              } catch (error) {
+                const message =
+                  error instanceof Error ? error.message : String(error);
+                report.errors.push({ path: entry.path, message });
+                metadata = {
+                  ...(previous || fallbackMetadata(entry.path)),
+                  warning: message,
+                };
+              }
+              changed.push({
+                entry,
+                metadata,
+                id: previous?.id || `${sourceId}:${entry.path}`,
+              });
+              if (previous) report.updated++;
+              else report.added++;
+            }
+            if (signal?.aborted) throw new Error("扫描已取消，曲库未改动");
+            if (stopped) return;
+            progress(++completed, entries.length, entry.path);
+            // Fast unchanged entries do not need a timer each. Yield periodically
+            // so cancellation and UI updates can still run on the JS thread.
+            if (++sinceYield >= 32 || Date.now() - lastYield >= 16) {
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              sinceYield = 0;
+              lastYield = Date.now();
+            }
           }
-          changed.push({
-            entry,
-            metadata,
-            id: previous?.id || `${sourceId}:${entry.path}`,
-          });
-          previous ? report.updated++ : report.added++;
+        } catch (error) {
+          stopped = true;
+          throw error;
         }
-        progress(i + 1, entries.length, entry.path);
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      }
+      };
+      // Drain in-flight readers even on cancellation/error before releasing the
+      // scan lock. No worker can continue writing artwork into a subsequent scan.
+      const workers = await Promise.allSettled(
+        Array.from({ length: Math.min(4, entries.length) }, worker),
+      );
+      for (const result of workers)
+        if (result.status === "rejected") throw result.reason;
       if (signal?.aborted) throw new Error("扫描已取消，曲库未改动");
       // A narrowed scan scope must not delete or hide previously indexed music.
       const missing = [...old.values()].filter(
@@ -224,7 +279,7 @@ export class Library {
             "UPDATE tracks SET available=0 WHERE id=?",
             track.id,
           );
-        for (const entry of entries)
+        for (const entry of reactivated)
           await this.db.runAsync(
             "UPDATE tracks SET available=1,uri=? WHERE source_id=? AND path=?",
             entry.uri || "",

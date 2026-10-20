@@ -34,6 +34,12 @@ export function parseSettingsBackup(text: string): SettingsBackup {
   if (!p || typeof p !== "object" || Array.isArray(p))
     throw new Error("备份缺少设置内容");
   const normalized = normalizePreferences(p);
+  // Older v1 backups predate DSD settings; missing values migrate to defaults.
+  if (
+    p.dsd !== undefined &&
+    (p.dsd?.mode !== "pcm" || p.dsd?.pcmRate !== normalized.dsd.pcmRate)
+  )
+    throw new Error("DSD 输出模式或 PCM 采样率无效");
   for (const key of [
     "home",
     "player",

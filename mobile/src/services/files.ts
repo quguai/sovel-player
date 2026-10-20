@@ -84,12 +84,13 @@ export async function enumerate(
   if (!active || active.error) throw new Error(active?.error || "来源尚未授权");
   const entries: Entry[] = [];
   function entry(file: File, path: string, lyricUri?: string): Entry {
-    if (!file.exists) throw new Error(`文件暂时不可访问：${path}`);
+    const info = file.info();
+    if (!info.exists) throw new Error(`文件暂时不可访问：${path}`);
     return {
       path,
       uri: file.uri,
-      size: file.size,
-      mtime: file.info().modificationTime || 0,
+      size: info.size ?? 0,
+      mtime: info.modificationTime || 0,
       lyricUri,
     };
   }

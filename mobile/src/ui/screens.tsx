@@ -19,9 +19,9 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurTargetView } from "expo-blur";
 import { useMusic } from "../services/store";
+import { canPlay, supportsDsf } from "../services/playbackSupport";
 import { sourceStatus, trackUri } from "../services/files";
 import {
-  canPlay,
   recordSpeeds,
   stylusLights,
   type StylusLight,
@@ -35,6 +35,7 @@ import {
 } from "../core/types";
 import { CartridgeColorOptions } from "./CartridgeColorOptions";
 import { currentLyric, lyricSeekTime } from "../core/lyrics";
+import { LyricLine } from "./LyricLine";
 import { trackDetails } from "../core/trackDetails";
 import { Action, Button, MiniPlayer, PlaybackControls } from "./components";
 import {
@@ -123,37 +124,40 @@ export function LibraryScreen({
     setFilter("");
     setMix(null);
   }
-  const trackById = new Map(tracks.map((t) => [t.id, t]));
-  const sourceTracks = mix
-    ? mix.ids.map((id) => trackById.get(id)).filter((t): t is Track => !!t)
-    : tracks;
-  const base = sourceTracks.filter(
-    (t) =>
-      (!favorites || t.favorite) &&
-      `${t.title} ${t.artist} ${t.album} ${t.path}`
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-  );
-  const groupValue = (t: Track) =>
-    tab === "albums"
-      ? `${t.album}\u0000${t.albumArtist || t.artist}`
-      : tab === "artists"
-        ? t.artist
-        : t.path.includes("/")
-          ? t.path.split("/").slice(0, -1).join("/")
-          : "导入的音乐";
-  const shown = filter ? base.filter((t) => groupValue(t) === filter) : base;
-  const grouped = tab !== "tracks" && !filter;
+  const { base, shown, grouped, groups, rows, groupValue } = useMemo(() => {
+    const trackById = new Map(tracks.map((t) => [t.id, t]));
+    const sourceTracks = mix
+      ? mix.ids.map((id) => trackById.get(id)).filter((t): t is Track => !!t)
+      : tracks;
+    const base = sourceTracks.filter(
+      (t) =>
+        (!favorites || t.favorite) &&
+        `${t.title} ${t.artist} ${t.album} ${t.path}`
+          .toLowerCase()
+          .includes(query.toLowerCase()),
+    );
+    const groupValue = (t: Track) =>
+      tab === "albums"
+        ? `${t.album}\u0000${t.albumArtist || t.artist}`
+        : tab === "artists"
+          ? t.artist
+          : t.path.includes("/")
+            ? t.path.split("/").slice(0, -1).join("/")
+            : "导入的音乐";
+    const shown = filter ? base.filter((t) => groupValue(t) === filter) : base;
+    const grouped = tab !== "tracks" && !filter;
+    const groups = new Map<string, Track[]>();
+    if (grouped)
+      base.forEach((t) => {
+        const key = groupValue(t);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(t);
+      });
+    const rows = grouped ? [...groups.values()].map((g) => g[0]) : shown;
+    return { base, shown, grouped, groups, rows, groupValue };
+  }, [tracks, mix, favorites, query, tab, filter]);
   const layout = tab === "artists" ? prefs.artistLayout : prefs.albumLayout;
   const grid = grouped && (tab === "folders" || layout === "cards");
-  const groups = new Map<string, Track[]>();
-  if (grouped)
-    base.forEach((t) => {
-      const key = groupValue(t);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(t);
-    });
-  const rows = grouped ? [...groups.values()].map((g) => g[0]) : shown;
   const choose = (track: Track) => {
     if (grouped) setFilter(groupValue(track));
     else {
@@ -234,10 +238,10 @@ export function LibraryScreen({
       {!tracks.length && !query && !favorites && (
         <View style={s.emptyHero}>
           <Text style={s.heroTitle}>{"收藏声音，\n从一首歌开始。"}</Text>
-          <Text style={s.subtitle}>将你的音乐与封面，带进 Sovel。</Text>
+          <Text style={s.subtitle}>选择音乐文件夹，直接索引原文件。</Text>
           <View style={{ gap: 12, marginTop: 20 }}>
-            <Button disabled={busy} onPress={() => importMusic("files")}>
-              导入本地音乐
+            <Button disabled={busy} onPress={() => importMusic("folder")}>
+              导入音乐文件夹
             </Button>
           </View>
         </View>
@@ -524,11 +528,13 @@ export function PlayerScreen({
   onLyrics,
   onQueue,
   onDetails,
+  animateLyrics = true,
 }: {
   onClose: () => void;
   onLyrics: () => void;
   onQueue: () => void;
   onDetails: () => void;
+  animateLyrics?: boolean;
 }) {
   const { current, prefs, status, favorite, lyricOffset } = useMusic();
   const { width, height } = useWindowDimensions();
@@ -675,7 +681,11 @@ export function PlayerScreen({
                 .filter(Boolean)
                 .join(" / ") || "本地音频"}
             </Text>
-            <Text style={s.qualityText}>源文件 ›</Text>
+            <Text style={s.qualityText}>
+              {current.format.toUpperCase() === "DSF" && supportsDsf
+                ? "软解 → PCM ›"
+                : "源文件 ›"}
+            </Text>
           </Pressable>
           <Pressable
             onPress={onLyrics}
@@ -686,14 +696,24 @@ export function PlayerScreen({
               minHeight: compact || vinyl ? 44 : 85,
             }}
           >
-            <Text numberOfLines={1} style={s.previewLine}>
-              {lines[Math.max(index, 0)]?.text || "此刻，专注聆听"}
-            </Text>
+            <LyricLine
+              key={`${current?.id}-${index}-current`}
+              text={lines[Math.max(index, 0)]?.text || "此刻，专注聆听"}
+              style={s.previewLine}
+              centered
+              active={animateLyrics}
+            />
             {!(vinyl && !landscape && height < 740) && (
-              <Text numberOfLines={1} style={s.previewNext}>
-                {lines[Math.max(index, 0) + 1]?.text ||
-                  (lines.length ? "" : "暂无歌词")}
-              </Text>
+              <LyricLine
+                key={`${current?.id}-${index}-next`}
+                text={
+                  lines[Math.max(index, 0) + 1]?.text ||
+                  (lines.length ? "" : "暂无歌词")
+                }
+                style={s.previewNext}
+                centered
+                active={animateLyrics}
+              />
             )}
           </Pressable>
           <PlaybackControls onQueue={onQueue} />
@@ -702,7 +722,13 @@ export function PlayerScreen({
     </View>
   );
 }
-export function LyricsScreen({ onQueue }: { onQueue: () => void }) {
+export function LyricsScreen({
+  onQueue,
+  animateLyrics = true,
+}: {
+  onQueue: () => void;
+  animateLyrics?: boolean;
+}) {
   const {
     current,
     status,
@@ -830,7 +856,7 @@ export function LyricsScreen({ onQueue }: { onQueue: () => void }) {
         {lines.length ? (
           lines.map((line, i) => (
             <Pressable
-              key={`${i}-${line.time}`}
+              key={`${current?.id}-${i}-${line.time}`}
               disabled={line.time === null || !status.isLoaded}
               onLayout={(e) => {
                 positions.current[i] = e.nativeEvent.layout.y;
@@ -843,7 +869,9 @@ export function LyricsScreen({ onQueue }: { onQueue: () => void }) {
                 line.time === null ? line.text : `播放到：${line.text}`
               }
             >
-              <Text
+              <LyricLine
+                text={line.text}
+                active={animateLyrics && (line.time === null || i === active)}
                 style={{
                   fontSize: prefs.largeLyrics ? 32 : 26,
                   fontWeight: "700",
@@ -858,9 +886,7 @@ export function LyricsScreen({ onQueue }: { onQueue: () => void }) {
                           ? "#ffffff80"
                           : "#ffffff40",
                 }}
-              >
-                {line.text}
-              </Text>
+              />
             </Pressable>
           ))
         ) : (

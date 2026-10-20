@@ -125,9 +125,13 @@ export function PlayerDeck({
                 onLyrics={() => onPanel("lyrics")}
                 onDetails={onDetails}
                 onQueue={onQueue}
+                animateLyrics={panel === "player" && !appearance && !reduced}
               />
             ) : (
-              <LyricsScreen onQueue={onQueue} />
+              <LyricsScreen
+                onQueue={onQueue}
+                animateLyrics={panel === "lyrics" && !appearance && !reduced}
+              />
             )}
           </View>
         ))}

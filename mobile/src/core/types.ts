@@ -1,4 +1,5 @@
 import { defaultEqualizer, type EqualizerSettings } from "./equalizer";
+import { defaultDsd, type DsdSettings } from "./dsd";
 export type HomeStyle = "gallery" | "library" | "quiet";
 export type PlayerStyle = "cover" | "vinyl" | "immersive";
 export type RecordStyle =
@@ -169,6 +170,7 @@ export type Preferences = {
   backgroundPlayback: boolean;
   scanRules: ScanRules;
   equalizer: EqualizerSettings;
+  dsd: DsdSettings;
   albumLayout: "cards" | "list";
   artistLayout: "cards" | "list";
 };
@@ -185,6 +187,7 @@ export const defaults: Preferences = {
   backgroundPlayback: true,
   scanRules: defaultScanRules,
   equalizer: defaultEqualizer,
+  dsd: defaultDsd,
   albumLayout: "cards",
   artistLayout: "cards",
 };
@@ -208,8 +211,13 @@ export const audioExtensions = new Set([
 export const extension = (path: string) =>
   path.split(".").pop()?.toLowerCase() || "";
 export const isAudio = (path: string) => audioExtensions.has(extension(path));
-export const canPlay = (track: Track) =>
-  track.available && !["DSF", "DFF", "APE", "WV"].includes(track.format);
+// Capabilities are injected by the installed native engine, not just OS name.
+export const playbackSupport = (dsf: boolean) => (track: Track) =>
+  track.available &&
+  (track.format.toUpperCase() === "DSF"
+    ? dsf
+    : !["DFF", "APE", "WV"].includes(track.format.toUpperCase()));
+export const canPlay = playbackSupport(false);
 export function fallbackMetadata(path: string): Metadata {
   return {
     title: path

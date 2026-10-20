@@ -36,6 +36,39 @@ copy(
 );
 for (const file of ["CMakeLists.txt", "sovel_equalizer_jni.cpp"])
   copy(`android/${file}`, `android/src/main/cpp/sovel/${file}`);
+for (const file of [
+  "SovelDsdDecoder.cpp",
+  "SovelDsdDecoder.h",
+  "android/sovel_dsd_jni.cpp",
+  "third_party/dsd2pcm/dsd2pcm.c",
+  "third_party/dsd2pcm/dsd2pcm.h",
+  "third_party/dsd2pcm/LICENSE.txt",
+]) {
+  const target = resolve(audio, "android/src/main/cpp/sovel/dsd", file);
+  mkdirSync(dirname(target), { recursive: true });
+  copyFileSync(resolve(root, "native/dsd", file), target);
+}
+for (const file of ["SovelDsfHeader.kt", "SovelDsfExtractor.kt"])
+  copyFileSync(
+    resolve(root, "native/dsd/android", file),
+    resolve(audio, "android/src/main/java/expo/modules/audio", file),
+  );
+patch(
+  "android/src/main/java/expo/modules/audio/AudioPlaylist.kt",
+  "DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory)",
+  "DefaultMediaSourceFactory(context, SovelExtractorsFactory()).setDataSourceFactory(dataSourceFactory)",
+);
+patch(
+  "android/src/main/java/expo/modules/audio/AudioModule.kt",
+  "ProgressiveMediaSource.Factory(factory)",
+  "ProgressiveMediaSource.Factory(factory, SovelExtractorsFactory())",
+);
+patch(
+  "android/src/main/java/expo/modules/audio/AudioPlaylist.kt",
+  '      "trackCount" to trackCount,',
+  `      "trackCount" to trackCount,
+      "sovelError" to (ref.playerError?.cause?.message ?: ref.playerError?.message),`,
+);
 patch(
   "ios/AudioModule.swift",
   '    Name("ExpoAudio")',
@@ -86,6 +119,14 @@ for (const file of ["AudioPlaylist.kt", "AudioPlayer.kt"]) {
     "ExoPlayer.Builder(context, SovelEqualizerRenderers(context).setEnableAudioFloatOutput(true))",
   );
 }
+patch(
+  "android/src/main/java/expo/modules/audio/AudioModule.kt",
+  "    OnCreate {",
+  `    Function("getSovelDsfSupport") { SovelDsfDecoder.available }
+    Function("configureSovelDsf") { pcmRate: Int -> SovelDsfDecoder.configure(pcmRate) }
+
+    OnCreate {`,
+);
 patch(
   "android/build.gradle",
   '  namespace "expo.modules.audio"',

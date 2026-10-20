@@ -72,6 +72,19 @@ test("offline current falls forward without deleting canonical queue IDs or reus
   assert.deepEqual(session.queueIds, ["c", "a", "b"]);
   assert.equal(restoreSession(session, [track("a", false)]).current, undefined);
 });
+test("restoring a queue skips unsupported DSD regardless of format tag casing", () => {
+  for (const format of ["DSF", "dsf", "DFF", "dff"]) {
+    const result = restoreSession(session, [
+      { ...track("a"), format },
+      track("b"),
+      track("c"),
+    ]);
+    assert.equal(result.current?.id, "b");
+    assert.equal(result.position, 0);
+    assert.deepEqual(result.ordered.map((t) => t.id), ["c", "b"]);
+    assert.deepEqual(session.queueIds, ["c", "a", "b"]);
+  }
+});
 test("invalid sessions are rejected and a shorter replacement file clamps position", () => {
   assert.equal(normalizeSession({ version: 9 }), null);
   assert.equal(normalizeSession(null), null);

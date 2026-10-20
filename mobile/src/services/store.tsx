@@ -17,7 +17,6 @@ import { Library } from "../core/library";
 import { runScanJob } from "../core/scanJob";
 import { normalizeScanRules } from "../core/scanRules";
 import {
-  canPlay,
   defaults,
   playbackModes,
   type PlaybackMode,
@@ -29,6 +28,8 @@ import {
   type ScanProgress,
 } from "../core/types";
 import * as files from "./files";
+import { canPlay, supportsDsf, configureDsd } from "./playbackSupport";
+import { normalizeDsd, type PcmRate } from "../core/dsd";
 import { normalizeEqualizer, type EqualizerSettings } from "../core/equalizer";
 import { configureEqualizer, readEqStatus } from "./equalizer";
 import { normalizePreferences } from "../core/preferences";
@@ -51,6 +52,11 @@ import {
 } from "./playbackNative";
 import type { PortableSettings } from "../core/settingsBackup";
 import { emptyProfile, type ListeningEntry } from "../core/listeningHistory";
+import {
+  addQueueSources,
+  FavoriteUpdates,
+  samePlaybackSources,
+} from "../core/playbackRequests";
 function shuffleTracks(list: Track[]) {
   const result = [...list];
   for (let i = result.length - 1; i > 0; i--) {
@@ -76,6 +82,15 @@ function useStore() {
   const activeSession = useRef<PlaybackSession | null>(null),
     queueRef = useRef<Track[]>([]);
   const transitioning = useRef(false);
+  const intendedPlaying = useRef<boolean | null>(null);
+  const [controlIntent, setControlIntent] = useState<boolean | null>(null);
+  const favoriteUpdates = useRef(new FavoriteUpdates());
+  const favoriteValues = useRef(new Map<string, boolean>());
+  const loadingQueue = useRef<Track[]>([]);
+  const loadingSession = useRef<{
+    snapshot: PlaybackSession;
+    original: Track[];
+  } | null>(null);
   const [pendingTrack, setPendingTrack] = useState<Track | null>(null);
   const [restoreNote, setRestoreNote] = useState("");
   const [lyricOffsets, setLyricOffsets] = useState<Record<string, number>>({});
@@ -97,6 +112,26 @@ function useStore() {
     updateInterval: 300,
   });
   const status = useAudioPlaylistStatus(playlist);
+  useEffect(() => {
+    let previous: string | undefined;
+    const subscription = playlist.addListener(
+      "playlistStatusUpdate",
+      (value) => {
+        const failure = (value as typeof value & { sovelError?: string })
+          .sovelError;
+        if (failure && failure !== previous) setError(`播放失败：${failure}`);
+        if (
+          failure ||
+          (!transitioning.current && value.playing === intendedPlaying.current)
+        ) {
+          intendedPlaying.current = null;
+          setControlIntent(null);
+        }
+        previous = failure;
+      },
+    );
+    return () => subscription.remove();
+  }, [playlist]);
   const nativePlaylist = playlist as SovelPlaylist;
   const current =
     pendingTrack ||
@@ -178,6 +213,7 @@ function useStore() {
       );
       eqSettings.current = normalizeEqualizer(saved.equalizer);
       if (readEqStatus().available) configureEqualizer(eqSettings.current);
+      if (supportsDsf) configureDsd(saved.dsd);
       await setAudioModeAsync({
         playsInSilentMode: true,
         shouldPlayInBackground:
@@ -203,6 +239,7 @@ function useStore() {
             readPlaybackCheckpoint(),
             await lib.get("playbackCheckpoint", null),
           ),
+          canPlay,
         );
         if (restored.current) {
           await installQueue(
@@ -294,6 +331,7 @@ function useStore() {
     queueIds = ordered.map((t) => t.id),
     originalIds = original.map((t) => t.id),
     mode = prefsRef.current.playbackMode,
+    reuse = false,
   ) {
     const timerAtStart = sleepState(nativePlaylist);
     const revision = ++queueRevision.current;
@@ -308,7 +346,12 @@ function useStore() {
       mode,
     };
     transitioning.current = true;
+    loadingQueue.current = ordered;
+    loadingSession.current = { snapshot, original };
+    intendedPlaying.current = playing;
+    setControlIntent(playing);
     setPendingTrack(track);
+    setError("");
     try {
       const audio = ordered.map((t) => ({
         uri: files.trackUri(t),
@@ -317,40 +360,79 @@ function useStore() {
       playlist.pause();
       await library.current!.set("playbackSession", snapshot);
       if (revision !== queueRevision.current) return;
-      playlist.clear();
-      audio.forEach((source) => playlist.add(source));
-      queueRef.current = ordered;
-      setQueue(ordered);
-      originalQueue.current = original;
+      if (!reuse) {
+        playlist.clear();
+        if (
+          !(await addQueueSources(
+            audio,
+            (source) => playlist.add(source),
+            () => revision === queueRevision.current,
+          ))
+        )
+          return;
+      }
+      // A favorite tap may have happened while this queue was being installed.
+      const latestFavorite = (item: Track) =>
+        favoriteValues.current.has(item.id)
+          ? { ...item, favorite: favoriteValues.current.get(item.id)! }
+          : item;
+      queueRef.current = ordered.map(latestFavorite);
+      setQueue(queueRef.current);
+      originalQueue.current = original.map(latestFavorite);
       activeSession.current = snapshot;
       playlist.loop = mode === "single" ? "single" : "all";
       playlist.skipTo(ordered.findIndex((t) => t.id === track.id));
+      nativePlaylist.setSovelQueueToken?.(snapshot.token);
+      nativePlaylist.bindSovelListeningQueue?.(snapshot.nativeIds);
+      // Start buffering/playback immediately when no position restore is needed.
+      if (
+        time === 0 &&
+        intendedPlaying.current &&
+        !(timerAtStart.active && sleepState(nativePlaylist).expired)
+      )
+        playlist.play();
       const deadline = Date.now() + 12000;
       while (
         !playlist.isLoaded &&
         Date.now() < deadline &&
         revision === queueRevision.current
-      )
+      ) {
+        const failure = (
+          playlist.currentStatus as typeof status & { sovelError?: string }
+        ).sovelError;
+        if (failure) throw new Error(`播放失败：${failure}`);
         await new Promise((resolve) => setTimeout(resolve, 50));
+      }
       if (revision !== queueRevision.current) return;
       if (!playlist.isLoaded)
         throw new Error("无法恢复播放位置，请检查文件是否在线及编码是否受支持");
-      await playlist.seekTo(
-        Math.min(
-          time,
-          playlist.duration > 0 ? Math.max(0, playlist.duration - 0.05) : time,
-        ),
-      );
+      if (time > 0)
+        await playlist.seekTo(
+          Math.min(
+            time,
+            playlist.duration > 0
+              ? Math.max(0, playlist.duration - 0.05)
+              : time,
+          ),
+        );
       if (revision !== queueRevision.current) return;
-      nativePlaylist.setSovelQueueToken?.(snapshot.token);
-      nativePlaylist.bindSovelListeningQueue?.(snapshot.nativeIds);
       if (
-        playing &&
+        intendedPlaying.current &&
         !(timerAtStart.active && sleepState(nativePlaylist).expired)
-      )
+      ) {
         playlist.play();
+      } else {
+        intendedPlaying.current = false;
+        setControlIntent(false);
+        playlist.pause();
+      }
     } catch (e) {
-      setError(String(e));
+      if (revision === queueRevision.current) {
+        intendedPlaying.current = false;
+        setControlIntent(false);
+        playlist.pause();
+        setError(String(e));
+      }
     } finally {
       if (revision === queueRevision.current) {
         transitioning.current = false;
@@ -374,6 +456,7 @@ function useStore() {
         interruptionMode: "doNotMix",
       });
       if (readEqStatus().available) configureEqualizer(next.equalizer);
+      if (supportsDsf) configureDsd(next.dsd);
       await prefWrites.current.catch(() => {});
       await library.current!.set("preferences", next);
       eqSettings.current = next.equalizer;
@@ -381,6 +464,8 @@ function useStore() {
       setPrefs(next);
       if (previous.playbackMode !== next.playbackMode)
         await reorderMode(next.playbackMode);
+      else if (previous.dsd.pcmRate !== next.dsd.pcmRate)
+        await reloadAudioQueue();
     } catch (e) {
       await setAudioModeAsync({
         playsInSilentMode: true,
@@ -388,6 +473,7 @@ function useStore() {
         interruptionMode: "doNotMix",
       });
       if (readEqStatus().available) configureEqualizer(previous.equalizer);
+      if (supportsDsf) configureDsd(previous.dsd);
       throw e;
     }
   };
@@ -418,6 +504,33 @@ function useStore() {
       setError(String(e));
     }
   };
+  async function reloadAudioQueue() {
+    const state = playlist.currentStatus;
+    const track = queueRef.current[state.currentIndex];
+    if (!track || !activeSession.current) return;
+    await installQueue(
+      queueRef.current,
+      track,
+      state.currentTime,
+      state.playing,
+      originalQueue.current,
+      activeSession.current.queueIds,
+      activeSession.current.originalIds,
+    );
+  }
+  const setDsdRate = async (pcmRate: PcmRate) => {
+    if (transitioning.current || pcmRate === prefsRef.current.dsd.pcmRate)
+      return;
+    try {
+      const next = normalizeDsd({ pcmRate });
+      configureDsd(next);
+      await preferences({ dsd: next });
+      // Recreate sources so already-buffered DSF tracks also use the new rate.
+      await reloadAudioQueue();
+    } catch (e) {
+      setError(String(e));
+    }
+  };
   useEffect(() => {
     const timer = setInterval(() => setEqStatus(readEqStatus()), 1000);
     return () => clearInterval(timer);
@@ -426,6 +539,8 @@ function useStore() {
     playlist.loop = prefs.playbackMode === "single" ? "single" : "all";
   }, [playlist, prefs.playbackMode]);
   const pause = () => {
+    intendedPlaying.current = false;
+    setControlIntent(false);
     playlist.pause();
     void savePlayback().catch((e) => setError(String(e)));
   };
@@ -626,7 +741,11 @@ function useStore() {
       Alert.alert(
         "暂时无法播放",
         track.available
-          ? "此格式已加入曲库，专用解码模块尚未接入。当前可试听 FLAC、PCM WAV、MP3、AAC 等系统支持的文件。"
+          ? ["DSF", "DFF"].includes(track.format.toUpperCase())
+            ? track.format.toUpperCase() === "DSF"
+              ? "当前安装包未包含 DSF 软解模块。Android 请安装新版完整应用；iOS 暂时支持读取标签、封面和歌词。"
+              : "DFF 暂时支持读取标签，音频解码尚未接入。DSF 软解不适用于 DFF 文件。"
+            : "此格式已加入曲库，专用解码模块尚未接入。当前可试听 FLAC、PCM WAV、MP3、AAC 等系统支持的文件。"
           : "文件或来源暂时不可用，请连接设备后扫描，或重新授权。",
       );
       return;
@@ -636,6 +755,26 @@ function useStore() {
     );
     const playable = list.filter(canPlay),
       pool = playable.some((t) => t.id === track.id) ? playable : [track];
+    const reuse =
+      !transitioning.current &&
+      playlist.isLoaded &&
+      samePlaybackSources(pool, originalQueue.current) &&
+      queueRef.current.some((item) => item.id === track.id);
+    if (reuse) {
+      setRestoreNote("");
+      void installQueue(
+        queueRef.current,
+        track,
+        0,
+        true,
+        pool,
+        activeSession.current?.queueIds,
+        activeSession.current?.originalIds,
+        prefsRef.current.playbackMode,
+        true,
+      );
+      return;
+    }
     const ordered = shuffle
       ? [track, ...shuffleTracks(pool.filter((t) => t.id !== track.id))]
       : pool;
@@ -643,31 +782,83 @@ function useStore() {
     void installQueue(ordered, track, 0, true, pool);
   };
   const toggle = () => {
-    if (!current || transitioning.current) return;
+    if (!current) return;
+    if (transitioning.current) {
+      const next = !intendedPlaying.current;
+      intendedPlaying.current = next;
+      setControlIntent(next);
+      if (!next) playlist.pause();
+      return;
+    }
     if (!queue.length) play(current);
-    else if (status.playing) pause();
-    else playlist.play();
+    else if (intendedPlaying.current ?? playlist.playing) pause();
+    else {
+      intendedPlaying.current = true;
+      setControlIntent(true);
+      playlist.play();
+    }
   };
   const resume = () => {
-    if (!current || transitioning.current) return;
+    if (!current) return;
+    if (transitioning.current) {
+      intendedPlaying.current = true;
+      setControlIntent(true);
+      return;
+    }
     if (!queue.length) play(current);
-    else playlist.play();
+    else {
+      intendedPlaying.current = true;
+      setControlIntent(true);
+      playlist.play();
+    }
   };
   const skipTrack = (delta: number) => {
-    if (!queue.length || transitioning.current) return;
+    if (transitioning.current) {
+      const ordered = loadingQueue.current;
+      const loading = loadingSession.current;
+      const index = ordered.findIndex(
+        (t) => t.id === loading?.snapshot.currentId,
+      );
+      if (ordered.length && loading)
+        void installQueue(
+          ordered,
+          ordered[
+            (Math.max(0, index) + delta + ordered.length) % ordered.length
+          ],
+          0,
+          intendedPlaying.current ?? true,
+          loading.original,
+          loading.snapshot.queueIds,
+          loading.snapshot.originalIds,
+          loading.snapshot.mode,
+        );
+      return;
+    }
+    if (!queue.length) return;
     playlist.skipTo(
       (playlist.currentIndex + delta + queue.length) % queue.length,
     );
   };
-  const favorite = async (track: Track) => {
-    await library.current?.favorite(track.id, !track.favorite);
-    await refresh();
-    setQueue((q) =>
-      q.map((t) =>
-        t.id === track.id ? { ...t, favorite: !track.favorite } : t,
-      ),
+  const favorite = (track: Track) =>
+    favoriteUpdates.current.toggle(
+      track.id,
+      track.favorite,
+      (value) => {
+        favoriteValues.current.set(track.id, value);
+        const update = (t: Track) =>
+          t.id === track.id ? { ...t, favorite: value } : t;
+        setTracks((all) => all.map(update));
+        queueRef.current = queueRef.current.map(update);
+        originalQueue.current = originalQueue.current.map(update);
+        loadingQueue.current = loadingQueue.current.map(update);
+        setQueue(queueRef.current);
+        setPendingTrack((pending) => (pending ? update(pending) : null));
+      },
+      async (value) => {
+        await library.current!.favorite(track.id, value);
+      },
+      (e) => setError(`收藏保存失败：${String(e)}`),
     );
-  };
   const reorderMode = async (mode: PlaybackMode) => {
     playlist.loop = mode === "single" ? "single" : "all";
     const now = queueRef.current[playlist.currentIndex];
@@ -725,11 +916,14 @@ function useStore() {
     queue,
     playlist,
     status,
+    controlPlaying: controlIntent ?? status.playing,
+    playbackLoading: !!pendingTrack || status.isBuffering,
     setPlaybackMode,
     cyclePlaybackMode,
     setBackgroundPlayback,
     eqStatus,
     setEqualizer,
+    setDsdRate,
     restoreSettings,
     listeningAvailable: listeningAvailable(),
     listeningHistory,
