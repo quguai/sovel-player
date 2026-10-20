@@ -32,13 +32,33 @@ Connect the `quguai/sovel-player` GitHub repository to Cloudflare Pages using Gi
 | Build command | `npm run site:build` |
 | Build output directory | `dist` |
 | Environment variable | `NODE_VERSION=22` |
-| Optional environment variable | `SITE_URL=https://your-real-domain.example` |
+| Optional environment variable | `SITE_URL=https://sovel.quguai.cn` (already the default) |
 
-Replace the example domain with the deployed HTTPS domain. Setting `SITE_URL` generates the canonical URL, sitemap, absolute Open Graph image URL and sitemap entry in `robots.txt`. Without it, the site works normally and does not invent a public domain. Rebuild after changing it.
+The official website is **https://sovel.quguai.cn**. Every build generates the canonical URL, Open Graph page and image URLs, sitemap, and sitemap entry in `robots.txt` using this origin. `SITE_URL` can override it for a separate deployment; rebuild after changing it.
+
+After the first Pages deployment, open **Custom domains → Set up a domain** and enter `sovel.quguai.cn`. If `quguai.cn` is managed in the same Cloudflare account, confirm the automatically proposed DNS record. Otherwise, add a `CNAME` named `sovel` at your DNS provider, pointing to the exact `<project>.pages.dev` hostname assigned to your Pages project. Add the domain in Pages first; a DNS record alone does not associate it with the project. Wait for the custom domain to become active. See [Cloudflare custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/).
 
 For Direct Upload, run `npm run site:build` and upload the **contents of `dist/`**, or a ZIP whose root contains `index.html`, `_headers`, and `assets/`. Never upload the whole repository or `mobile/`. Cloudflare will serve `404.html` for missing pages; this site does not need an SPA rewrite or Pages Functions.
 
 References: [Cloudflare static HTML](https://developers.cloudflare.com/pages/framework-guides/deploy-anything/), [custom headers](https://developers.cloudflare.com/pages/configuration/headers/).
+
+## Deploy through the Workers creation screen
+
+The Cloudflare screen with **Deploy command** and **Preview command** creates a Worker. This site also supports Workers Static Assets using the root `wrangler.json`; no Worker script is required.
+
+| Setting | Value |
+| --- | --- |
+| Worker name | `sovel-player` |
+| Root directory | Repository root |
+| Production branch | `main` |
+| Build command | Leave blank; Wrangler runs `npm run site:build` through `build.command` |
+| Deploy command | `npx wrangler deploy --config wrangler.json` |
+| Preview command | `npx wrangler preview --config wrangler.json` |
+| Environment variable | `NODE_VERSION=22` |
+
+Only `dist/` is uploaded. Do not set `--assets .` or use the repository root as the asset directory: that includes unrelated source files and `node_modules`, and can exceed the 25 MiB per-file limit. If a command was automatically generated before `wrangler.json` existed, replace it with the commands above and deploy the latest commit.
+
+For this Workers deployment, bind `sovel.quguai.cn` under **Settings → Domains & Routes → Add → Custom Domain**; the Pages custom-domain instructions above apply only to Pages projects. See [Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/get-started/) and [Workers Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/).
 
 ## GitHub stars and release downloads
 
@@ -69,6 +89,8 @@ The hero turntable is an appearance preview and does not play audio. Motion resp
 ## 项目说明
 
 网站源码在 `site/`，英文默认展示，可切换简体中文。部署时使用仓库根目录，构建命令为 `npm run site:build`，产物目录为 `dist`，适用于 Cloudflare Pages。
+
+正式域名为 **https://sovel.quguai.cn**，构建默认生成对应的 canonical、Open Graph 地址、sitemap 和 robots.txt，无需额外设置 `SITE_URL`。首次部署后在 Pages 项目的「自定义域 → 设置域」中绑定 `sovel.quguai.cn`，按提示确认或添加 CNAME，并等待域名状态变为有效。
 
 Star 数和 Android 下载入口实时读取公开 GitHub 数据，缓存五分钟。正式版优先；没有正式版时展示最新预览版并明确标识。尚无安装包时显示“首个版本准备中”，接口失败时保留 GitHub Releases 入口。发布新版本后，无需重建网站。
 

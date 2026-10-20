@@ -2,6 +2,7 @@
 <h1 align="center">Sovel HiFi</h1>
 <p align="center">收藏声音，慢慢聆听。</p>
 <p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
+<p align="center"><a href="https://sovel.quguai.cn/?lang=zh">官方网站</a></p>
 
 Sovel HiFi 是一款正在开发的开源跨平台音乐播放器，面向本地与远程曲库。它将黑金曲库、可定制的黑胶外观和独立歌词页结合在一起，专注于你自己的音乐收藏。
 

@@ -2,6 +2,7 @@
 <h1 align="center">Sovel HiFi</h1>
 <p align="center">Your music. Your library. Your listening space.</p>
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+<p align="center"><a href="https://sovel.quguai.cn">Official website</a></p>
 
 Sovel HiFi is an open-source, cross-platform music player being built for local and remote libraries. It combines a charcoal-and-gold library, customizable vinyl visuals, and a dedicated lyrics view with a focus on the music you own.
 

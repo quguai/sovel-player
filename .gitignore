@@ -3,6 +3,7 @@
 
 # Dependencies and generated output
 node_modules/
+.wrangler/
 .expo/
 dist/
 web-build/
