@@ -88,6 +88,10 @@ npm run dev
 
 浏览器预览独立保存状态，不共享原生 SQLite 曲库。示例歌曲与音质标签用于设计展示，不代表原生音频处理或硬件输出能力。
 
+## 产品网站
+
+中英文产品网站位于 [`site/`](site)。运行 `npm run site:dev` 本地预览，运行 `npm run site:build` 生成适用于 Cloudflare Pages 的 `dist/`。部署参数、GitHub Star 数和最新 Release 下载逻辑详见[网站部署说明](site/README.md)。
+
 ## 开发
 
 | 部分 | 当前实现 |

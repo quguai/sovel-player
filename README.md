@@ -88,6 +88,10 @@ Open [localhost:4786](http://localhost:4786). No dependency installation is need
 
 The browser demo has its own state and does not share the native SQLite library. Demonstration tracks and quality labels are illustrative; native audio processing and hardware output are not represented by this preview.
 
+## Product website
+
+The bilingual product website lives in [`site/`](site). Run `npm run site:dev` to preview it, or `npm run site:build` to generate `dist/` for Cloudflare Pages. See the [website deployment guide](site/README.md) for hosting settings and live GitHub Stars/Release downloads.
+
 ## Development
 
 | Component | Implementation |

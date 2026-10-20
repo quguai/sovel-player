@@ -6,6 +6,10 @@
   "description": "Sovel HiFi — an open-source, cross-platform HiFi music player",
   "scripts": {
     "dev": "node scripts/serve.mjs",
-    "check": "node --check app.js && node --check scripts/serve.mjs"
+    "check": "node --check app.js && node --check scripts/serve.mjs",
+    "site:dev": "node scripts/serve-site.mjs",
+    "site:build": "node scripts/build-site.mjs",
+    "site:preview": "node scripts/serve-site.mjs --dist",
+    "site:check": "node --check site/site.js && node --check site/copy.js && node --check site/github.js && node --check scripts/build-site.mjs && node --check scripts/serve-site.mjs && node --test scripts/site-github.test.mjs"
   }
 }

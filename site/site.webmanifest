@@ -1,0 +1,10 @@
+{
+  "name": "Sovel HiFi",
+  "short_name": "Sovel",
+  "description": "An open-source listening space for the music you own.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#151613",
+  "theme_color": "#151613",
+  "icons": [{"src":"./assets/icon.png","sizes":"1024x1024","type":"image/png"}]
+}
