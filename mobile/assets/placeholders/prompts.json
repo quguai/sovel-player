@@ -1,0 +1,43 @@
+{
+  "generator": "image_gen built-in",
+  "optimization": "JPEG 768px, quality 84, no design edits",
+  "images": [
+    {
+      "name": "album-amber",
+      "prompt": "Use case: stylized-concept. Asset type: bundled offline fallback artwork for Sovel, an elegant black and champagne gold HiFi music player. Generate ONE square 1024x1024 image, full bleed, no typography, no logos, no watermark, no mockup frame. Refined editorial art with subtle film grain and tangible material detail, quiet tonal contrast, legible at small thumbnail sizes. Abstract sculptural folded satin ribbon forming a soft sound wave, warm champagne amber highlights on deep charcoal, asymmetric spacious composition, premium album sleeve photography, no musical note icons.",
+      "original": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-4d905c37-d450-4e51-a5a2-6f0ad678e9da.png",
+      "asset": "album-amber.jpg"
+    },
+    {
+      "name": "album-tidal",
+      "prompt": "Use case: stylized-concept. Asset type: bundled offline fallback artwork for Sovel, an elegant black and champagne gold HiFi music player. Generate ONE square 1024x1024 image, full bleed, no typography, no logos, no watermark, no mockup frame. Refined editorial art with subtle film grain and tangible material detail, quiet tonal contrast, legible at small thumbnail sizes. Abstract midnight teal ocean ripples with a single soft crescent of warm reflected light, tranquil cinematic texture, close cropped water and atmospheric depth, no scenery horizon, premium album sleeve art.",
+      "original": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-636c2c07-ff14-4986-a08e-3be130045b63.png",
+      "asset": "album-tidal.jpg"
+    },
+    {
+      "name": "album-dusk",
+      "prompt": "Use case: stylized-concept. Asset type: bundled offline fallback artwork for Sovel, an elegant black and champagne gold HiFi music player. Generate ONE square 1024x1024 image, full bleed, no typography, no logos, no watermark, no mockup frame. Refined editorial art with subtle film grain and tangible material detail, quiet tonal contrast, legible at small thumbnail sizes. Abstract hazy mauve and slate blue translucent glass arcs overlapping, a muted copper luminous edge, soft light scattering and fine grain on ink dark background, beautiful restrained album sleeve art.",
+      "original": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-dd0ce921-913d-41b7-8574-68b9dbb5e206.png",
+      "asset": "album-dusk.jpg"
+    },
+    {
+      "name": "album-dune",
+      "prompt": "Use case: stylized-concept. Asset type: bundled offline fallback artwork for Sovel, an elegant black and champagne gold HiFi music player. Generate ONE square 1024x1024 image, full bleed, no typography, no logos, no watermark, no mockup frame. Refined editorial art with subtle film grain and tangible material detail, quiet tonal contrast, legible at small thumbnail sizes. Sculptural dark terracotta sand dunes with sweeping fine ridges and champagne rim light, minimalist aerial close crop, deep warm shadows, elegant fine art album sleeve.",
+      "original": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-8aeddeca-e696-4744-abe4-76330665fcc9.png",
+      "asset": "album-dune.jpg"
+    },
+    {
+      "name": "artist-bronze",
+      "prompt": "Use case: stylized-concept. Asset type: bundled offline fallback artwork for Sovel, an elegant black and champagne gold HiFi music player. Generate ONE square 1024x1024 image, full bleed, no typography, no logos, no watermark, no mockup frame. Refined editorial art with subtle film grain and tangible material detail, quiet tonal contrast, legible at small thumbnail sizes. A single centered androgynous faceless head-and-shoulders bust carved from matte charcoal ceramic, gently turned three quarter view, simple continuous sculptural silhouette with NO facial features, soft champagne bronze rim light and charcoal background. This is an abstract default artist avatar, explicitly not a real person's portrait. Keep the entire head and shoulders in central 70 percent to survive circular cropping. Refined minimal gallery object.",
+      "original": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-335fdf8d-0d4a-44da-9fd1-788a42cff58d.png",
+      "asset": "artist-bronze.jpg"
+    },
+    {
+      "name": "artist-slate",
+      "prompt": "Use case: stylized-concept. Asset type: bundled offline fallback artwork for Sovel, an elegant black and champagne gold HiFi music player. Generate ONE square 1024x1024 image, full bleed, no typography, no logos, no watermark, no mockup frame. Refined editorial art with subtle film grain and tangible material detail, quiet tonal contrast, legible at small thumbnail sizes. A single centered faceless androgynous head-and-shoulders sculptural bust of frosted slate blue glass, slight side turn, simple smooth silhouette with NO facial features, muted blue grey and warm silver lighting on dark navy background. This is an abstract default artist avatar, explicitly not a real person's portrait. Keep entire head and shoulders within central 70 percent for circular cropping, understated premium gallery object.",
+      "original": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-f8893fe7-8003-49d4-ac5a-3e1458c4c01c.png",
+      "asset": "artist-slate.jpg"
+    }
+  ],
+  "totalBytes": 955543
+}

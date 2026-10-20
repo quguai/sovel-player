@@ -1,0 +1,64 @@
+{
+  "generator": "Built-in image_gen",
+  "date": "2026-10-19",
+  "use": "Original transparent product sprites for Sovel. PNG alpha retained; no user screenshots or album artwork are embedded.",
+  "assets": [
+    {
+      "name": "black",
+      "file": "black-v2.png",
+      "prompt": "Use case: product-mockup. Asset type: production texture for a centered vinyl music player UI, NOT a UI mockup. Create one extremely realistic top-down orthographic 12-inch vinyl record. Square canvas, exact circular silhouette, disc exactly centered, outer rim at 3% and 97% of canvas (94% diameter). True transparent alpha outside the circle. No perspective, no turntable, no tonearm, no text, no logo, no album photo, no spindle protrusion, no background, no floor shadow. Blank dark center label diameter 42% of the full disc diameter, centered tiny spindle hole. Hundreds of very fine irregularly spaced realistic concentric microgrooves with subtle track bands, not coarse decorative circles. Precise premium physical material with a thin beveled rim. Soft restrained studio lighting, readable even over dark UI. Full disc in frame, no clipping. High resolution 1536 square. Material: rich almost-black pressed vinyl, deep carbon black with fine charcoal microgrooves and understated satin sheen; not flat gray. Faint grazing silver reflections only, preserving a deep black base.",
+      "source": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-36a1996b-77f5-44a7-b905-5205fba51788.png"
+    },
+    {
+      "name": "smoke",
+      "file": "smoke-v2.png",
+      "prompt": "Use case: product-mockup. Asset type: production texture for a centered vinyl music player UI, NOT a UI mockup. Create one extremely realistic top-down orthographic 12-inch vinyl record. Square canvas, exact circular silhouette, disc exactly centered, outer rim at 3% and 97% of canvas (94% diameter). True transparent alpha outside the circle. No perspective, no turntable, no tonearm, no text, no logo, no album photo, no spindle protrusion, no background, no floor shadow. Blank dark center label diameter 42% of the full disc diameter, centered tiny spindle hole. Hundreds of very fine irregularly spaced realistic concentric microgrooves with subtle track bands, not coarse decorative circles. Precise premium physical material with a thin beveled rim. Soft restrained studio lighting, readable even over dark UI. Full disc in frame, no clipping. High resolution 1536 square. Material: smoky translucent graphite vinyl, cool muted purple-gray, marbled wisps and tiny cloudy resin variations inside the material, gentle graphite translucency but most of the disc retains visible substance. Tasteful fine irregular grain, premium smokey vinyl like a carefully photographed collectible LP. Avoid scratches or damage.",
+      "source": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-ae64d719-704d-4de5-8790-1b952d05cf97.png"
+    },
+    {
+      "name": "blue",
+      "file": "blue-v2.png",
+      "prompt": "Use case: product-mockup. Asset type: production texture for a centered vinyl music player UI, NOT a UI mockup. Create one extremely realistic top-down orthographic 12-inch vinyl record. Square canvas, exact circular silhouette, disc exactly centered, outer rim at 3% and 97% of canvas (94% diameter). True transparent alpha outside the circle. No perspective, no turntable, no tonearm, no text, no logo, no album photo, no spindle protrusion, no background, no floor shadow. Blank dark center label diameter 42% of the full disc diameter, centered tiny spindle hole. Hundreds of very fine irregularly spaced realistic concentric microgrooves with subtle track bands, not coarse decorative circles. Precise premium physical material with a thin beveled rim. Soft restrained studio lighting, readable even over dark UI. Full disc in frame, no clipping. High resolution 1536 square. Material: midnight smoke-gray vinyl with a luminous icy-blue pearlescent band spreading across the right side and a smaller opposite blue accent on lower left. A cool blue dichroic shimmer integrated in the vinyl, very fine realistic grooves continuing across the blue band. Deep navy-gray in other areas, not a neon glowing outline. Premium metallic iridescence.",
+      "source": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-b64b9a19-3715-436c-9c67-ffc166dd7886.png"
+    },
+    {
+      "name": "tonearm",
+      "file": "tonearm-v2.png",
+      "prompt": "Use case: product-mockup. Asset type: isolated pre-rendered tonearm sprite for a music app. Create a premium realistic hi-fi straight tonearm viewed EXACTLY from directly above, orthographic, on a true transparent alpha background. Square 1024x1024 canvas. One narrow vertical tonearm centered horizontally. Entire object is within x=405..620 and y=80..960. Main circular pivot centered precisely at x=512,y=190, radius 48 pixels. Dark anodized black pivot housing with subtle machined bevel and small counterweight above it. Slim straight polished brushed aluminum cylindrical tube, vertical at x=512 from y=250 to y=820, width 24 pixels, with convincing bright narrow reflection and dark edges. Small black connector at y=820. Matte black rectangular headshell about 65px wide, 110px long, tilted 24 degrees clockwise, near x=500,y=882. Tiny copper-gold stylus tip near x=480,y=943, and a fine black finger lift on the right. No oversized turntable base, no record, no scene, no text or logos, no surrounding circle, no external shadows or glow, no wireframe outlines. The result must look like a miniature physical product photographed in soft studio light, with crisp silhouette and subtle thickness, not a vector illustration.",
+      "source": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-7edafc0a-0d53-4276-b13a-bcafdd2d9f27.png"
+    },
+    {
+      "name": "tonearm-soft",
+      "file": "tonearm-soft.png",
+      "prompt": "Edit the first supplied transparent tonearm sprite to match the SOFT SIMPLIFIED 2.5D UI STYLE of the tonearm on the right side of the second supplied music-player screenshot. The first image has far too much photographic industrial machinery. Replace it with a clean, restrained, softly modeled UI illustration: a modest matte charcoal rectangular pivot block at the top with a small low cylindrical cap, a straight satin silver shaft with a broad soft gradient (no razor chrome reflections), a slim dark collar near the bottom, and a long clean matte black rectangular headshell at a slight clockwise angle with a tiny dark stylus and a short simple finger lift. No visible screws, bolts, knurled surfaces, branding, gold metal tip, cables, levers, decorative parts, or realistic photography. The cartridge should be simple like in the screenshot, with a small bevel only. Soft shading, slightly rounded corners, subtle depth; not a flat pictogram or line icon. Preserve a true transparent background, no floor, no record, no album, no UI. IMPORTANT GEOMETRY: retain the same square canvas and the long vertical overall arrangement as image 1. Center of the top pivot block at normalized x=0.50 y=0.20, straight shaft x=0.50 from y=0.25 to y=0.80, headshell from y=0.80 to y=0.95, final stylus tip at x=0.469 y=0.957. Keep pivot block compact, width about 0.10 of canvas, not the huge circular detailed mechanism from image 1. Shaft width about 0.032 of canvas. Keep the whole object in the center narrow strip of canvas, leaving ample transparency left and right. Output only this one complete isolated tonearm sprite, all parts connected.",
+      "references": [
+        "tonearm-v2.png",
+        "/Users/liyang/Documents/IMG_5822.PNG.JPG"
+      ],
+      "source": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-69a2874f-8267-4bef-ac0b-fb2c680c081d.png",
+      "active": false
+    },
+    {
+      "name": "tonearm-slim",
+      "file": "tonearm-slim.png",
+      "prompt": "Use case: precise-object-edit.\nInput: edit this supplied transparent tonearm sprite. Keep the same square canvas, true alpha transparency, center x coordinate, pivot center, and final needle tip position.\nMake one focused refinement: the metal shaft is still a tube. Reduce the visible shaft thickness from its current roughly 24px to just 9–10px on the 1254px canvas, about 40% of the current thickness. It must read as a fine long polished steel wire/rod, with a restrained silver highlight, not as a chunky chrome tube. Keep it perfectly straight and continuous for the entire run.\nMake both black shaft collars similarly slim, at most 16px wide. Reduce the top round pivot to about 65px diameter while keeping its center position. Reduce the lower black cartridge to a small elegant face about 45px wide and 105px long, maintaining the same slight angle and final stylus-tip position; extend the thin shaft as needed so all parts connect cleanly.\nDo not move the pivot or the stylus tip. No screws, labels, floor shadow or extra parts. Keep the plain charcoal cartridge face with a subtle bevel for later color tinting. Preserve soft 2.5D shading and clean edge antialiasing. Background must remain genuinely transparent. This should look airy, long, fine and restrained in a small music player UI.",
+      "promptSet": "tonearm-slim.provenance.json",
+      "references": [
+        "tonearm-soft.png"
+      ],
+      "source": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-5e5f9e7c-e8e6-4558-be1f-b8221216256b.png",
+      "active": true
+    }
+  ],
+  "implementation": "Three transparent base records plus color treatments form nine materials. Settings offer tonearm-slim.png (default simple style: thin, long metal rod) and tonearm-v2.png (classic mechanical style). The app composites independent album art, static sheen, rotating disc, moving arm and selectable stylus glow. Each tonearm has its own calibrated pivot, tracking sweep and cartridge color mask.",
+  "recordRendering": {
+    "canvas": 1254,
+    "crop": {
+      "left": 50,
+      "top": 45,
+      "size": 1152
+    },
+    "visibleDiameterRatio": 0.95,
+    "note": "The renderer maps the common inner surface into a shared circular viewport, removing unequal transparent margins and the baked dark outer rim. The tint fills that same viewport. Original PNG bytes and alpha are unchanged."
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "mode": "Built-in image_gen",
+  "date": "2026-10-19",
+  "asset": "tonearm-slim.png",
+  "initialPrompt": "Use case: precise-object-edit.\nAsset type: production transparent PNG tonearm sprite for a music player, not a UI screenshot.\nInput image: the supplied image is the edit target. Redesign its top-heavy, thick tonearm into a much more slender and elegant silver metal-rod tonearm.\nPrimary request: a LONG, VERY THIN straight satin-steel rod, visually like a fine rigid metal wire. About one quarter of the current shaft thickness. The silver shaft must occupy most of the overall length. A small simple charcoal circular pivot at the top, a tiny dark collar, a compact matte charcoal headshell at the bottom. Soft restrained 2.5D product rendering, subtle metal highlights and depth, clean smooth silhouette. No industrial machinery, screws, oversized rectangular pivot block, big counterweight or thick pipe.\nComposition: square canvas, true transparent background. Complete object visible in a narrow vertical strip, ample transparent margins. No record, floor, backdrop, UI, text, watermark or cast floor shadow.\nGeometry in normalized canvas coordinates: center of top circular pivot x=.50 y=.12, pivot diameter .065. Slim silver shaft runs straight at x=.50 from y=.15 to y=.875, thickness only .009 of canvas width (roughly 11 pixels on a 1254px canvas). A tiny collar connects to a small rounded rectangular headshell, approximately .042 wide and .085 long, tilted clockwise 18 degrees with its lower end leaning left. Headshell extends from roughly y=.87 to .953. Tiny stylus tip ends near x=.463 y=.963. Short slender finger lift on right of the headshell. The top pivot is at x=.50 and the shaft is at exactly x=.50, not offset sideways.\nThe headshell face must be plain matte charcoal with softly beveled edges, suitable for later color tinting; no screws or holes on its face. The needle is tiny and dark silver. No gold metal decoration.\nPreserve real alpha transparency and crisp antialiased edges; no pale matte halo. Only this one isolated, fully connected redesigned tonearm.",
+  "finalPrompt": "Use case: precise-object-edit.\nInput: edit this supplied transparent tonearm sprite. Keep the same square canvas, true alpha transparency, center x coordinate, pivot center, and final needle tip position.\nMake one focused refinement: the metal shaft is still a tube. Reduce the visible shaft thickness from its current roughly 24px to just 9–10px on the 1254px canvas, about 40% of the current thickness. It must read as a fine long polished steel wire/rod, with a restrained silver highlight, not as a chunky chrome tube. Keep it perfectly straight and continuous for the entire run.\nMake both black shaft collars similarly slim, at most 16px wide. Reduce the top round pivot to about 65px diameter while keeping its center position. Reduce the lower black cartridge to a small elegant face about 45px wide and 105px long, maintaining the same slight angle and final stylus-tip position; extend the thin shaft as needed so all parts connect cleanly.\nDo not move the pivot or the stylus tip. No screws, labels, floor shadow or extra parts. Keep the plain charcoal cartridge face with a subtle bevel for later color tinting. Preserve soft 2.5D shading and clean edge antialiasing. Background must remain genuinely transparent. This should look airy, long, fine and restrained in a small music player UI.",
+  "references": [
+    "tonearm-soft.png"
+  ],
+  "source": "/Users/liyang/.codex/generated_images/01a151fa-b939-7121-8382-8f1b83ffe10e/exec-5e5f9e7c-e8e6-4558-be1f-b8221216256b.png",
+  "note": "Original generated PNG and alpha preserved; only runtime size/placement and optional SVG cartridge tint are applied.",
+  "rendering": {
+    "pivot": [
+      0.9,
+      0.09
+    ],
+    "sprite": {
+      "left": 0.4215,
+      "top": -0.0481,
+      "size": 0.957
+    },
+    "trackingDegrees": [
+      0,
+      19
+    ],
+    "parkedDegrees": -7,
+    "note": "Normalized to the turntable width. The record center is [0.5,0.56] and its visible radius is 0.475. Pivot moved right/up; the stylus follows the groove area throughout playback."
+  }
+}

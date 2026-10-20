@@ -1,0 +1,26 @@
+# Local upstream checkouts used for implementation reference
+/repos/
+
+# Dependencies and generated output
+node_modules/
+.expo/
+dist/
+web-build/
+artifacts/
+coverage/
+*.tsbuildinfo
+
+# Native build caches
+Pods/
+.gradle/
+.kotlin/
+build/
+local.properties
+
+# Local editor, OS and environment files
+.idea/
+.DS_Store
+.env
+.env.*
+!.env.example
+*.log

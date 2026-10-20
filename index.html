@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#eeede9" />
+    <meta name="description" content="Sovel HiFi 本地音乐播放器 · 三种设计方向的交互原型，支持横竖屏、黑胶主题与歌词视图。" />
+    <title>Sovel HiFi · 音乐，回到自己</title>
+    <link rel="icon" href="./assets/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <header class="studio-header">
+      <a class="brand" href="./" aria-label="Sovel 设计原型首页"><span class="brand-symbol"><i></i><i></i><i></i><i></i></span>sovel<span class="brand-divider"></span><span class="brand-caption">私人音乐空间</span></a>
+      <div class="studio-meta"><span class="live-dot"></span>DESIGN EXPLORATION <span class="edition">/ 001</span></div>
+    </header>
+    <main>
+      <section class="intro">
+        <div><p class="eyebrow">LESS NOISE. MORE MUSIC.</p><h1>音乐，回到自己<span>。</span></h1><p class="intro-copy">为掌心里的音乐收藏，寻找一种恰好的表达。</p></div>
+        <div class="intro-note"><span>ANDROID HiFi PLAYER</span><p>三种主页，一种专注。<br>黑金曲库 · 封面流彩播放。</p></div>
+      </section>
+      <section class="theme-selector" aria-label="切换主页风格">
+        <button class="theme-option selected" data-theme="obsidian" aria-pressed="true"><span class="theme-swatch swatch-obsidian"><i></i><i></i><i></i></span><span><small>DIRECTION 01</small><strong>唱片馆 <em>Gallery</em></strong><span class="theme-summary">专辑优先 · 找到收藏的温度</span></span><span class="theme-check">↗</span></button>
+        <button class="theme-option" data-theme="paper" aria-pressed="false"><span class="theme-swatch swatch-paper"><i></i><i></i><i></i></span><span><small>DIRECTION 02</small><strong>曲库 <em>Library</em></strong><span class="theme-summary">分类优先 · 本地音乐井然有序</span></span><span class="theme-check">↗</span></button>
+        <button class="theme-option" data-theme="flow" aria-pressed="false"><span class="theme-swatch swatch-flow"><i></i><i></i><i></i></span><span><small>DIRECTION 03</small><strong>静听 <em>Focus</em></strong><span class="theme-summary">极简收藏 · 打开就能继续听</span></span><span class="theme-check">↗</span></button>
+      </section>
+      <section class="preview-toolbar" aria-label="预览设置">
+        <div class="direction-description"><span id="direction-dot"></span><span id="direction-copy">黑金音乐库，配合封面取色的播放页与独立歌词页。</span></div>
+        <div class="preview-controls"><div class="segmented"><button data-orientation="portrait" aria-pressed="true" class="active"><span class="orientation-icon portrait-icon"></span>竖屏</button><button data-orientation="landscape" aria-pressed="false"><span class="orientation-icon landscape-icon"></span>横屏</button></div><button class="view-toggle" id="view-toggle" aria-pressed="false">单页体验 <span>↗</span></button><a id="fullscreen-link" class="view-toggle" href="?device=1" target="_blank">全屏预览 ↗</a></div>
+      </section>
+      <nav class="focus-nav" aria-label="单页预览页面"><button class="active" data-focus="library">音乐库</button><button data-focus="player">正在播放</button><button data-focus="lyrics">歌词</button></nav>
+      <section class="preview-gallery" id="gallery" data-theme="obsidian" aria-label="播放器页面预览"></section>
+      <section class="direction-footer"><div><span class="footer-mark">01—03</span><p id="design-note">香槟金点缀 / 有序的信息层级 / 专辑封面优先</p></div><button id="choose-direction">播放器设置 <span>↗</span></button></section>
+      <footer class="studio-footer"><span>Sovel © 2026 <span class="footer-separator">/</span> A LITTLE SPACE FOR YOUR MUSIC.</span><span>交互概念稿 · 虚构曲目与音质信息 · 默认无声演示</span></footer>
+    </main>
+    <dialog id="studio-dialog" aria-labelledby="dialog-title"></dialog>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <input type="file" id="folder-import" webkitdirectory multiple hidden />
+    <input type="file" id="audio-import" accept="audio/*,.flac,.wav,.mp3,.m4a,.ogg" multiple hidden />
+  </body>
+</html>

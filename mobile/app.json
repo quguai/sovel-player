@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Sovel HiFi",
+    "slug": "sovel-player",
+    "scheme": "sovel",
+    "version": "0.1.0",
+    "icon": "./assets/icon.png",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "cn.quguai.music.sovel",
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true
+      }
+    },
+    "android": {
+      "package": "cn.quguai.music.sovel",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#151617"
+      },
+      "permissions": [],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "predictiveBackGestureEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": true
+        }
+      ],
+      "expo-sqlite",
+      "expo-sharing"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

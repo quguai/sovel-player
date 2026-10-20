@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(sovel_equalizer)
+add_library(sovel_equalizer SHARED sovel_equalizer_jni.cpp SovelEqualizerDSP.cpp)
+target_compile_features(sovel_equalizer PRIVATE cxx_std_17)
+target_compile_options(sovel_equalizer PRIVATE -O2 -Wall -Wextra)
+target_link_options(sovel_equalizer PRIVATE "-Wl,-z,max-page-size=16384")

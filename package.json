@@ -1,0 +1,11 @@
+{
+  "name": "sovel-player",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sovel HiFi — an open-source, cross-platform HiFi music player",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "check": "node --check app.js && node --check scripts/serve.mjs"
+  }
+}

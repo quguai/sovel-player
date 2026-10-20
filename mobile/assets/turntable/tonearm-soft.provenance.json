@@ -1,0 +1,10 @@
+{
+  "mode": "Built-in image_gen",
+  "date": "2026-10-19",
+  "asset": "tonearm-soft.png",
+  "prompt": "Edit the first supplied transparent tonearm sprite to match the SOFT SIMPLIFIED 2.5D UI STYLE of the tonearm on the right side of the second supplied music-player screenshot. The first image has far too much photographic industrial machinery. Replace it with a clean, restrained, softly modeled UI illustration: a modest matte charcoal rectangular pivot block at the top with a small low cylindrical cap, a straight satin silver shaft with a broad soft gradient (no razor chrome reflections), a slim dark collar near the bottom, and a long clean matte black rectangular headshell at a slight clockwise angle with a tiny dark stylus and a short simple finger lift. No visible screws, bolts, knurled surfaces, branding, gold metal tip, cables, levers, decorative parts, or realistic photography. The cartridge should be simple like in the screenshot, with a small bevel only. Soft shading, slightly rounded corners, subtle depth; not a flat pictogram or line icon. Preserve a true transparent background, no floor, no record, no album, no UI. IMPORTANT GEOMETRY: retain the same square canvas and the long vertical overall arrangement as image 1. Center of the top pivot block at normalized x=0.50 y=0.20, straight shaft x=0.50 from y=0.25 to y=0.80, headshell from y=0.80 to y=0.95, final stylus tip at x=0.469 y=0.957. Keep pivot block compact, width about 0.10 of canvas, not the huge circular detailed mechanism from image 1. Shaft width about 0.032 of canvas. Keep the whole object in the center narrow strip of canvas, leaving ample transparency left and right. Output only this one complete isolated tonearm sprite, all parts connected.",
+  "references": [
+    "tonearm-v2.png",
+    "/Users/liyang/Documents/IMG_5822.PNG.JPG"
+  ]
+}
