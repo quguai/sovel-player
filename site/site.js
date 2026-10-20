@@ -1,4 +1,5 @@
 import { zh, labels } from './copy.js';
+import { initStory } from './story.js';
 import { loadGitHub, releaseView, repositoryUrl } from './github.js';
 
 const preview = document.querySelector('#record-preview');
@@ -6,11 +7,8 @@ const playButton = document.querySelector('#record-play');
 const record = document.querySelector('.record-spin');
 const materialName = document.querySelector('#material-name');
 const texture = document.querySelector('#record-texture');
-const screen = document.querySelector('#app-screen');
-const tabs = [...document.querySelectorAll('[data-screen]')];
 const swatches = [...document.querySelectorAll('.material-swatch')];
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const compact = matchMedia('(max-width: 620px)');
 const localized = [...document.querySelectorAll('[data-i18n], [data-i18n-html]')].map(element => ({
   element,
   key: element.dataset.i18n ?? element.dataset.i18nHtml,
@@ -27,8 +25,6 @@ function savePreference(key, value) {
 }
 const requested = new URLSearchParams(location.search).get('lang');
 let language = (requested ?? readPreference('language')) === 'zh' ? 'zh' : 'en';
-let selectedScreen = 'library';
-let selectedVinyl = 'player';
 let github = { stars: null, release: undefined, error: false };
 let playing = !reducedMotion.matches;
 let visible = true;
@@ -53,10 +49,8 @@ function refreshLabels() {
   const copy = labels[language];
   preview.setAttribute('aria-label', copy.preview);
   document.querySelector('.material-options').setAttribute('aria-label', copy.material);
-  document.querySelector('.experience-tabs').setAttribute('aria-label', copy.tabs);
   swatches.forEach(button => button.setAttribute('aria-label', copy[button.dataset.material]));
-  screen.alt = copy[`${selectedScreen === 'player' ? selectedVinyl : selectedScreen}Alt`];
-  document.querySelectorAll('[data-vinyl]').forEach(button => button.setAttribute('aria-label', copy[button.dataset.vinyl === 'player' ? 'smoke' : button.dataset.vinyl]));
+  document.querySelectorAll('[data-screen-alt]').forEach(image => { image.alt = copy[`${image.dataset.screenAlt}Alt`]; });
   refreshGitHub();
   updateMaterialCaption();
   refreshAnimation();
@@ -114,23 +108,6 @@ async function setMaterial(value, remember = true) {
     }
   }
 }
-function selectScreen(value, focus = false) {
-  const index = tabs.findIndex(tab => tab.dataset.screen === value);
-  if (index === -1) return;
-  selectedScreen = value;
-  tabs.forEach(tab => {
-    const active = tab.dataset.screen === value;
-    tab.setAttribute('aria-selected', String(active));
-    tab.tabIndex = active ? 0 : -1;
-  });
-  screen.src = `./assets/screen-${value === 'player' ? selectedVinyl : value}.png`;
-  screen.alt = labels[language][`${value === 'player' ? selectedVinyl : value}Alt`];
-  document.querySelector('.dap-materials').hidden = value !== 'player';
-  document.querySelector('#screen-panel').setAttribute('aria-labelledby', tabs[index].id);
-  document.querySelector('#stage-counter').textContent = `0${index + 1} — 0${tabs.length}`;
-  if (focus) tabs[index].focus();
-}
-
 function refreshGitHub() {
   const copy = labels[language];
   const star = document.querySelector('.header-github');
@@ -156,34 +133,13 @@ function refreshGitHub() {
 document.querySelector('#language-toggle').addEventListener('click', () => setLanguage(language === 'en' ? 'zh' : 'en', true));
 playButton.addEventListener('click', () => { playing = !playing; refreshAnimation(); });
 swatches.forEach(button => button.addEventListener('click', () => setMaterial(button.dataset.material)));
-tabs.forEach(tab => {
-  tab.addEventListener('click', () => selectScreen(tab.dataset.screen));
-  tab.addEventListener('keydown', event => {
-    const index = tabs.indexOf(tab);
-    let next;
-    if (['ArrowRight', 'ArrowDown'].includes(event.key)) next = (index + 1) % tabs.length;
-    else if (['ArrowLeft', 'ArrowUp'].includes(event.key)) next = (index - 1 + tabs.length) % tabs.length;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = tabs.length - 1;
-    if (next !== undefined) { event.preventDefault(); selectScreen(tabs[next].dataset.screen, true); }
-  });
-});
-document.querySelectorAll('[data-vinyl]').forEach(button => button.addEventListener('click', () => {
-  selectedVinyl = button.dataset.vinyl;
-  document.querySelectorAll('[data-vinyl]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
-  selectScreen('player');
-}));
-function updateTabOrientation() {
-  document.querySelector('.experience-tabs').setAttribute('aria-orientation', compact.matches ? 'horizontal' : 'vertical');
-}
-compact.addEventListener('change', updateTabOrientation);
 reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) playing = false; refreshAnimation(); });
 document.addEventListener('visibilitychange', refreshAnimation);
 if ('IntersectionObserver' in window) {
   new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; refreshAnimation(); }).observe(preview);
 }
 setLanguage(language);
-updateTabOrientation();
+initStory();
 const savedMaterial = readPreference('material');
 if (savedMaterial && savedMaterial in paths && savedMaterial !== material) setMaterial(savedMaterial, false);
 loadGitHub(update => { github = { ...github, ...update }; refreshGitHub(); });
