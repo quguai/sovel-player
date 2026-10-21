@@ -44,6 +44,30 @@ function Shell() {
     prefs,
   } = useMusic();
   const updates = useUpdates();
+  const updateDownloading = updates.download.phase === "downloading";
+  const updateVerifying = updates.download.phase === "verifying";
+  const updateReady = updates.download.phase === "ready";
+  const updatePercent =
+    updates.download.total > 0
+      ? Math.min(
+          100,
+          Math.max(
+            0,
+            Math.round(
+              (updates.download.received / updates.download.total) * 100,
+            ),
+          ),
+        )
+      : 0;
+  const updateStatus = updates.installing
+    ? "正在准备安装…"
+    : updateDownloading
+      ? `正在下载更新 · ${updatePercent}%`
+      : updateVerifying
+        ? "正在校验更新…"
+        : updateReady
+          ? "更新已就绪"
+          : "发现新版本";
   const [updateEntry, setUpdateEntry] = useState(false);
   const playerPage = page === "player";
   const uri = artUri(current?.artwork);
@@ -147,17 +171,42 @@ function Shell() {
           page !== "settings" && (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="查看新版本"
+              accessibilityLabel={updateReady ? "查看安装更新" : updateStatus}
+              disabled={
+                updateDownloading || updateVerifying || updates.installing
+              }
               onPress={() => {
                 setUpdateEntry(true);
                 setPage("settings");
               }}
               style={styles.banner}
             >
-              <Text style={{ color: p.gold, flex: 1, fontSize: 12 }}>
-                Sovel {updates.release.tag} 已发布
-              </Text>
-              <Text style={{ color: p.gold, fontSize: 12 }}>查看更新 ›</Text>
+              <View style={{ flex: 1, gap: 7 }}>
+                <Text style={{ color: p.gold, fontSize: 12 }}>
+                  {updateStatus}
+                </Text>
+                {(updateDownloading || updateVerifying) && (
+                  <View
+                    accessibilityRole="progressbar"
+                    accessibilityLabel="更新下载进度"
+                    accessibilityValue={{
+                      min: 0,
+                      max: 100,
+                      now: updatePercent,
+                    }}
+                    style={styles.updateTrack}
+                  >
+                    <View
+                      style={[styles.updateFill, { width: `${updatePercent}%` }]}
+                    />
+                  </View>
+                )}
+              </View>
+              {!updateDownloading && !updateVerifying && (
+                <Text style={{ color: p.gold, fontSize: 12 }}>
+                  {updateReady ? "安装更新 ›" : "更新 ›"}
+                </Text>
+              )}
             </Pressable>
           )}
         {busy && page !== "sources" && (
@@ -261,6 +310,13 @@ export default function App() {
   );
 }
 const styles = StyleSheet.create({
+  updateTrack: {
+    height: 3,
+    borderRadius: 3,
+    overflow: "hidden",
+    backgroundColor: "#ffffff16",
+  },
+  updateFill: { height: 3, backgroundColor: p.gold },
   banner: {
     paddingHorizontal: 18,
     paddingVertical: 10,

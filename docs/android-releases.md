@@ -67,7 +67,7 @@ A production-signed release cannot overwrite a debug-signed development installa
 
 ## In-app behavior
 
-Settings → **版本更新** provides manual checks, release notes, size, progress, cancellation, explicit installation, an ignored-version preference, and stable/preview channels.
+Settings → **版本更新** provides manual checks, version, size, progress, cancellation, explicit installation, an ignored-version preference, and stable/preview channels. The update flow does not display changelogs or external release links. Outside settings, automatic downloads display a compact progress bar; once ready, open update settings to confirm installation.
 
 - Automatic checks are enabled by default, at most once every 12 hours while the app is active. Failed automatic checks do not interrupt listening; manual checks show errors. GitHub API rate-limit failures can be retried later.
 - Automatic download is opt-in and requires Wi-Fi or Ethernet. The native downloader stops if that connection disappears. Manually requested downloads may use the current network.

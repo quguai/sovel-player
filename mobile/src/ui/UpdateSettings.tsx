@@ -58,29 +58,12 @@ export function UpdateSettings() {
                 <Text style={s.releaseTitle}>{u.release.version}</Text>
                 <Text style={s.small}>{bytes(u.packageInfo.size)}</Text>
               </View>
-              <Text style={s.small}>
-                {u.release.preview
-                  ? "测试版本 · 适合提前体验"
-                  : "正式版本 · 推荐更新"}
-              </Text>
-              {!!u.release.notes && (
-                <Text selectable numberOfLines={16} style={s.notes}>
-                  {u.release.notes}
-                </Text>
-              )}
-              <Pressable
-                accessibilityRole="link"
-                onPress={() => void u.openReleases()}
-                style={s.linkButton}
-              >
-                <Text style={s.link}>查看完整发布说明 ↗</Text>
-              </Pressable>
               {["downloading", "verifying"].includes(u.download.phase) ? (
                 <>
                   <View style={s.heroTop}>
                     <Text style={s.small}>
                       {u.download.phase === "verifying"
-                        ? "正在校验安装包与签名"
+                        ? "正在校验更新…"
                         : `${bytes(u.download.received)} / ${bytes(u.download.total)}`}
                     </Text>
                     <Text style={s.percent}>{Math.round(progress * 100)}%</Text>
@@ -219,12 +202,9 @@ export function UpdateSettings() {
         <>
           <Text style={s.notes}>
             {Platform.OS === "ios"
-              ? "iOS 版本通过 App Store 或 TestFlight 更新。你也可以查看开源项目的发布记录。"
+              ? "iOS 版本请通过 App Store 或 TestFlight 更新。"
               : "当前版本暂不支持应用内安装。请通过原安装渠道获取新版本。"}
           </Text>
-          <Button secondary onPress={() => void u.openReleases()}>
-            查看 GitHub 发布记录
-          </Button>
         </>
       )}
     </View>
@@ -267,12 +247,6 @@ const s = StyleSheet.create({
   releaseTitle: { color: p.text, fontSize: 23, fontWeight: "600" },
   small: { color: p.muted, fontSize: 11, lineHeight: 19 },
   notes: { color: p.text, fontSize: 13, lineHeight: 23 },
-  linkButton: {
-    minHeight: 44,
-    justifyContent: "center",
-    alignSelf: "flex-start",
-  },
-  link: { color: p.gold, fontSize: 12 },
   track: {
     height: 4,
     borderRadius: 4,
