@@ -79,18 +79,34 @@ export class Library {
     const rows = await this.db.getAllAsync<any>(
       "SELECT t.*, f.track_id AS favorite FROM tracks t LEFT JOIN favorites f ON f.track_id=t.id ORDER BY path",
     );
-    return rows.map((row) => ({
-      ...JSON.parse(row.metadata),
-      id: row.id,
-      sourceId: row.source_id,
-      uri: row.uri,
-      path: row.path,
-      size: row.size,
-      mtime: row.mtime,
-      available: !!row.available,
-      favorite: !!row.favorite,
-    }));
+    const tracks: Track[] = [];
+    for (let index = 0; index < rows.length; index++) {
+      // Large embedded lyric/tag JSON should not monopolize the UI thread.
+      if (index > 0 && index % 100 === 0)
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      const row = rows[index];
+      let metadata: Metadata;
+      try {
+        metadata = JSON.parse(row.metadata);
+      } catch {
+        // One damaged cached tag must not prevent access to the entire library.
+        metadata = fallbackMetadata(row.path);
+      }
+      tracks.push({
+        ...metadata,
+        id: row.id,
+        sourceId: row.source_id,
+        uri: row.uri,
+        path: row.path,
+        size: row.size,
+        mtime: row.mtime,
+        available: !!row.available,
+        favorite: !!row.favorite,
+      });
+    }
+    return tracks;
   }
+
   async favorite(id: string, selected: boolean) {
     await this.db.runAsync(
       selected

@@ -30,6 +30,43 @@ final class SovelUITests: XCTestCase {
   func capture(_ name: String) {
     let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
   }
+  func testColdStartRestoresPlaybackAfterLibraryOpens() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("按歌曲浏览", timeout: 30)
+    tap("播放 初见"); assertClockAdvanced(3); tap("暂停")
+    Thread.sleep(forTimeInterval: 2.5)
+    app.terminate(); app.launch()
+    tap("打开播放页面", timeout: 15)
+    assertClockAdvanced(3)
+    XCTAssertTrue(element("播放").exists, "Cold start must restore paused, without autoplay")
+    tap("下一首")
+    XCTAssertTrue(app.staticTexts["微光"].firstMatch.waitForExistence(timeout: 10))
+    capture("startup-restored-queue")
+  }
+  func testCompactControlsAndReturnToLibrary() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("按专辑浏览", timeout: 30)
+    let toggle = element("专辑切换为列表").exists ? element("专辑切换为列表") : element("专辑切换为卡片")
+    XCTAssertEqual(toggle.frame.midY, element("按文件夹浏览").frame.midY, accuracy: 3)
+    XCTAssertGreaterThan(toggle.frame.midX, element("按文件夹浏览").frame.midX)
+    capture("compact-view-toggle")
+    tap("打开 声音手记")
+    tap("播放 初见"); assertClockAdvanced(2)
+    let closeX = element("返回音乐库").frame.minX
+    XCTAssertLessThanOrEqual(closeX, 8)
+    tap("返回音乐库")
+    XCTAssertTrue(element("播放 初见").waitForExistence(timeout: 3), "Closing the player should preserve the opened album")
+    tap("打开播放页面"); tap("暂停")
+    tap("查看完整歌词")
+    capture("single-line-lyrics")
+    Thread.sleep(forTimeInterval: 2)
+    capture("single-line-lyrics-after-scroll")
+    tap("返回音乐库"); tap("设置")
+    XCTAssertEqual(element("返回音乐库").frame.minX, closeX, accuracy: 1)
+    capture("aligned-settings-back")
+  }
   func testUpdateSettingsOnIOS() {
     continueAfterFailure = false
     XCUIDevice.shared.orientation = .portrait
@@ -359,6 +396,55 @@ final class SovelUITests: XCTestCase {
 
   func selectPlayerStyle(_ name: String) {
     tap("打开播放外观"); tap("播放画面：\(name)"); tap("收起播放外观面板")
+  }
+  func testAmbientPlayerBackground() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("打开播放页面", timeout: 30)
+    if element("暂停").exists { tap("暂停") }
+    for mode in ["专辑封面", "唱片", "沉浸大图"] {
+      selectPlayerStyle(mode)
+      XCTAssertTrue(element("播放").isHittable)
+      XCTAssertTrue(element("返回音乐库").isHittable)
+      capture("ambient-\(mode)")
+      if mode == "专辑封面" {
+        Thread.sleep(forTimeInterval: 8)
+        capture("ambient-cover-after-drift")
+      }
+    }
+    selectPlayerStyle("唱片")
+  }
+  func testPlayerDismissGesture() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("按歌曲浏览", timeout: 30)
+    tap("播放 初见"); assertClockAdvanced(2); tap("暂停")
+    selectPlayerStyle("唱片")
+    let originalHeader = element("打开播放外观").frame
+    let middle = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+    let shortEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.43))
+    middle.press(forDuration: 0.05, thenDragTo: shortEnd)
+    XCTAssertTrue(element("返回音乐库").exists, "Short downward drags must spring back")
+    Thread.sleep(forTimeInterval: 0.5)
+    XCTAssertEqual(element("打开播放外观").frame.minY, originalHeader.minY, accuracy: 1)
+    let footer = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+    footer.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)))
+    XCTAssertTrue(element("返回音乐库").exists, "The transport area must not dismiss the player")
+    shortEnd.press(forDuration: 0.05, thenDragTo: middle)
+    XCTAssertTrue(app.staticTexts["初见"].firstMatch.exists, "Upward swipes must not change songs")
+    capture("player-dismiss-resting")
+    let bottom = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.79))
+    middle.press(forDuration: 0.05, thenDragTo: bottom, withVelocity: .slow, thenHoldForDuration: 3)
+    XCTAssertTrue(element("打开播放页面").waitForExistence(timeout: 5))
+    capture("player-dismiss-library")
+    tap("打开播放页面")
+    XCTAssertTrue(app.staticTexts["初见"].firstMatch.waitForExistence(timeout: 5))
+    let right = app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.4))
+    let left = app.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.4))
+    right.press(forDuration: 0.05, thenDragTo: left)
+    assertPlayerPage("完整歌词")
+    tap("返回音乐库")
+    XCTAssertTrue(element("打开播放页面").waitForExistence(timeout: 5), "Header button must use the same dismissal")
   }
   func assertPlayerHeaderStaysAnchored() {
     let button = element("打开播放外观").frame

@@ -66,6 +66,9 @@ final class SovelPlaybackState {
 // The journal is acknowledged only after SQLite commits; revisions prevent double counting.
 final class SovelListeningHistory {
   private static let journalLock = NSRecursiveLock()
+  // Status getters can run on the JS thread while AVPlayer samples on main.
+  // Protect in-memory dictionaries too, not only journal file writes.
+  private let stateLock = NSRecursiveLock()
   static let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
     .appendingPathComponent("SovelListeningJournal", isDirectory: true)
   private let folder: URL
@@ -83,15 +86,20 @@ final class SovelListeningHistory {
        wall: @escaping () -> Double = { Date().timeIntervalSince1970 * 1000 }) {
     self.folder = folder; self.now = now; self.wall = wall
   }
-  func bind(_ trackIds: [String]) { ids = trackIds; anchor = nil }
-  func suspend() { flush(); ids = []; anchor = nil }
+  func bind(_ trackIds: [String]) {
+    stateLock.lock(); defer { stateLock.unlock() }; ids = trackIds; anchor = nil }
+  func suspend() {
+    stateLock.lock(); defer { stateLock.unlock() }; flush(); ids = []; anchor = nil }
   func beginSeek() {
+    stateLock.lock(); defer { stateLock.unlock() };
     guard !ids.isEmpty else { return }
     if record != nil { record!["seekCount"] = (record!["seekCount"] as? Int ?? 0) + 1 }
     seeking = true; anchor = nil; flush()
   }
-  func endSeek() { seeking = false; anchor = nil }
+  func endSeek() {
+    stateLock.lock(); defer { stateLock.unlock() }; seeking = false; anchor = nil }
   func sample(index: Int, position: Double, duration: Double, playing: Bool, rate: Double = 1, force: Bool = false) {
+    stateLock.lock(); defer { stateLock.unlock() };
     guard ids.indices.contains(index), position.isFinite, duration.isFinite, position >= 0, !seeking else { return }
     let trackId = ids[index], clock = now()
     if let old = record, old["trackId"] as? String != trackId { finish("transition") }
@@ -130,11 +138,13 @@ final class SovelListeningHistory {
     ranges = merged
   }
   func finish(_ reason: String) {
+    stateLock.lock(); defer { stateLock.unlock() };
     guard record != nil else { return }
     record!["reason"] = reason; record!["updatedAt"] = wall(); flush()
     lastClosed = record; record = nil; anchor = nil; ranges = []
   }
   func transition(index: Int, reason: String) {
+    stateLock.lock(); defer { stateLock.unlock() };
     guard ids.indices.contains(index) else { return }
     let id = ids[index]
     if record?["trackId"] as? String == id { finish(reason) }
@@ -145,6 +155,7 @@ final class SovelListeningHistory {
     }
   }
   func flush() {
+    stateLock.lock(); defer { stateLock.unlock() };
     guard record != nil else { return }
     record!["revision"] = (record!["revision"] as? Int ?? 0) + 1
     persist(record!); lastWrite = now()

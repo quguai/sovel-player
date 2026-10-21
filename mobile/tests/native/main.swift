@@ -67,3 +67,28 @@ expect(SovelListeningHistory.pending(folder: historyFolder).count == 1, "end cal
 sample(0); tick += 1; sample(1)
 expect(SovelListeningHistory.pending(folder: historyFolder).contains { $0["id"] as? String != completedId }, "repeat starts a separate play-through")
 print("Native listening: seek/pause/coverage/repeat/revision journal checks passed")
+
+// Reproduce concurrent JS status reads, AVPlayer ticks and transport controls.
+let concurrentFolder = FileManager.default.temporaryDirectory.appendingPathComponent("sovel-history-concurrent-\(UUID().uuidString)")
+defer { try? FileManager.default.removeItem(at: concurrentFolder) }
+let concurrentHistory = SovelListeningHistory(folder: concurrentFolder)
+concurrentHistory.bind(["one", "two"])
+DispatchQueue.concurrentPerform(iterations: 400) { i in
+  switch i % 7 {
+  case 0: concurrentHistory.bind(["one", "two"])
+  case 1: concurrentHistory.beginSeek(); concurrentHistory.endSeek()
+  case 2: concurrentHistory.transition(index: i % 2, reason: "skip")
+  case 3: concurrentHistory.finish("selected")
+  default: concurrentHistory.sample(index: i % 2, position: Double(i % 90), duration: 100, playing: true, force: true)
+  }
+}
+concurrentHistory.endSeek()
+concurrentHistory.sample(index: 0, position: 1, duration: 100, playing: true, force: true)
+concurrentHistory.finish("paused")
+let concurrentEvents = SovelListeningHistory.pending(folder: concurrentFolder)
+expect(!concurrentEvents.isEmpty, "concurrent updates must retain readable journal events")
+for event in concurrentEvents {
+  expect((event["coveredSeconds"] as? Double ?? -1) >= 0, "valid concurrent coverage")
+  expect((event["coveredSeconds"] as? Double ?? 101) <= 100, "bounded concurrent coverage")
+}
+print("Native listening: concurrent sampling/seek/finish/bind checks passed")

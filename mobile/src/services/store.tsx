@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { Alert, AppState } from "react-native";
 import { openDatabaseAsync } from "expo-sqlite";
@@ -14,6 +15,7 @@ import {
   useAudioPlaylistStatus,
 } from "expo-audio";
 import { Library } from "../core/library";
+import { StartupAttempt } from "../core/startup";
 import { runScanJob } from "../core/scanJob";
 import { normalizeScanRules } from "../core/scanRules";
 import {
@@ -33,7 +35,7 @@ import { normalizeDsd, type PcmRate } from "../core/dsd";
 import { normalizeEqualizer, type EqualizerSettings } from "../core/equalizer";
 import { configureEqualizer, readEqStatus } from "./equalizer";
 import { normalizePreferences } from "../core/preferences";
-import { normalizeLyricOffset } from "../core/lyrics";
+import { normalizeLyricOffset, currentLyric } from "../core/lyrics";
 import {
   checkpointFor,
   reorderedSessionIds,
@@ -56,6 +58,8 @@ import {
   addQueueSources,
   FavoriteUpdates,
   samePlaybackSources,
+  playbackSummary,
+  sameFields,
 } from "../core/playbackRequests";
 function shuffleTracks(list: Track[]) {
   const result = [...list];
@@ -68,6 +72,11 @@ function shuffleTracks(list: Track[]) {
 function useStore() {
   const [tracks, setTracks] = useState<Track[]>([]),
     [prefs, setPrefs] = useState<Preferences>(defaults);
+  const [startupAttempt, setStartupAttempt] = useState(0);
+  const [startupStage, setStartupStage] = useState("打开本地数据库");
+  const [startupError, setStartupError] = useState("");
+  // Keep migrations single-flight even if the user retries a slow startup.
+  const databaseInit = useRef<Promise<Library> | null>(null);
   const [ready, setReady] = useState(false),
     [busy, setBusy] = useState(false),
     [progress, setProgress] = useState("");
@@ -111,12 +120,16 @@ function useStore() {
     loop: "all",
     updateInterval: 300,
   });
-  const status = useAudioPlaylistStatus(playlist);
+  const [status, setStatus] = useState(() =>
+    playbackSummary(playlist.currentStatus),
+  );
   useEffect(() => {
     let previous: string | undefined;
     const subscription = playlist.addListener(
       "playlistStatusUpdate",
       (value) => {
+        const next = playbackSummary(value);
+        setStatus((previous) => (sameFields(previous, next) ? previous : next));
         const failure = (value as typeof value & { sovelError?: string })
           .sovelError;
         if (failure && failure !== previous) setError(`播放失败：${failure}`);
@@ -202,47 +215,104 @@ function useStore() {
     return restored;
   };
   useEffect(() => {
-    let alive = true;
+    const attempt = new StartupAttempt();
+    const revisions = queueRevision;
+    let historyTimer: ReturnType<typeof setTimeout> | undefined;
+    const stage = async <T,>(label: string, task: () => Promise<T>) => {
+      if (!attempt.active) throw new Error("启动已取消");
+      setStartupStage(label);
+      const started = Date.now();
+      const result = await attempt.step(task);
+      console.info(`[startup] ${label}: ${Date.now() - started}ms`);
+      return result;
+    };
     (async () => {
-      files.prepareFiles();
-      const db = await openDatabaseAsync("sovel.db");
-      const lib = new Library(db);
-      await lib.init();
-      const saved = normalizePreferences(
-        await lib.get("preferences", defaults),
-      );
-      eqSettings.current = normalizeEqualizer(saved.equalizer);
-      if (readEqStatus().available) configureEqualizer(eqSettings.current);
-      if (supportsDsf) configureDsd(saved.dsd);
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        shouldPlayInBackground:
-          saved.backgroundPlayback ?? defaults.backgroundPlayback,
-        interruptionMode: "doNotMix",
+      await Promise.resolve();
+      const lib = await stage("打开本地数据库", () => {
+        if (!databaseInit.current) {
+          databaseInit.current = (async () => {
+            files.prepareFiles();
+            const db = await openDatabaseAsync("sovel.db");
+            const value = new Library(db);
+            await value.init();
+            return value;
+          })().catch((e) => {
+            databaseInit.current = null;
+            throw e;
+          });
+        }
+        return databaseInit.current;
       });
-      if (!alive) return;
+      const [
+        saved,
+        all,
+        sourceList,
+        offsets,
+        storedSession,
+        checkpoint,
+        lastScan,
+      ] = await stage("读取曲库与设置", () =>
+        Promise.all([
+          lib.get("preferences", defaults).then(normalizePreferences),
+          lib.list(),
+          lib.sources(),
+          lib.lyricOffsets(),
+          lib.get("playbackSession", null),
+          lib.get("playbackCheckpoint", null),
+          lib.get<ScanReport | null>("lastScan", null),
+        ]),
+      );
+      // Permissions are checked once per source, never once per song.
+      const restoredSources: SourceStatus[] = [];
+      await stage("恢复音乐文件夹访问", async () => {
+        for (let i = 0; i < sourceList.length; i += 4) {
+          if (!attempt.active) return;
+          const batch = await Promise.all(
+            sourceList.slice(i, i + 4).map(files.activate),
+          );
+          if (!attempt.active) return;
+          restoredSources.push(...batch);
+          for (const source of batch) {
+            if (!attempt.active) return;
+            if (!source.error) await lib.saveSource(source);
+          }
+        }
+      });
+      await stage("准备音频播放", async () => {
+        eqSettings.current = normalizeEqualizer(saved.equalizer);
+        if (readEqStatus().available) configureEqualizer(eqSettings.current);
+        if (supportsDsf) configureDsd(saved.dsd);
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: saved.backgroundPlayback,
+          interruptionMode: "doNotMix",
+        });
+      });
+      const visible = all.map((t) => ({
+        ...t,
+        available: t.available && !files.sourceStatus(t.sourceId)?.error,
+      }));
       library.current = lib;
-      await restoreSources();
-      const all = await refresh();
       prefsRef.current = saved;
       setPrefs(saved);
-      setLyricOffsets(await lib.lyricOffsets());
-      await refreshListening();
-      const session = normalizeSession(await lib.get("playbackSession", null));
+      setTracks(visible);
+      setSources(restoredSources);
+      setLyricOffsets(offsets);
+      setReport(lastScan);
+      setNativeSleep(sleepState(nativePlaylist));
+      const session = normalizeSession(storedSession);
       if (session) {
         activeSession.current = session;
         const restored = restoreSession(
           session,
-          all,
-          checkpointFor(
-            session,
-            readPlaybackCheckpoint(),
-            await lib.get("playbackCheckpoint", null),
-          ),
+          visible,
+          checkpointFor(session, readPlaybackCheckpoint(), checkpoint),
           canPlay,
         );
         if (restored.current) {
-          await installQueue(
+          // Claim the queue revision before exposing the UI. A later user tap
+          // supersedes this restoration; native loading never holds the splash.
+          void installQueue(
             restored.ordered,
             restored.current,
             restored.position,
@@ -251,21 +321,31 @@ function useStore() {
             session.queueIds,
             session.originalIds,
             saved.playbackMode,
-          );
+          ).catch((e) => {
+            if (attempt.active) setError(String(e));
+          });
         }
         if (restored.unavailable)
           setRestoreNote(
             `${restored.unavailable} 首暂时不可用，已保留队列记录`,
           );
       }
-      setNativeSleep(sleepState(nativePlaylist));
-      setReport(await lib.get("lastScan", null));
       setReady(true);
-    })().catch((e) => setError(String(e)));
+      historyTimer = setTimeout(() => void refreshListening(), 0);
+    })().catch((e) => {
+      if (attempt.active) {
+        setStartupError(e instanceof Error ? e.message : String(e));
+        attempt.cancel();
+      }
+    });
     return () => {
-      alive = false;
+      attempt.cancel();
+      clearTimeout(historyTimer);
+      revisions.current++;
     };
-  }, []);
+    // Startup is explicitly retried, not restarted when playback state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startupAttempt]);
   const preferences = (patch: Partial<Preferences>) => {
     const next = normalizePreferences({ ...prefsRef.current, ...patch });
     prefsRef.current = next;
@@ -353,10 +433,9 @@ function useStore() {
     setPendingTrack(track);
     setError("");
     try {
-      const audio = ordered.map((t) => ({
-        uri: files.trackUri(t),
-        name: t.title,
-      }));
+      // Let React paint the pressed/loading state before native queue preparation.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      if (revision !== queueRevision.current) return;
       playlist.pause();
       await library.current!.set("playbackSession", snapshot);
       if (revision !== queueRevision.current) return;
@@ -364,8 +443,9 @@ function useStore() {
         playlist.clear();
         if (
           !(await addQueueSources(
-            audio,
-            (source) => playlist.add(source),
+            ordered,
+            (item) =>
+              playlist.add({ uri: files.trackUri(item), name: item.title }),
             () => revision === queueRevision.current,
           ))
         )
@@ -532,7 +612,18 @@ function useStore() {
     }
   };
   useEffect(() => {
-    const timer = setInterval(() => setEqStatus(readEqStatus()), 1000);
+    const timer = setInterval(() => {
+      const next = readEqStatus();
+      // Frame/clipping counters are diagnostic telemetry, not UI state.
+      setEqStatus((previous) => {
+        const ui = {
+          ...next,
+          frames: previous.frames,
+          clipped: previous.clipped,
+        };
+        return sameFields(previous, ui) ? previous : ui;
+      });
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
   useEffect(() => {
@@ -544,7 +635,12 @@ function useStore() {
     playlist.pause();
     void savePlayback().catch((e) => setError(String(e)));
   };
-  const checkSleep = () => setNativeSleep(sleepState(nativePlaylist));
+  const checkSleep = () => {
+    const next = sleepState(nativePlaylist);
+    setNativeSleep((previous) =>
+      sameFields(previous, next) ? previous : next,
+    );
+  };
   const setSleepTimer = (minutes: number) => {
     try {
       if (!nativePlaylist.setSovelSleepTimer)
@@ -909,6 +1005,13 @@ function useStore() {
   };
   return {
     ready,
+    startupStage,
+    startupError,
+    retryStartup: () => {
+      setStartupError("");
+      setStartupStage("打开本地数据库");
+      setStartupAttempt((value) => value + 1);
+    },
     tracks,
     prefs,
     preferences,
@@ -966,4 +1069,27 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 }
 export function useMusic() {
   return useContext(Context)!;
+}
+
+/** Only clock-dependent views subscribe to the 300 ms native progress events. */
+export function usePlaybackProgress() {
+  const { playlist } = useMusic();
+  return useAudioPlaylistStatus(playlist);
+}
+
+/** Lyrics subscribe to line changes, not every clock tick. */
+export function useLyricIndex(lines: Track["lyrics"], offset: number) {
+  const { playlist } = useMusic();
+  const subscribe = useCallback(
+    (notify: () => void) => {
+      const listener = playlist.addListener("playlistStatusUpdate", notify);
+      return () => listener.remove();
+    },
+    [playlist],
+  );
+  const snapshot = useCallback(
+    () => currentLyric(lines, playlist.currentTime, offset),
+    [playlist, lines, offset],
+  );
+  return useSyncExternalStore(subscribe, snapshot, snapshot);
 }

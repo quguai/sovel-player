@@ -20,7 +20,7 @@ import {
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { Icon, palette, Record } from "./visuals";
-import { useMusic } from "../services/store";
+import { useMusic, usePlaybackProgress } from "../services/store";
 import { playbackModes } from "../core/types";
 export function Action({
   icon,
@@ -130,7 +130,8 @@ export const time = (n: number) => {
   return `${Math.floor(v / 60)}:${String(Math.floor(v % 60)).padStart(2, "0")}`;
 };
 export function Progress() {
-  const { status, current, seek: seekPlayback, setError } = useMusic();
+  const { current, seek: seekPlayback, setError } = useMusic();
+  const status = usePlaybackProgress();
   const [seek, setSeek] = useState<number | null>(null),
     width = useRef(1),
     position = useRef(0);
@@ -349,12 +350,14 @@ export function MiniPlayer({
   blurTarget,
   compact = false,
   landscape = false,
+  active = true,
 }: {
   onOpen: () => void;
   onQueue: () => void;
   blurTarget: RefObject<ComponentRef<typeof View> | null>;
   compact?: boolean;
   landscape?: boolean;
+  active?: boolean;
 }) {
   const { current, toggle, status, prefs, controlPlaying, playbackLoading } =
     useMusic();
@@ -384,7 +387,7 @@ export function MiniPlayer({
           size={44}
           mini
           artworkRatio={0.64}
-          playing={status.playing}
+          playing={active && status.playing}
           speed={prefs.recordSpeed}
         />
         <Text numberOfLines={1} style={[s.title, { flex: 1 }]}>
@@ -437,3 +440,14 @@ const s = StyleSheet.create({
   title: { fontSize: 13, fontWeight: "600", color: palette.text },
   miniArtist: { color: "#aaa294", fontWeight: "400" },
 });
+
+// SafeAreaView owns the inset; 6 + (46 - 23) / 2 gives a ~18 pt icon edge.
+export const navigationHeader = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 6,
+    minHeight: 52,
+  },
+}).row;

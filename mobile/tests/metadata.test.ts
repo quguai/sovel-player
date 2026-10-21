@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { open, readFile } from "node:fs/promises";
 import { readMetadata } from "../src/core/metadata";
-import { parseLyrics, currentLyric } from "../src/core/lyrics";
+import { parseLyrics, currentLyric, singleLineLyric } from "../src/core/lyrics";
 for (const path of [
   "tests/fixtures/sample.wav",
   "tests/fixtures/sample.flac",
@@ -121,4 +121,10 @@ test("LRC supports repeated timestamps, offsets and plain lyrics", () => {
     { time: null, text: "第一句" },
     { time: null, text: "第二句" },
   ]);
+});
+
+test("single-line lyric display keeps all words and removes embedded Unicode line separators", () => {
+  assert.equal(singleLineLyric("第一句\r\n第二句\u2028第三句\u2029第四句\u0085last line"), "第一句 第二句 第三句 第四句 last line");
+  const long = "a long lyric without truncation ".repeat(100);
+  assert.equal(singleLineLyric(long), long);
 });

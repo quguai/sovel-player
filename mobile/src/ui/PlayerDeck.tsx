@@ -6,8 +6,9 @@ import {
   StyleSheet,
   View,
   useWindowDimensions,
+  type GestureResponderHandlers,
 } from "react-native";
-import { Action } from "./components";
+import { Action, navigationHeader } from "./components";
 import { PlayerScreen, LyricsScreen } from "./screens";
 import { SongContextScreen } from "./SongContextScreen";
 import { PlayerAppearanceSheet } from "./PlayerAppearanceSheet";
@@ -22,16 +23,19 @@ export function PlayerDeck({
   onClose,
   onDetails,
   onQueue,
+  dismissPanHandlers,
 }: {
   panel: PlayerPanel;
   onPanel: (panel: PlayerPanel) => void;
   onClose: () => void;
   onDetails: () => void;
   onQueue: () => void;
+  dismissPanHandlers?: GestureResponderHandlers;
 }) {
   const window = useWindowDimensions();
   const [width, setWidth] = useState(window.width);
   const [appearance, setAppearance] = useState(false);
+  const [neighborsReady, setNeighborsReady] = useState(false);
   const [reduced, setReduced] = useState(false);
   const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const previousWidth = useRef(0);
@@ -57,8 +61,9 @@ export function PlayerDeck({
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
     >
       <View
+        {...(!appearance ? dismissPanHandlers : undefined)}
         style={[
-          styles.header,
+          navigationHeader,
           {
             height:
               window.height < 740 || window.width > window.height ? 48 : 60,
@@ -96,6 +101,7 @@ export function PlayerDeck({
         showsHorizontalScrollIndicator={false}
         contentOffset={{ x: index * width, y: 0 }}
         scrollEnabled={!appearance}
+        onScrollBeginDrag={() => setNeighborsReady(true)}
         onMomentumScrollEnd={(event) => {
           const next = Math.max(
             0,
@@ -114,7 +120,9 @@ export function PlayerDeck({
               panel === item ? "auto" : "no-hide-descendants"
             }
           >
-            {item === "about" ? (
+            {item !== "player" &&
+            panel !== item &&
+            !neighborsReady ? null : item === "about" ? (
               <SongContextScreen
                 onPlay={() => onPanel("player")}
                 onQueue={onQueue}
@@ -126,6 +134,11 @@ export function PlayerDeck({
                 onDetails={onDetails}
                 onQueue={onQueue}
                 animateLyrics={panel === "player" && !appearance && !reduced}
+                dismissPanHandlers={
+                  panel === "player" && !appearance
+                    ? dismissPanHandlers
+                    : undefined
+                }
               />
             ) : (
               <LyricsScreen
@@ -146,12 +159,6 @@ export function PlayerDeck({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-  },
   dots: {
     flexDirection: "row",
     alignItems: "center",

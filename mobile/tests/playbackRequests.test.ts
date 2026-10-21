@@ -4,6 +4,8 @@ import {
   addQueueSources,
   FavoriteUpdates,
   samePlaybackSources,
+  playbackSummary,
+  sameFields,
 } from "../src/core/playbackRequests";
 import { fallbackMetadata, type Track } from "../src/core/types";
 
@@ -50,6 +52,7 @@ test("large queues yield before work and between bridge batches; newer requests 
       yields++;
       if (yields === 3) current = false;
     },
+    () => 0,
   );
   assert.equal(result, false);
   assert.deepEqual(
@@ -110,4 +113,51 @@ test("failed favorite writes cannot overwrite newer taps; latest failure restore
   await updates.toggle("a", false, show, reject, failed);
   assert.deepEqual(shown, [true, false, true, false]);
   assert.equal(errors, 2);
+});
+
+test("clock and queue population events do not invalidate navigation; control transitions do", () => {
+  const initial = {
+    currentIndex: 0,
+    playing: true,
+    isLoaded: true,
+    isBuffering: false,
+    currentTime: 0,
+    trackCount: 1,
+  };
+  const summary = playbackSummary(initial);
+  for (let i = 1; i <= 1000; i++) {
+    const event = { ...initial, currentTime: i * 0.3, trackCount: i };
+    assert.ok(sameFields(summary, playbackSummary(event)));
+  }
+  for (const change of [
+    { currentIndex: 1 },
+    { playing: false },
+    { isLoaded: false },
+    { isBuffering: true },
+  ]) {
+    assert.equal(
+      sameFields(summary, playbackSummary({ ...initial, ...change })),
+      false,
+    );
+  }
+});
+
+test("slow native queue additions yield by elapsed time before reaching the batch limit", async () => {
+  let clock = 0;
+  const added: number[] = [],
+    boundaries: number[] = [];
+  await addQueueSources(
+    [0, 1, 2, 3, 4],
+    (source) => {
+      added.push(source);
+      clock += 4;
+    },
+    () => true,
+    async () => {
+      boundaries.push(added.length);
+    },
+    () => clock,
+  );
+  assert.deepEqual(added, [0, 1, 2, 3, 4]);
+  assert.deepEqual(boundaries, [0, 2, 4]);
 });

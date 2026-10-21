@@ -11,7 +11,7 @@ import {
 import { useMusic } from "../services/store";
 import { normalizeScanRules } from "../core/scanRules";
 import { type ScanRules } from "../core/types";
-import { Action, Button } from "./components";
+import { Action, Button, navigationHeader } from "./components";
 import { SettingGroup, SettingRow, SettingSwitch } from "./SettingsPanels";
 import { palette as p } from "./visuals";
 export function FileScanScreen({ onBack }: { onBack: () => void }) {
@@ -52,7 +52,7 @@ export function FileScanScreen({ onBack }: { onBack: () => void }) {
     : null;
   return (
     <View style={{ flex: 1 }}>
-      <View style={s.header}>
+      <View style={navigationHeader}>
         <Action icon="back" label="返回设置" onPress={onBack} />
         <Text style={s.heading}>文件扫描</Text>
         <View style={{ width: 46 }} />
@@ -322,13 +322,6 @@ export function FileScanScreen({ onBack }: { onBack: () => void }) {
   );
 }
 const s = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
   heading: { color: p.text, fontSize: 19, fontWeight: "600" },
   content: { padding: 24, paddingBottom: 50 },
   intro: { color: p.text, fontSize: 19, fontWeight: "500", marginBottom: 10 },

@@ -695,3 +695,50 @@ test("lyric offsets and playback session survive full rescans and repeated schem
   await lib.setLyricOffset(id, 0);
   assert.equal((await lib.lyricOffsets())[id], 0);
 });
+
+test("opening a 2000-track library yields to UI and tolerates one damaged cached tag", async () => {
+  const { lib, sqlite } = setup();
+  await lib.init();
+  const insert = sqlite.prepare(
+    "INSERT INTO tracks(id,path,size,mtime,metadata) VALUES (?,?,1,1,?)",
+  );
+  for (let i = 0; i < 2000; i++) {
+    const path = `${String(i).padStart(4, "0")}.flac`;
+    insert.run(
+      path,
+      path,
+      i === 500
+        ? "broken JSON"
+        : JSON.stringify({
+            ...fallbackMetadata(path),
+            lyrics: Array.from({ length: 60 }, (_, line) => ({
+              time: line,
+              text: `歌词 ${line}`,
+            })),
+          }),
+    );
+  }
+  await lib.favorite("0001.flac", true);
+  let uiTicks = 0;
+  const timer = setInterval(() => {
+    uiTicks++;
+  }, 0);
+  const started = performance.now();
+  try {
+    const tracks = await lib.list();
+    assert.equal(tracks.length, 2000);
+    assert.equal(tracks[1].favorite, true);
+    assert.equal(tracks[500].title, "0500");
+    assert.equal(tracks[1999].lyrics.length, 60);
+    assert.ok(
+      uiTicks > 0,
+      "the event loop must remain responsive during hydration",
+    );
+    console.info(
+      `2000 cached tracks with lyrics: ${Math.round(performance.now() - started)}ms (desktop SQLite test)`,
+    );
+  } finally {
+    clearInterval(timer);
+    sqlite.close();
+  }
+});

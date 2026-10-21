@@ -2,17 +2,15 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   BackHandler,
-  Image,
   Modal,
   Pressable,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { LinearGradient } from "expo-linear-gradient";
 import { MusicProvider, useMusic } from "./src/services/store";
 import { UpdatesProvider, useUpdates } from "./src/services/appUpdates";
 import { artUri } from "./src/services/files";
@@ -26,6 +24,9 @@ import {
   s,
 } from "./src/ui/screens";
 import { PlayerDeck, type PlayerPanel } from "./src/ui/PlayerDeck";
+import { PlayerBackdrop } from "./src/ui/PlayerBackdrop";
+import { DismissiblePlayer } from "./src/ui/DismissiblePlayer";
+import { StartupScreen } from "./src/ui/StartupScreen";
 type Page = "library" | "player" | "settings" | "sources" | "details";
 function Shell() {
   const [page, setPage] = useState<Page>("library"),
@@ -33,6 +34,9 @@ function Shell() {
   const [playerPanel, setPlayerPanel] = useState<PlayerPanel>("player");
   const {
     ready,
+    startupStage,
+    startupError,
+    retryStartup,
     current,
     tracks,
     queue: playingQueue,
@@ -95,46 +99,102 @@ function Shell() {
     });
     return () => listener.remove();
   }, [page, queue, playerPanel]);
-  return (
-    <View style={{ flex: 1, backgroundColor: playerPage ? "#746b66" : p.bg }}>
-      <StatusBar style="light" />
-      {playerPage && (
-        <>
-          <Image
-            source={uri ? { uri } : require("./assets/artwork/ocean.jpg")}
-            blurRadius={
-              prefs.player === "immersive" && playerPanel === "player" ? 0 : 65
+  const notices = (
+    <>
+      {updates.release &&
+        updates.release.tag !== updates.prefs.ignoredTag &&
+        page !== "settings" && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={updateReady ? "查看安装更新" : updateStatus}
+            disabled={
+              updateDownloading || updateVerifying || updates.installing
             }
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                opacity:
-                  prefs.player === "immersive" && playerPanel === "player"
-                    ? 0.75
-                    : 0.4,
-              },
-            ]}
-            resizeMode="cover"
-          />
-          <LinearGradient
-            colors={["#48444835", "#39313570", "#292b36c9"]}
-            style={StyleSheet.absoluteFill}
-          />
-        </>
+            onPress={() => {
+              setUpdateEntry(true);
+              setPage("settings");
+            }}
+            style={styles.banner}
+          >
+            <View style={{ flex: 1, gap: 7 }}>
+              <Text style={{ color: p.gold, fontSize: 12 }}>
+                {updateStatus}
+              </Text>
+              {(updateDownloading || updateVerifying) && (
+                <View
+                  accessibilityRole="progressbar"
+                  accessibilityLabel="更新下载进度"
+                  accessibilityValue={{
+                    min: 0,
+                    max: 100,
+                    now: updatePercent,
+                  }}
+                  style={styles.updateTrack}
+                >
+                  <View
+                    style={[styles.updateFill, { width: `${updatePercent}%` }]}
+                  />
+                </View>
+              )}
+            </View>
+            {!updateDownloading && !updateVerifying && (
+              <Text style={{ color: p.gold, fontSize: 12 }}>
+                {updateReady ? "安装更新 ›" : "更新 ›"}
+              </Text>
+            )}
+          </Pressable>
+        )}
+      {busy && page !== "sources" && (
+        <View style={styles.banner}>
+          <ActivityIndicator color={p.gold} size="small" />
+          <Text numberOfLines={2} style={[s.tiny, { flex: 1, color: p.text }]}>
+            {progress}
+          </Text>
+        </View>
       )}
+      {!!error && (
+        <View style={[styles.banner, { backgroundColor: "#4a3430" }]}>
+          <Text style={{ color: "#f0d3c6", fontSize: 12, flex: 1 }}>
+            {error}
+          </Text>
+          <Action
+            icon="close"
+            label="关闭提示"
+            onPress={() => setError("")}
+            size={18}
+          />
+        </View>
+      )}
+    </>
+  );
+  return (
+    <View style={{ flex: 1, backgroundColor: p.bg }}>
+      <StatusBar style="light" />
       <SafeAreaView
         style={{ flex: 1 }}
         edges={["top", "bottom", "left", "right"]}
       >
-        {!ready && !error ? (
-          <View style={s.center}>
-            <ActivityIndicator color={p.gold} />
-            <Text style={s.subtitle}>正在打开音乐库…</Text>
-          </View>
+        {!ready ? (
+          <StartupScreen
+            stage={startupStage}
+            error={startupError}
+            onRetry={retryStartup}
+          />
         ) : (
           <View style={{ flex: 1 }}>
-            {page === "library" ? (
+            <View
+              style={{
+                flex: 1,
+                display: page === "library" || playerPage ? "flex" : "none",
+              }}
+              pointerEvents={playerPage ? "none" : "auto"}
+              accessibilityElementsHidden={page !== "library"}
+              importantForAccessibility={
+                page === "library" ? "auto" : "no-hide-descendants"
+              }
+            >
               <LibraryScreen
+                active={page === "library"}
                 onPlayer={() => {
                   setPlayerPanel("player");
                   setPage("player");
@@ -145,15 +205,8 @@ function Shell() {
                 }}
                 onQueue={() => setQueue(true)}
               />
-            ) : page === "player" ? (
-              <PlayerDeck
-                panel={playerPanel}
-                onPanel={setPlayerPanel}
-                onDetails={() => setPage("details")}
-                onClose={() => setPage("library")}
-                onQueue={() => setQueue(true)}
-              />
-            ) : page === "settings" ? (
+            </View>
+            {page === "library" || playerPage ? null : page === "settings" ? (
               <SettingsScreen
                 initialSection={updateEntry ? "updates" : "root"}
                 onBack={() => setPage("library")}
@@ -166,74 +219,37 @@ function Shell() {
             )}
           </View>
         )}
-        {updates.release &&
-          updates.release.tag !== updates.prefs.ignoredTag &&
-          page !== "settings" && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={updateReady ? "查看安装更新" : updateStatus}
-              disabled={
-                updateDownloading || updateVerifying || updates.installing
-              }
-              onPress={() => {
-                setUpdateEntry(true);
-                setPage("settings");
-              }}
-              style={styles.banner}
-            >
-              <View style={{ flex: 1, gap: 7 }}>
-                <Text style={{ color: p.gold, fontSize: 12 }}>
-                  {updateStatus}
-                </Text>
-                {(updateDownloading || updateVerifying) && (
-                  <View
-                    accessibilityRole="progressbar"
-                    accessibilityLabel="更新下载进度"
-                    accessibilityValue={{
-                      min: 0,
-                      max: 100,
-                      now: updatePercent,
-                    }}
-                    style={styles.updateTrack}
-                  >
-                    <View
-                      style={[styles.updateFill, { width: `${updatePercent}%` }]}
-                    />
-                  </View>
-                )}
-              </View>
-              {!updateDownloading && !updateVerifying && (
-                <Text style={{ color: p.gold, fontSize: 12 }}>
-                  {updateReady ? "安装更新 ›" : "更新 ›"}
-                </Text>
-              )}
-            </Pressable>
-          )}
-        {busy && page !== "sources" && (
-          <View style={styles.banner}>
-            <ActivityIndicator color={p.gold} size="small" />
-            <Text
-              numberOfLines={2}
-              style={[s.tiny, { flex: 1, color: p.text }]}
-            >
-              {progress}
-            </Text>
-          </View>
-        )}
-        {!!error && (
-          <View style={[styles.banner, { backgroundColor: "#4a3430" }]}>
-            <Text style={{ color: "#f0d3c6", fontSize: 12, flex: 1 }}>
-              {error}
-            </Text>
-            <Action
-              icon="close"
-              label="关闭提示"
-              onPress={() => setError("")}
-              size={18}
-            />
-          </View>
-        )}
+        {!playerPage && notices}
       </SafeAreaView>
+      {playerPage && (
+        <DismissiblePlayer onClose={() => setPage("library")}>
+          {(dismiss, panHandlers) => (
+            <>
+              <PlayerBackdrop
+                uri={uri}
+                immersive={
+                  prefs.player === "immersive" && playerPanel === "player"
+                }
+                active={playerPanel === "player" && !queue}
+              />
+              <SafeAreaView
+                style={{ flex: 1 }}
+                edges={["top", "bottom", "left", "right"]}
+              >
+                <PlayerDeck
+                  panel={playerPanel}
+                  onPanel={setPlayerPanel}
+                  onDetails={() => setPage("details")}
+                  onClose={dismiss}
+                  onQueue={() => setQueue(true)}
+                  dismissPanHandlers={panHandlers}
+                />
+                {notices}
+              </SafeAreaView>
+            </>
+          )}
+        </DismissiblePlayer>
+      )}
       <Modal
         visible={queue}
         transparent
@@ -266,32 +282,39 @@ function Shell() {
                 onPress={() => setQueue(false)}
               />
             </View>
-            <ScrollView>
-              {(playingQueue.length ? playingQueue : tracks).map((track) => (
-                <Pressable
-                  key={track.id}
-                  style={s.trackRow}
-                  onPress={() => {
-                    play(track, playingQueue.length ? playingQueue : tracks);
-                    setQueue(false);
-                    setPage("player");
-                  }}
-                >
-                  <Cover track={track} size={40} />
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        s.trackTitle,
-                        track.id === current?.id && { color: p.gold },
-                      ]}
-                    >
-                      {track.title}
-                    </Text>
-                    <Text style={s.tiny}>{track.artist}</Text>
-                  </View>
-                </Pressable>
-              ))}
-            </ScrollView>
+            {queue && (
+              <FlatList
+                data={playingQueue.length ? playingQueue : tracks}
+                keyExtractor={(track) => track.id}
+                initialNumToRender={10}
+                maxToRenderPerBatch={8}
+                windowSize={5}
+                renderItem={({ item: track }) => (
+                  <Pressable
+                    key={track.id}
+                    style={s.trackRow}
+                    onPress={() => {
+                      play(track, playingQueue.length ? playingQueue : tracks);
+                      setQueue(false);
+                      setPage("player");
+                    }}
+                  >
+                    <Cover track={track} size={40} />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          s.trackTitle,
+                          track.id === current?.id && { color: p.gold },
+                        ]}
+                      >
+                        {track.title}
+                      </Text>
+                      <Text style={s.tiny}>{track.artist}</Text>
+                    </View>
+                  </Pressable>
+                )}
+              />
+            )}
           </View>
         </View>
       </Modal>

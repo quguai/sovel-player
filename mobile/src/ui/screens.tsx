@@ -15,10 +15,15 @@ import {
   ScrollView,
   useWindowDimensions,
   BackHandler,
+  type GestureResponderHandlers,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurTargetView } from "expo-blur";
-import { useMusic } from "../services/store";
+import {
+  useMusic,
+  usePlaybackProgress,
+  useLyricIndex,
+} from "../services/store";
 import { canPlay, supportsDsf } from "../services/playbackSupport";
 import { sourceStatus, trackUri } from "../services/files";
 import {
@@ -28,16 +33,24 @@ import {
   playbackModes,
   type PlaybackMode,
   type Track,
+  type LyricLine as LyricData,
   type HomeStyle,
   type RecordStyle,
   type RecordSpeed,
   type TonearmStyle,
 } from "../core/types";
 import { CartridgeColorOptions } from "./CartridgeColorOptions";
-import { currentLyric, lyricSeekTime } from "../core/lyrics";
+import { lyricSeekTime } from "../core/lyrics";
 import { LyricLine } from "./LyricLine";
+import { FormatTag } from "./FormatTag";
 import { trackDetails } from "../core/trackDetails";
-import { Action, Button, MiniPlayer, PlaybackControls } from "./components";
+import {
+  Action,
+  Button,
+  MiniPlayer,
+  PlaybackControls,
+  navigationHeader,
+} from "./components";
 import {
   Cover,
   Icon,
@@ -64,10 +77,12 @@ import {
 } from "../core/discovery";
 
 export function LibraryScreen({
+  active = true,
   onPlayer,
   onSettings,
   onQueue,
 }: {
+  active?: boolean;
   onPlayer: () => void;
   onSettings: () => void;
   onQueue: () => void;
@@ -278,6 +293,22 @@ export function LibraryScreen({
             </Text>
           </Pressable>
         ))}
+        {grouped && tab !== "folders" && (
+          <Action
+            icon={layout === "cards" ? "list" : "grid"}
+            label={`${tab === "albums" ? "专辑" : "艺术家"}切换为${layout === "cards" ? "列表" : "卡片"}`}
+            size={20}
+            color={p.muted}
+            style={{ marginLeft: "auto", marginRight: -12 }}
+            onPress={() =>
+              void preferences(
+                tab === "albums"
+                  ? { albumLayout: layout === "cards" ? "list" : "cards" }
+                  : { artistLayout: layout === "cards" ? "list" : "cards" },
+              )
+            }
+          />
+        )}
       </View>
       {tracks.length > 0 && (
         <View
@@ -289,35 +320,7 @@ export function LibraryScreen({
             minHeight: 44,
           }}
         >
-          {grouped && tab !== "folders" ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${tab === "albums" ? "专辑" : "艺术家"}切换为${layout === "cards" ? "列表" : "卡片"}`}
-              onPress={() =>
-                void preferences(
-                  tab === "albums"
-                    ? { albumLayout: layout === "cards" ? "list" : "cards" }
-                    : { artistLayout: layout === "cards" ? "list" : "cards" },
-                )
-              }
-              style={({ pressed }) => ({
-                minHeight: 44,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 8,
-                opacity: pressed ? 0.6 : 1,
-              })}
-            >
-              <Icon
-                name={layout === "cards" ? "grid" : "list"}
-                color={p.gold}
-                size={18}
-              />
-              <Text style={{ color: p.gold, fontSize: 12 }}>
-                {layout === "cards" ? "封面视图" : "列表视图"}
-              </Text>
-            </Pressable>
-          ) : mix ? (
+          {mix ? (
             <Pressable
               accessibilityLabel="返回全部音乐"
               onPress={() => setMix(null)}
@@ -334,7 +337,11 @@ export function LibraryScreen({
           ) : (
             <Text style={s.tiny}>
               {grouped
-                ? "音乐目录"
+                ? tab === "albums"
+                  ? "全部专辑"
+                  : tab === "artists"
+                    ? "全部艺术家"
+                    : "音乐目录"
                 : filter
                   ? "歌曲列表"
                   : favorites
@@ -375,6 +382,9 @@ export function LibraryScreen({
           key={`${grid ? columns : 1}-${tab}`}
           numColumns={grid ? columns : 1}
           data={rows}
+          initialNumToRender={12}
+          maxToRenderPerBatch={8}
+          windowSize={5}
           keyExtractor={(t) => t.id}
           contentContainerStyle={{
             paddingHorizontal: 24,
@@ -421,11 +431,13 @@ export function LibraryScreen({
                   >
                     {item.title}
                   </Text>
-                  <Text numberOfLines={1} style={s.tiny}>
-                    {item.artist} ·{" "}
-                    {item.available ? item.format : "文件不可用"}
-                    {!canPlay(item) && item.available ? " · 待解码支持" : ""}
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
+                    {item.available && <FormatTag format={item.format} />}
+                    <Text numberOfLines={1} style={[s.tiny, { flexShrink: 1, marginTop: 0 }]}>
+                      {item.artist}
+                      {!item.available ? " · 文件不可用" : !canPlay(item) ? " · 待解码支持" : ""}
+                    </Text>
+                  </View>
                 </View>
                 {item.id === current?.id ? (
                   <Icon
@@ -462,6 +474,7 @@ export function LibraryScreen({
           }}
         />
         <MiniPlayer
+          active={active}
           onOpen={onPlayer}
           onQueue={onQueue}
           blurTarget={blurTarget}
@@ -523,20 +536,106 @@ export function LibraryScreen({
     </View>
   );
 }
+const emptyLyrics: Track["lyrics"] = [];
+function PlayingRecord(
+  props: Omit<React.ComponentProps<typeof Record>, "playing" | "progress">,
+) {
+  const status = usePlaybackProgress();
+  return (
+    <Record
+      {...props}
+      playing={status.playing}
+      progress={
+        status.currentTime / (status.duration || props.track?.duration || 1)
+      }
+    />
+  );
+}
+function LyricPreview({
+  showNext,
+  animate,
+}: {
+  showNext: boolean;
+  animate: boolean;
+}) {
+  const { current, lyricOffset } = useMusic();
+  const lines = current?.lyrics || emptyLyrics;
+  const index = useLyricIndex(lines, lyricOffset);
+  return (
+    <>
+      <LyricLine
+        text={lines[Math.max(index, 0)]?.text || "此刻，专注聆听"}
+        style={s.previewLine}
+        centered
+        active={animate}
+      />
+      {showNext && (
+        <LyricLine
+          text={
+            lines[Math.max(index, 0) + 1]?.text ||
+            (lines.length ? "" : "暂无歌词")
+          }
+          style={s.previewNext}
+          centered
+          active={animate}
+        />
+      )}
+    </>
+  );
+}
+
 export function PlayerScreen({
   onClose,
   onLyrics,
   onQueue,
   onDetails,
   animateLyrics = true,
+  dismissPanHandlers,
 }: {
   onClose: () => void;
   onLyrics: () => void;
   onQueue: () => void;
   onDetails: () => void;
   animateLyrics?: boolean;
+  dismissPanHandlers?: GestureResponderHandlers;
 }) {
-  const { current, prefs, status, favorite, lyricOffset } = useMusic();
+  const { current } = useMusic();
+  if (!current)
+    return (
+      <View style={s.center}>
+        <Text style={s.subtitle}>先导入一首音乐</Text>
+        <Button onPress={onClose}>返回音乐库</Button>
+      </View>
+    );
+  return (
+    <View style={{ flex: 1, backgroundColor: "transparent" }}>
+      <View style={{ flex: 1, paddingHorizontal: 28 }} {...dismissPanHandlers}>
+        <PlayerTrackContent
+          current={current}
+          animateLyrics={animateLyrics}
+          onLyrics={onLyrics}
+          onDetails={onDetails}
+        />
+      </View>
+      <View style={{ paddingHorizontal: 28, backgroundColor: "transparent" }}>
+        <PlaybackControls onQueue={onQueue} />
+      </View>
+    </View>
+  );
+}
+
+function PlayerTrackContent({
+  current,
+  animateLyrics,
+  onLyrics,
+  onDetails,
+}: {
+  current: Track;
+  animateLyrics: boolean;
+  onLyrics: () => void;
+  onDetails: () => void;
+}) {
+  const { prefs, favorite } = useMusic();
   const { width, height } = useWindowDimensions();
   const landscape = width > height;
   const vinyl = prefs.player === "vinyl";
@@ -550,7 +649,7 @@ export function PlayerScreen({
       ? Math.min(height - 150, width * 0.42)
       : Math.min(width - 58, height * 0.38);
   const artSize =
-    (vinyl ? 0.92 : 1) *
+    (vinyl ? 0.87 : 1) *
     Math.min(
       preferredArtSize,
       artHeight
@@ -560,75 +659,69 @@ export function PlayerScreen({
         : preferredArtSize,
     );
   const recordLift = Math.min(landscape ? 6 : 12, artHeight * 0.03);
-  const lines = current?.lyrics || [],
-    index = currentLyric(lines, status.currentTime, lyricOffset);
-  if (!current)
-    return (
-      <View style={s.center}>
-        <Text style={s.subtitle}>先导入一首音乐</Text>
-        <Button onPress={onClose}>返回音乐库</Button>
-      </View>
-    );
+  const infoLift =
+    landscape || prefs.player === "immersive"
+      ? 0
+      : height < 620
+        ? 10
+        : compact
+          ? 16
+          : 24;
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      style={[
+        { flex: 1 },
+        landscape
+          ? { flexDirection: "row", gap: 30 }
+          : { justifyContent: "space-between" },
+      ]}
+    >
       <View
+        onLayout={(event) => setArtHeight(event.nativeEvent.layout.height)}
         style={[
-          { flex: 1, paddingHorizontal: 28 },
-          landscape
-            ? { flexDirection: "row", gap: 30 }
-            : { justifyContent: "space-between" },
+          {
+            alignItems: "center",
+            justifyContent: "center",
+            flex: 1,
+            minHeight: 150,
+          },
+          landscape && { flex: 0, width: (width - 86) * 0.46 },
+          vinyl && !landscape && { marginHorizontal: -20 },
         ]}
       >
-        <View
-          onLayout={(event) => setArtHeight(event.nativeEvent.layout.height)}
-          style={[
-            {
-              alignItems: "center",
-              justifyContent: "center",
-              flex: 1,
-              minHeight: 150,
-            },
-            landscape && { flex: 0, width: (width - 86) * 0.46 },
-            vinyl && !landscape && { marginHorizontal: -20 },
-          ]}
-        >
-          {prefs.player === "vinyl" ? (
-            <View style={{ transform: [{ translateY: -recordLift }] }}>
-              <Record
-                track={current}
-                material={prefs.record}
-                speed={prefs.recordSpeed}
-                stylusLight={prefs.stylusLight}
-                tonearmStyle={prefs.tonearmStyle}
-                cartridgeColor={prefs.cartridgeColor}
-                size={artSize}
-                playing={status.playing}
-                progress={
-                  status.currentTime /
-                  (status.duration || current.duration || 1)
-                }
-              />
-            </View>
-          ) : prefs.player === "cover" ? (
-            <Cover
+        {prefs.player === "vinyl" ? (
+          <View style={{ transform: [{ translateY: -recordLift }] }}>
+            <PlayingRecord
               track={current}
+              material={prefs.record}
+              speed={prefs.recordSpeed}
+              stylusLight={prefs.stylusLight}
+              tonearmStyle={prefs.tonearmStyle}
+              cartridgeColor={prefs.cartridgeColor}
               size={artSize}
-              style={{
-                borderRadius: 12,
-                shadowColor: "#000",
-                shadowOpacity: 0.2,
-                shadowRadius: 20,
-              }}
             />
-          ) : (
-            <View style={{ height: artSize }} />
-          )}
-        </View>
-        <View
-          style={[
-            landscape ? { flex: 1, minWidth: 0, justifyContent: "center" } : {},
-          ]}
-        >
+          </View>
+        ) : prefs.player === "cover" ? (
+          <Cover
+            track={current}
+            size={artSize}
+            style={{
+              borderRadius: 12,
+              shadowColor: "#000",
+              shadowOpacity: 0.2,
+              shadowRadius: 20,
+            }}
+          />
+        ) : (
+          <View style={{ height: artSize }} />
+        )}
+      </View>
+      <View
+        style={[
+          landscape ? { flex: 1, minWidth: 0, justifyContent: "center" } : {},
+        ]}
+      >
+        <View style={{ marginTop: -infoLift, paddingBottom: infoLift }}>
           <View style={[s.row, { marginTop: landscape ? 0 : vinyl ? 8 : 16 }]}>
             <View style={{ flex: 1 }}>
               <Text
@@ -672,7 +765,7 @@ export function PlayerScreen({
               (compact || vinyl) && { marginTop: 4, minHeight: 28 },
             ]}
           >
-            <Text style={s.qualityTag}>{current.format}</Text>
+            <FormatTag format={current.format} />
             <Text style={s.qualityText}>
               {[
                 current.bits ? `${current.bits} bit` : null,
@@ -696,27 +789,11 @@ export function PlayerScreen({
               minHeight: compact || vinyl ? 44 : 85,
             }}
           >
-            <LyricLine
-              key={`${current?.id}-${index}-current`}
-              text={lines[Math.max(index, 0)]?.text || "此刻，专注聆听"}
-              style={s.previewLine}
-              centered
-              active={animateLyrics}
+            <LyricPreview
+              showNext={!(vinyl && !landscape && height < 740)}
+              animate={animateLyrics}
             />
-            {!(vinyl && !landscape && height < 740) && (
-              <LyricLine
-                key={`${current?.id}-${index}-next`}
-                text={
-                  lines[Math.max(index, 0) + 1]?.text ||
-                  (lines.length ? "" : "暂无歌词")
-                }
-                style={s.previewNext}
-                centered
-                active={animateLyrics}
-              />
-            )}
           </Pressable>
-          <PlaybackControls onQueue={onQueue} />
         </View>
       </View>
     </View>
@@ -731,7 +808,6 @@ export function LyricsScreen({
 }) {
   const {
     current,
-    status,
     seek,
     prefs,
     preferences,
@@ -739,19 +815,26 @@ export function LyricsScreen({
     lyricOffset,
     setLyricOffset,
   } = useMusic();
+  const { status } = useMusic();
   const [adjustLyrics, setAdjustLyrics] = useState(false);
-  const lines = current?.lyrics || [];
-  const active = currentLyric(lines, status.currentTime, lyricOffset);
-  const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null),
-    positions = useRef<number[]>([]),
-    dragged = useRef(0);
+  const lines = current?.lyrics || emptyLyrics;
+  const active = useLyricIndex(lines, lyricOffset);
+  const { width, height, fontScale } = useWindowDimensions();
+  // Compact screens need denser lyrics; keep system accessibility scaling intact.
+  const lyricScale = Math.max(0.8, Math.min(1, width / 390, height / 800));
+  const lyricFontSize = Math.round((prefs.largeLyrics ? 32 : 26) * lyricScale);
+  const lyricLineHeight = Math.round((prefs.largeLyrics ? 43 : 36) * lyricScale);
+  const lyricPadding = Math.round(10 * lyricScale * lyricScale);
+  const rowHeight = Math.max(44, lyricLineHeight * fontScale + lyricPadding * 2);
+  const scroll = useRef<FlatList<LyricData>>(null);
+  const dragged = useRef(0);
   useEffect(() => {
-    if (active >= 0 && Date.now() - dragged.current > 3000)
-      scroll.current?.scrollTo({
-        y: Math.max(0, (positions.current[active] || 0) - 70),
+    if (animateLyrics && active >= 0 && Date.now() - dragged.current > 3000)
+      scroll.current?.scrollToOffset({
+        offset: Math.max(0, 12 + active * rowHeight - 70),
         animated: true,
       });
-  }, [active]);
+  }, [active, rowHeight, animateLyrics]);
   return (
     <View style={{ flex: 1 }}>
       <View
@@ -841,8 +924,19 @@ export function LyricsScreen({
           </View>
         )}
       </View>
-      <ScrollView
+      <FlatList
         ref={scroll}
+        data={lines}
+        extraData={`${active}-${prefs.largeLyrics}-${lyricScale}-${fontScale}-${animateLyrics}-${status.isLoaded}-${lyricOffset}`}
+        keyExtractor={(_, index) => `${current?.id}-${index}`}
+        initialNumToRender={12}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        getItemLayout={(_, index) => ({
+          length: rowHeight,
+          offset: 12 + rowHeight * index,
+          index,
+        })}
         onScrollBeginDrag={() => {
           dragged.current = Date.now();
         }}
@@ -852,44 +946,40 @@ export function LyricsScreen({
           paddingBottom: 90,
         }}
         showsVerticalScrollIndicator={false}
-      >
-        {lines.length ? (
-          lines.map((line, i) => (
-            <Pressable
-              key={`${current?.id}-${i}-${line.time}`}
-              disabled={line.time === null || !status.isLoaded}
-              onLayout={(e) => {
-                positions.current[i] = e.nativeEvent.layout.y;
+        renderItem={({ item: line, index: i }) => (
+          <Pressable
+            key={`${current?.id}-${i}-${line.time}`}
+            disabled={line.time === null || !status.isLoaded}
+            style={{ height: rowHeight, justifyContent: "center" }}
+            onPress={() => {
+              if (line.time !== null)
+                void seek(lyricSeekTime(line.time, lyricOffset));
+            }}
+            accessibilityLabel={
+              line.time === null ? line.text : `播放到：${line.text}`
+            }
+          >
+            <LyricLine
+              text={line.text}
+              active={animateLyrics && (line.time === null || i === active)}
+              style={{
+                fontSize: lyricFontSize,
+                fontWeight: "700",
+                lineHeight: lyricLineHeight,
+                paddingVertical: lyricPadding,
+                color:
+                  line.time === null
+                    ? "#ffffffe0"
+                    : i === active
+                      ? "#fff"
+                      : i < active
+                        ? "#ffffff80"
+                        : "#ffffff40",
               }}
-              onPress={() => {
-                if (line.time !== null)
-                  void seek(lyricSeekTime(line.time, lyricOffset));
-              }}
-              accessibilityLabel={
-                line.time === null ? line.text : `播放到：${line.text}`
-              }
-            >
-              <LyricLine
-                text={line.text}
-                active={animateLyrics && (line.time === null || i === active)}
-                style={{
-                  fontSize: prefs.largeLyrics ? 32 : 26,
-                  fontWeight: "700",
-                  lineHeight: prefs.largeLyrics ? 43 : 36,
-                  paddingVertical: 10,
-                  color:
-                    line.time === null
-                      ? "#ffffffe0"
-                      : i === active
-                        ? "#fff"
-                        : i < active
-                          ? "#ffffff80"
-                          : "#ffffff40",
-                }}
-              />
-            </Pressable>
-          ))
-        ) : (
+            />
+          </Pressable>
+        )}
+        ListEmptyComponent={
           <View style={{ paddingTop: 60, gap: 14 }}>
             <Text
               style={{ fontSize: 28, color: "#ffffffbc", fontWeight: "600" }}
@@ -900,8 +990,8 @@ export function LyricsScreen({
               这首歌暂时没有歌词。支持内嵌歌词与同名 LRC。
             </Text>
           </View>
-        )}
-      </ScrollView>
+        }
+      />
       <View style={{ paddingHorizontal: 28 }}>
         <PlaybackControls onQueue={onQueue} />
       </View>
@@ -933,7 +1023,7 @@ export function SettingsScreen({
   }, [section]);
   return (
     <View style={{ flex: 1 }}>
-      <View style={[s.row, { paddingHorizontal: 24, paddingTop: 16 }]}>
+      <View style={navigationHeader}>
         <Action
           icon="back"
           label={section === "root" ? "返回音乐库" : "返回设置"}
@@ -1203,7 +1293,7 @@ export function DetailsScreen({ onBack }: { onBack: () => void }) {
   ];
   return (
     <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 48 }}>
-      <View style={s.row}>
+      <View style={[navigationHeader, { marginHorizontal: -24 }]}>
         <Action icon="back" label="返回播放页面" onPress={onBack} />
         <Text style={s.screenTitle}>音频文件信息</Text>
         <View style={{ width: 46 }} />
@@ -1277,8 +1367,8 @@ export const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  tabs: { flexDirection: "row", gap: 24 },
-  tab: { paddingBottom: 12, minHeight: 36 },
+  tabs: { flexDirection: "row", alignItems: "center", gap: 16 },
+  tab: { justifyContent: "center", minHeight: 46 },
   tabActive: { borderBottomColor: p.gold, borderBottomWidth: 2 },
   search: {
     backgroundColor: p.surface,
@@ -1345,15 +1435,6 @@ export const s = StyleSheet.create({
     gap: 9,
     alignItems: "center",
     marginTop: 14,
-  },
-  qualityTag: {
-    fontSize: 9,
-    color: "#ffffffe0",
-    borderColor: "#ffffff70",
-    borderWidth: 0.5,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 3,
   },
   qualityText: { fontSize: 10, color: "#ffffff90" },
   previewLine: { fontSize: 14, color: "#fffffff0", fontWeight: "600" },
