@@ -1,5 +1,6 @@
 import React, {
   useEffect,
+  useCallback,
   useMemo,
   useRef,
   useState,
@@ -15,6 +16,9 @@ import {
   ScrollView,
   useWindowDimensions,
   BackHandler,
+  AccessibilityInfo,
+  Animated,
+  AppState,
   type GestureResponderHandlers,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -41,7 +45,12 @@ import {
 } from "../core/types";
 import { CartridgeColorOptions } from "./CartridgeColorOptions";
 import { lyricSeekTime } from "../core/lyrics";
-import { LyricLine } from "./LyricLine";
+import { FocusedLyricLine } from "./FocusedLyricLine";
+import {
+  lyricMetrics,
+  lyricFocus,
+  lyricIdleDelay,
+} from "../core/lyricPresentation";
 import { FormatTag } from "./FormatTag";
 import { trackDetails } from "../core/trackDetails";
 import {
@@ -431,11 +440,25 @@ export function LibraryScreen({
                   >
                     {item.title}
                   </Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 3,
+                    }}
+                  >
                     {item.available && <FormatTag format={item.format} />}
-                    <Text numberOfLines={1} style={[s.tiny, { flexShrink: 1, marginTop: 0 }]}>
+                    <Text
+                      numberOfLines={1}
+                      style={[s.tiny, { flexShrink: 1, marginTop: 0 }]}
+                    >
                       {item.artist}
-                      {!item.available ? " · 文件不可用" : !canPlay(item) ? " · 待解码支持" : ""}
+                      {!item.available
+                        ? " · 文件不可用"
+                        : !canPlay(item)
+                          ? " · 待解码支持"
+                          : ""}
                     </Text>
                   </View>
                 </View>
@@ -551,36 +574,25 @@ function PlayingRecord(
     />
   );
 }
-function LyricPreview({
-  showNext,
-  animate,
-}: {
-  showNext: boolean;
-  animate: boolean;
-}) {
+function LyricPreview({ showNext }: { showNext: boolean }) {
   const { current, lyricOffset } = useMusic();
   const lines = current?.lyrics || emptyLyrics;
   const index = useLyricIndex(lines, lyricOffset);
   return (
-    <>
-      <LyricLine
-        text={lines[Math.max(index, 0)]?.text || "此刻，专注聆听"}
-        style={s.previewLine}
-        centered
-        active={animate}
-      />
+    <View style={{ width: "100%" }}>
+      <Text
+        testID="lyric-preview"
+        style={[s.previewLine, { textAlign: "center" }]}
+      >
+        {lines[Math.max(index, 0)]?.text || "此刻，专注聆听"}
+      </Text>
       {showNext && (
-        <LyricLine
-          text={
-            lines[Math.max(index, 0) + 1]?.text ||
-            (lines.length ? "" : "暂无歌词")
-          }
-          style={s.previewNext}
-          centered
-          active={animate}
-        />
+        <Text style={[s.previewNext, { textAlign: "center" }]}>
+          {lines[Math.max(index, 0) + 1]?.text ||
+            (lines.length ? "" : "暂无歌词")}
+        </Text>
       )}
-    </>
+    </View>
   );
 }
 
@@ -589,14 +601,12 @@ export function PlayerScreen({
   onLyrics,
   onQueue,
   onDetails,
-  animateLyrics = true,
   dismissPanHandlers,
 }: {
   onClose: () => void;
   onLyrics: () => void;
   onQueue: () => void;
   onDetails: () => void;
-  animateLyrics?: boolean;
   dismissPanHandlers?: GestureResponderHandlers;
 }) {
   const { current } = useMusic();
@@ -612,7 +622,6 @@ export function PlayerScreen({
       <View style={{ flex: 1, paddingHorizontal: 28 }} {...dismissPanHandlers}>
         <PlayerTrackContent
           current={current}
-          animateLyrics={animateLyrics}
           onLyrics={onLyrics}
           onDetails={onDetails}
         />
@@ -626,12 +635,10 @@ export function PlayerScreen({
 
 function PlayerTrackContent({
   current,
-  animateLyrics,
   onLyrics,
   onDetails,
 }: {
   current: Track;
-  animateLyrics: boolean;
   onLyrics: () => void;
   onDetails: () => void;
 }) {
@@ -789,10 +796,7 @@ function PlayerTrackContent({
               minHeight: compact || vinyl ? 44 : 85,
             }}
           >
-            <LyricPreview
-              showNext={!(vinyl && !landscape && height < 740)}
-              animate={animateLyrics}
-            />
+            <LyricPreview showNext={!(vinyl && !landscape && height < 740)} />
           </Pressable>
         </View>
       </View>
@@ -801,10 +805,10 @@ function PlayerTrackContent({
 }
 export function LyricsScreen({
   onQueue,
-  animateLyrics = true,
+  visible = true,
 }: {
   onQueue: () => void;
-  animateLyrics?: boolean;
+  visible?: boolean;
 }) {
   const {
     current,
@@ -819,31 +823,130 @@ export function LyricsScreen({
   const [adjustLyrics, setAdjustLyrics] = useState(false);
   const lines = current?.lyrics || emptyLyrics;
   const active = useLyricIndex(lines, lyricOffset);
-  const { width, height, fontScale } = useWindowDimensions();
-  // Compact screens need denser lyrics; keep system accessibility scaling intact.
-  const lyricScale = Math.max(0.8, Math.min(1, width / 390, height / 800));
-  const lyricFontSize = Math.round((prefs.largeLyrics ? 32 : 26) * lyricScale);
-  const lyricLineHeight = Math.round((prefs.largeLyrics ? 43 : 36) * lyricScale);
-  const lyricPadding = Math.round(10 * lyricScale * lyricScale);
-  const rowHeight = Math.max(44, lyricLineHeight * fontScale + lyricPadding * 2);
+  const { width, fontScale } = useWindowDimensions();
+  const {
+    fontSize: lyricFontSize,
+    lineHeight: lyricLineHeight,
+    minRowHeight,
+  } = lyricMetrics(width, fontScale, prefs.largeLyrics);
   const scroll = useRef<FlatList<LyricData>>(null);
-  const dragged = useRef(0);
+  const followTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const followAttempts = useRef(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [controlsHeight, setControlsHeight] = useState(140);
+  const [idle, setIdle] = useState(false);
+  const [interaction, setInteraction] = useState(0);
+  const [browsing, setBrowsing] = useState(false);
+  const browseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const wakeTouch = useRef(false);
+  const [foreground, setForeground] = useState(
+    AppState.currentState === "active",
+  );
+  const [screenReader, setScreenReader] = useState(false);
+  const [reduced, setReduced] = useState(true);
+  const [controlsOpacity] = useState(() => new Animated.Value(1));
+  const canImmerse =
+    visible &&
+    status.playing &&
+    lines.length > 0 &&
+    !adjustLyrics &&
+    !browsing &&
+    !screenReader &&
+    foreground;
+  const immersive = idle && canImmerse;
+  const topPadding = 28;
+  const anchor = 72;
   useEffect(() => {
-    if (animateLyrics && active >= 0 && Date.now() - dragged.current > 3000)
-      scroll.current?.scrollToOffset({
-        offset: Math.max(0, 12 + active * rowHeight - 70),
-        animated: true,
+    let mounted = true;
+    void AccessibilityInfo.isScreenReaderEnabled().then((value) => {
+      if (mounted) setScreenReader(value);
+    });
+    void AccessibilityInfo.isReduceMotionEnabled().then((value) => {
+      if (mounted) setReduced(value);
+    });
+    const reader = AccessibilityInfo.addEventListener(
+      "screenReaderChanged",
+      setScreenReader,
+    );
+    const motion = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      setReduced,
+    );
+    const app = AppState.addEventListener("change", (state) => {
+      setForeground(state === "active");
+      setIdle(false);
+    });
+    return () => {
+      mounted = false;
+      reader.remove();
+      motion.remove();
+      app.remove();
+      clearTimeout(browseTimer.current);
+      clearTimeout(followTimer.current);
+    };
+  }, []);
+  useEffect(() => {
+    // A new page/song/playback session always starts with visible controls.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIdle(false);
+    if (!canImmerse) return;
+    const timer = setTimeout(() => setIdle(true), lyricIdleDelay);
+    return () => clearTimeout(timer);
+  }, [canImmerse, interaction, current?.id]);
+  useEffect(() => {
+    const animation = Animated.timing(controlsOpacity, {
+      toValue: immersive ? 0 : 1,
+      duration: reduced ? 0 : 260,
+      useNativeDriver: true,
+      isInteraction: false,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [immersive, controlsOpacity, reduced]);
+  const followCurrent = useCallback(() => {
+    if (visible && !browsing && active >= 0 && viewportHeight > 0)
+      scroll.current?.scrollToIndex({
+        index: active,
+        viewPosition: 0,
+        viewOffset: anchor,
+        animated: !reduced,
       });
-  }, [active, rowHeight, animateLyrics]);
+  }, [active, visible, browsing, viewportHeight, reduced]);
+  useEffect(() => {
+    followAttempts.current = 0;
+    followCurrent();
+    return () => clearTimeout(followTimer.current);
+  }, [followCurrent, width, lyricFontSize, fontScale, current?.id]);
+  const interact = () => {
+    setIdle(false);
+    setInteraction((value) => value + 1);
+  };
+  const browseEnd = () => {
+    clearTimeout(browseTimer.current);
+    browseTimer.current = setTimeout(() => setBrowsing(false), 4000);
+  };
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      style={{ flex: 1 }}
+      testID={immersive ? "lyrics-immersive" : "lyrics-standard"}
+      onTouchStart={() => {
+        wakeTouch.current = immersive;
+        interact();
+      }}
+    >
       <View
         style={[s.row, { paddingHorizontal: 28, paddingVertical: 12, gap: 14 }]}
       >
         <Cover track={current} size={48} />
         <View style={{ flex: 1 }}>
-          <Text style={s.trackTitle}>{current?.title}</Text>
-          <Text style={[s.tiny, { color: "#ffffff90" }]}>
+          <Text numberOfLines={1} style={s.trackTitle}>
+            {current?.title}
+          </Text>
+          <Text numberOfLines={1} style={[s.tiny, { color: "#ffffff90" }]}>
             {current?.artist} · {current?.album}
           </Text>
         </View>
@@ -871,7 +974,16 @@ export function LyricsScreen({
           />
         )}
       </View>
-      <View style={{ paddingHorizontal: 28, paddingBottom: 6 }}>
+      <Animated.View
+        style={{
+          paddingHorizontal: 28,
+          paddingBottom: 6,
+          opacity: controlsOpacity,
+        }}
+        pointerEvents={immersive ? "none" : "auto"}
+        accessibilityElementsHidden={immersive}
+        importantForAccessibility={immersive ? "no-hide-descendants" : "auto"}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="调整本曲歌词同步"
@@ -923,78 +1035,115 @@ export function LyricsScreen({
             ))}
           </View>
         )}
+      </Animated.View>
+      <View
+        style={{ flex: 1, marginBottom: immersive ? 0 : controlsHeight }}
+        onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
+      >
+        <FlatList
+          ref={scroll}
+          key={`${current?.id}-${width}-${lyricFontSize}-${fontScale}`}
+          testID="lyrics-list"
+          data={lines}
+          extraData={`${active}-${fontScale}-${status.isLoaded}-${lyricOffset}-${browsing}-${screenReader}-${reduced}`}
+          keyExtractor={(_, index) => `${current?.id}-${index}`}
+          initialNumToRender={12}
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          onScrollToIndexFailed={({ index, averageItemLength }) => {
+            if (
+              !visible ||
+              browsing ||
+              index !== active ||
+              followAttempts.current++ >= 5
+            )
+              return;
+            // Let virtualization measure the destination before using its actual position.
+            scroll.current?.scrollToOffset({
+              offset: averageItemLength * index,
+              animated: false,
+            });
+            clearTimeout(followTimer.current);
+            followTimer.current = setTimeout(followCurrent, 120);
+          }}
+          onContentSizeChange={followCurrent}
+          onScrollBeginDrag={() => {
+            clearTimeout(browseTimer.current);
+            setBrowsing(true);
+            interact();
+          }}
+          onScrollEndDrag={browseEnd}
+          onMomentumScrollBegin={() => clearTimeout(browseTimer.current)}
+          onMomentumScrollEnd={browseEnd}
+          contentContainerStyle={{
+            paddingHorizontal: 30,
+            paddingTop: topPadding,
+            paddingBottom: Math.max(40, viewportHeight - anchor - minRowHeight),
+          }}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item: line, index: i }) => {
+            const timed = line.time !== null;
+            const distance = active < 0 ? Infinity : Math.abs(i - active);
+            const focus = lyricFocus(distance, timed, browsing, screenReader);
+            return (
+              <Pressable
+                disabled={line.time === null || !status.isLoaded}
+                style={{ minHeight: minRowHeight, paddingVertical: 15 }}
+                accessibilityState={{ selected: timed && i === active }}
+                onPress={() => {
+                  if (wakeTouch.current) return;
+                  if (line.time !== null) {
+                    clearTimeout(browseTimer.current);
+                    setBrowsing(false);
+                    void seek(lyricSeekTime(line.time, lyricOffset));
+                  }
+                }}
+                accessibilityLabel={
+                  line.time === null ? line.text : `播放到：${line.text}`
+                }
+              >
+                <FocusedLyricLine
+                  text={line.text}
+                  fontSize={lyricFontSize}
+                  lineHeight={lyricLineHeight}
+                  fontScale={fontScale}
+                  blur={focus.blur}
+                  opacity={focus.opacity}
+                  reduced={reduced}
+                />
+              </Pressable>
+            );
+          }}
+          ListEmptyComponent={
+            <View style={{ paddingTop: 60, gap: 14 }}>
+              <Text
+                style={{ fontSize: 28, color: "#ffffffbc", fontWeight: "600" }}
+              >
+                让音乐，自由流动。
+              </Text>
+              <Text style={s.playerCaption}>
+                这首歌暂时没有歌词。支持内嵌歌词与同名 LRC。
+              </Text>
+            </View>
+          }
+        />
       </View>
-      <FlatList
-        ref={scroll}
-        data={lines}
-        extraData={`${active}-${prefs.largeLyrics}-${lyricScale}-${fontScale}-${animateLyrics}-${status.isLoaded}-${lyricOffset}`}
-        keyExtractor={(_, index) => `${current?.id}-${index}`}
-        initialNumToRender={12}
-        maxToRenderPerBatch={6}
-        windowSize={5}
-        getItemLayout={(_, index) => ({
-          length: rowHeight,
-          offset: 12 + rowHeight * index,
-          index,
-        })}
-        onScrollBeginDrag={() => {
-          dragged.current = Date.now();
+      <Animated.View
+        pointerEvents={immersive ? "none" : "auto"}
+        accessibilityElementsHidden={immersive}
+        importantForAccessibility={immersive ? "no-hide-descendants" : "auto"}
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          paddingHorizontal: 28,
+          opacity: controlsOpacity,
         }}
-        contentContainerStyle={{
-          paddingHorizontal: 30,
-          paddingTop: 12,
-          paddingBottom: 90,
-        }}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item: line, index: i }) => (
-          <Pressable
-            key={`${current?.id}-${i}-${line.time}`}
-            disabled={line.time === null || !status.isLoaded}
-            style={{ height: rowHeight, justifyContent: "center" }}
-            onPress={() => {
-              if (line.time !== null)
-                void seek(lyricSeekTime(line.time, lyricOffset));
-            }}
-            accessibilityLabel={
-              line.time === null ? line.text : `播放到：${line.text}`
-            }
-          >
-            <LyricLine
-              text={line.text}
-              active={animateLyrics && (line.time === null || i === active)}
-              style={{
-                fontSize: lyricFontSize,
-                fontWeight: "700",
-                lineHeight: lyricLineHeight,
-                paddingVertical: lyricPadding,
-                color:
-                  line.time === null
-                    ? "#ffffffe0"
-                    : i === active
-                      ? "#fff"
-                      : i < active
-                        ? "#ffffff80"
-                        : "#ffffff40",
-              }}
-            />
-          </Pressable>
-        )}
-        ListEmptyComponent={
-          <View style={{ paddingTop: 60, gap: 14 }}>
-            <Text
-              style={{ fontSize: 28, color: "#ffffffbc", fontWeight: "600" }}
-            >
-              让音乐，自由流动。
-            </Text>
-            <Text style={s.playerCaption}>
-              这首歌暂时没有歌词。支持内嵌歌词与同名 LRC。
-            </Text>
-          </View>
-        }
-      />
-      <View style={{ paddingHorizontal: 28 }}>
+        onLayout={(event) => setControlsHeight(event.nativeEvent.layout.height)}
+      >
         <PlaybackControls onQueue={onQueue} />
-      </View>
+      </Animated.View>
     </View>
   );
 }

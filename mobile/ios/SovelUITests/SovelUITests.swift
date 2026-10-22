@@ -44,6 +44,67 @@ final class SovelUITests: XCTestCase {
     XCTAssertTrue(app.staticTexts["微光"].firstMatch.waitForExistence(timeout: 10))
     capture("startup-restored-queue")
   }
+  func testLyricsSpacingAndIdleImmersion() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("按歌曲浏览", timeout: 30)
+    tap("播放 初见"); assertClockAdvanced(2); tap("暂停")
+    tap("查看完整歌词")
+    let line = element("播放到：让时间慢一点")
+    XCTAssertTrue(line.waitForExistence(timeout: 5))
+    XCTAssertGreaterThanOrEqual(line.frame.height, 65)
+    capture("lyrics-spacious-compact")
+    Thread.sleep(forTimeInterval: 9)
+    XCTAssertTrue(element("播放").exists, "Paused lyrics keep controls visible")
+    tap("播放")
+    XCTAssertTrue(element("lyrics-immersive").waitForExistence(timeout: 12))
+    XCTAssertFalse(element("暂停").exists, "Idle controls must leave accessibility tree")
+    Thread.sleep(forTimeInterval: 0.6)
+    capture("lyrics-idle-immersive")
+    app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.72)).tap()
+    XCTAssertTrue(element("lyrics-standard").waitForExistence(timeout: 3))
+    XCTAssertTrue(element("暂停").exists)
+    tap("暂停")
+    tap("正在播放")
+    tap("完整歌词")
+    XCTAssertTrue(element("lyrics-standard").exists, "Returning starts with controls visible")
+  }
+  // Prepare/restore with scripts/prepare-lyrics-ui-fixture.mjs (simulator only).
+  func testWrappedLyricsAndBrowsingFocus() throws {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    let long = "光落在安静的房间，听一首很长很长的歌，让每一个字都留在眼前。"
+    app.launch(); tap("按歌曲浏览", timeout: 30)
+    tap("播放 初见"); assertClockAdvanced(5); tap("暂停")
+    let preview = element("lyric-preview")
+    XCTAssertTrue(preview.exists)
+    try XCTSkipUnless(preview.label == long, "Run node scripts/prepare-lyrics-ui-fixture.mjs first")
+    XCTAssertGreaterThan(preview.frame.height, 28, "Preview wraps instead of scrolling horizontally")
+    capture("wrapped-lyric-preview")
+    tap("查看完整歌词")
+    let current = element("播放到：\(long)")
+    XCTAssertTrue(current.waitForExistence(timeout: 5))
+    XCTAssertGreaterThan(current.frame.height, 100, "Full lyrics grow to fit the entire sentence")
+    XCTAssertTrue(current.isSelected)
+    let list = element("lyrics-list")
+    list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+      .press(forDuration: 0.1, thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6)))
+    XCTAssertTrue(current.isSelected)
+    XCTAssertFalse(element("播放到：让时间慢一点").isSelected)
+    Thread.sleep(forTimeInterval: 0.4)
+    capture("wrapped-lyrics-browsing-focus")
+    Thread.sleep(forTimeInterval: 4.5)
+    tap("播放到：让时间慢一点")
+    assertClockAdvanced(7)
+    XCTAssertTrue(element("播放到：让时间慢一点").isSelected)
+    tap("切换歌词字号")
+    let aligned = NSPredicate { _,_ in
+      self.element("播放到：让时间慢一点").frame.minY < self.app.frame.height * 0.55
+    }
+    XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: aligned, object: app)], timeout: 5), .completed)
+    Thread.sleep(forTimeInterval: 0.5)
+    capture("wrapped-lyrics-resized")
+  }
   func testCompactControlsAndReturnToLibrary() {
     continueAfterFailure = false
     XCUIDevice.shared.orientation = .portrait

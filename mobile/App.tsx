@@ -237,6 +237,7 @@ function Shell() {
                 edges={["top", "bottom", "left", "right"]}
               >
                 <PlayerDeck
+                  active={!queue}
                   panel={playerPanel}
                   onPanel={setPlayerPanel}
                   onDetails={() => setPage("details")}

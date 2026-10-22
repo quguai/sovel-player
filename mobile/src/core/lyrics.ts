@@ -31,6 +31,3 @@ export function currentLyric(lines: LyricLine[], seconds: number, offset = 0) {
     if (lines[i].time !== null && lines[i].time! <= seconds + normalizeLyricOffset(offset)) index = i;
   return index;
 }
-
-/** Render embedded line separators as spaces without truncating the lyric. */
-export const singleLineLyric = (text: string) => text.replace(/[\r\n\v\f\u0085\u2028\u2029]+/g, " ");

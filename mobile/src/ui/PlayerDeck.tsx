@@ -24,6 +24,7 @@ export function PlayerDeck({
   onDetails,
   onQueue,
   dismissPanHandlers,
+  active = true,
 }: {
   panel: PlayerPanel;
   onPanel: (panel: PlayerPanel) => void;
@@ -31,6 +32,7 @@ export function PlayerDeck({
   onDetails: () => void;
   onQueue: () => void;
   dismissPanHandlers?: GestureResponderHandlers;
+  active?: boolean;
 }) {
   const window = useWindowDimensions();
   const [width, setWidth] = useState(window.width);
@@ -133,7 +135,6 @@ export function PlayerDeck({
                 onLyrics={() => onPanel("lyrics")}
                 onDetails={onDetails}
                 onQueue={onQueue}
-                animateLyrics={panel === "player" && !appearance && !reduced}
                 dismissPanHandlers={
                   panel === "player" && !appearance
                     ? dismissPanHandlers
@@ -142,8 +143,8 @@ export function PlayerDeck({
               />
             ) : (
               <LyricsScreen
+                visible={active && panel === "lyrics" && !appearance}
                 onQueue={onQueue}
-                animateLyrics={panel === "lyrics" && !appearance && !reduced}
               />
             )}
           </View>
