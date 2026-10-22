@@ -52,7 +52,7 @@ final class SovelUITests: XCTestCase {
     tap("查看完整歌词")
     let line = element("播放到：让时间慢一点")
     XCTAssertTrue(line.waitForExistence(timeout: 5))
-    XCTAssertGreaterThanOrEqual(line.frame.height, 65)
+    XCTAssertGreaterThanOrEqual(line.frame.height, 58)
     capture("lyrics-spacious-compact")
     Thread.sleep(forTimeInterval: 9)
     XCTAssertTrue(element("播放").exists, "Paused lyrics keep controls visible")

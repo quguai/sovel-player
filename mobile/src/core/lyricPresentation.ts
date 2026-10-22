@@ -2,7 +2,7 @@ export const lyricIdleDelay = 8000;
 
 export function lyricMetrics(width: number, fontScale: number, large: boolean) {
   // Size follows width; a short screen should show fewer lines, not crush the gaps.
-  const scale = Math.max(0.88, Math.min(1, width / 390));
+  const scale = Math.max(0.75, Math.min(1, width / 440));
   const fontSize = Math.round((large ? 32 : 28) * scale);
   const lineHeight = Math.ceil(fontSize * 1.3);
   const minRowHeight = Math.ceil(lineHeight * fontScale + 30);

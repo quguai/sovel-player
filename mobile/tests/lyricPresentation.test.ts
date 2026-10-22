@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 import { lyricMetrics, lyricFocus } from "../src/core/lyricPresentation";
 
 test("compact lyrics keep 30pt breathing room and respect accessibility font size", () => {
-  for (const width of [320, 375, 390, 768]) {
+  for (const width of [320, 360, 375, 390, 440, 768]) {
     for (const large of [false, true]) {
       for (const scale of [1, 1.5, 2]) {
         const metrics = lyricMetrics(width, scale, large);
         assert.ok(metrics.minRowHeight >= metrics.lineHeight * scale + 30);
-        assert.ok(metrics.fontSize >= 25);
+        assert.ok(metrics.fontSize >= 21);
+        if (width <= 375 && !large) assert.ok(metrics.fontSize <= 24);
       }
     }
   }
