@@ -18,6 +18,7 @@ import {
   parseUpdatePackage,
   releaseVersion,
   repositoryName,
+  createDownloadSpeedMeter,
   type Release,
   type UpdatePackage,
   type UpdatePreferences,
@@ -99,6 +100,7 @@ function useUpdateStore() {
   const [installing, setInstalling] = useState(false);
   const installInProgress = useRef(false);
   const [download, setDownload] = useState<DownloadState>(emptyDownload);
+  const [downloadSpeed, setDownloadSpeed] = useState(0);
   const [message, setMessage] = useState("");
   const [hasError, setHasError] = useState(false);
   const db = useRef<SQLiteDatabase | null>(null);
@@ -171,6 +173,7 @@ function useUpdateStore() {
       downloading.current = true;
       setMessage("");
       setHasError(false);
+      setDownloadSpeed(0);
       setDownload({ phase: "downloading", received: 0, total: candidate.size });
       try {
         await native.download(
@@ -289,8 +292,19 @@ function useUpdateStore() {
   useEffect(() => {
     if (download.phase !== "downloading" && download.phase !== "verifying")
       return;
+    const measureSpeed = createDownloadSpeedMeter(
+      native?.downloadState().received ?? 0,
+      performance.now(),
+    );
     const timer = setInterval(() => {
-      if (native) setDownload(native.downloadState());
+      if (!native) return;
+      const state = native.downloadState();
+      setDownload(state);
+      setDownloadSpeed(
+        state.phase === "downloading"
+          ? measureSpeed(state.received, performance.now())
+          : 0,
+      );
     }, 400);
     return () => clearInterval(timer);
   }, [download.phase]);
@@ -323,6 +337,7 @@ function useUpdateStore() {
     checking,
     installing,
     download,
+    downloadSpeed: download.phase === "downloading" ? downloadSpeed : 0,
     message,
     hasError,
     preferences,

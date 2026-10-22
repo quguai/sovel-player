@@ -7,8 +7,31 @@ import {
   findUpdate,
   parseUpdatePackage,
   releaseAssetUrl,
+  createDownloadSpeedMeter,
+  formatDownloadSpeed,
 } from "../src/core/appUpdates";
 const repo = "quguai/sovel-player";
+test("download speed measures recent bytes across uneven polling intervals and stalls", () => {
+  const sample = createDownloadSpeedMeter(1024, 0);
+  assert.equal(sample(2048, 500), 2048);
+  assert.equal(sample(4096, 1500), 2048);
+  assert.equal(sample(4096, 2000), 1536);
+  assert.equal(sample(4096, 2500), 1024);
+  assert.equal(sample(4096, 3500), 0);
+});
+test("download speed resets for retries and gaps after backgrounding", () => {
+  const sample = createDownloadSpeedMeter(0, 0);
+  assert.equal(sample(4096, 1000), 4096);
+  assert.equal(sample(0, 1400), 0);
+  assert.equal(sample(1024, 1900), 2048);
+  assert.equal(sample(8192, 10000), 0);
+  assert.equal(sample(10240, 11000), 2048);
+});
+test("download speed uses compact KB/s and MB/s labels", () => {
+  assert.equal(formatDownloadSpeed(0), "0 KB/s");
+  assert.equal(formatDownloadSpeed(820 * 1024), "820 KB/s");
+  assert.equal(formatDownloadSpeed(2.4 * 1024 * 1024), "2.4 MB/s");
+});
 const githubRelease = (tag = "v0.2.0", extra = {}) => ({
   tag_name: tag,
   body: "Fix playback",

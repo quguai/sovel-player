@@ -13,6 +13,27 @@ export const defaultUpdatePreferences: UpdatePreferences = {
   ignoredTag: "",
   checkedAt: 0,
 };
+export function createDownloadSpeedMeter(received: number, at: number) {
+  let samples = [{ received, at }];
+  return (received: number, at: number) => {
+    const last = samples[samples.length - 1];
+    // Reset after a restart or a long gap while the app was in the background.
+    if (received < last.received || at <= last.at || at - last.at > 2000) {
+      samples = [{ received, at }];
+      return 0;
+    }
+    samples.push({ received, at });
+    while (samples.length > 2 && samples[1].at <= at - 2000) samples.shift();
+    const first = samples[0];
+    return ((received - first.received) * 1000) / (at - first.at);
+  };
+}
+export function formatDownloadSpeed(bytesPerSecond: number) {
+  const speed = Math.max(0, bytesPerSecond);
+  return speed >= 1024 * 1024
+    ? `${(speed / 1024 / 1024).toFixed(1)} MB/s`
+    : `${Math.round(speed / 1024)} KB/s`;
+}
 export function normalizeUpdatePreferences(value: unknown): UpdatePreferences {
   const p = (
     value && typeof value === "object" ? value : {}

@@ -16,6 +16,7 @@ import {
 } from "../services/appUpdates";
 import { Button } from "./components";
 import { palette as p } from "./visuals";
+import { formatDownloadSpeed } from "../core/appUpdates";
 
 const bytes = (n: number) => `${(n / 1024 / 1024).toFixed(1)} MB`;
 export function UpdateSettings() {
@@ -69,10 +70,10 @@ export function UpdateSettings() {
               {["downloading", "verifying"].includes(u.download.phase) ? (
                 <>
                   <View style={s.heroTop}>
-                    <Text style={s.small}>
+                    <Text style={[s.small, s.downloadMetrics]}>
                       {u.download.phase === "verifying"
                         ? "正在校验更新…"
-                        : `${bytes(u.download.received)} / ${bytes(u.download.total)}`}
+                        : `${bytes(u.download.received)} / ${bytes(u.download.total)} · ${formatDownloadSpeed(u.downloadSpeed)}`}
                     </Text>
                     <Text style={s.percent}>{Math.round(progress * 100)}%</Text>
                   </View>
@@ -254,6 +255,7 @@ const s = StyleSheet.create({
   },
   releaseTitle: { color: p.text, fontSize: 23, fontWeight: "600" },
   small: { color: p.muted, fontSize: 11, lineHeight: 19 },
+  downloadMetrics: { flexShrink: 1, fontVariant: ["tabular-nums"] },
   notes: { color: p.text, fontSize: 13, lineHeight: 23 },
   track: {
     height: 4,
