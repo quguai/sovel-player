@@ -1,18 +1,8 @@
-import {
-  readFileSync,
-  writeFileSync,
-  mkdirSync,
-  copyFileSync,
-  appendFileSync,
-} from "node:fs";
-import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  releaseVersion,
-  releaseAssetUrl,
-  repositoryName,
-} from "../src/core/appUpdates.ts";
+import { releaseVersion, repositoryName } from "../src/core/appUpdates.ts";
+import { packageRelease } from "./release-packages.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const tag = process.env.GITHUB_REF_NAME;
@@ -36,38 +26,5 @@ if (process.argv[2] === "prepare") {
     );
   console.log(`Preparing ${tag} (${version.code}) for ${repo}`);
 } else if (process.argv[2] === "package") {
-  if (
-    config.expo.version !== version.version ||
-    config.expo.android.versionCode !== version.code
-  )
-    throw new Error("Run prepare before packaging.");
-  const apk = readFileSync(
-    resolve(root, "android/app/build/outputs/apk/release/app-release.apk"),
-  );
-  const name = `sovel-${version.version}-universal.apk`;
-  const sha256 = createHash("sha256").update(apk).digest("hex");
-  const output = resolve(root, "release");
-  mkdirSync(output, { recursive: true });
-  copyFileSync(
-    resolve(root, "android/app/build/outputs/apk/release/app-release.apk"),
-    resolve(output, name),
-  );
-  writeFileSync(
-    resolve(output, "update.json"),
-    JSON.stringify(
-      {
-        schema: 1,
-        version: version.version,
-        versionCode: version.code,
-        packageId: config.expo.android.package,
-        name,
-        size: apk.length,
-        sha256,
-        url: releaseAssetUrl(repo, tag, name),
-      },
-      null,
-      2,
-    ) + "\n",
-  );
-  writeFileSync(resolve(output, "SHA256SUMS"), `${sha256}  ${name}\n`);
+  packageRelease(root, tag, repo, config);
 } else throw new Error("Usage: node scripts/release.mjs prepare|package");

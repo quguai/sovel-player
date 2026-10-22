@@ -46,7 +46,20 @@ Sovel HiFi 是一款正在开发的开源跨平台音乐播放器，面向本地
 
 ## 版本发布与更新
 
-推送 `vX.Y.Z` 标签后，GitHub Actions 自动检查、构建正式签名 APK 并发布到 GitHub Releases；Beta / RC 标签发布为测试版。Android GitHub 版在「设置 → 版本更新」支持检查版本、发布说明、校验下载及用户确认安装。首次发布前需配置签名 Secrets，见[发布配置说明](docs/android-releases.md)。正式对外发布前仍需在 Android 真机验证覆盖升级。
+前往[官网下载区](https://sovel.quguai.cn/?lang=zh#download)或 [GitHub Releases](https://github.com/quguai/sovel-player/releases)，选择并安装**一个** Android APK：
+
+| 安装包后缀 | 适用设备 |
+| --- | --- |
+| `arm64-v8a.apk` | 支持 64 位 ARM 的安卓系统，支持时可选这个更小的包 |
+| `armeabi-v7a.apk` | 32 位 ARM 安卓系统，包括部分较老的 HiFi 播放器 |
+| `x86_64.apk` | x86_64 安卓模拟器及对应的 Intel / AMD 安卓设备 |
+| `universal.apk` | 兼容以上三种架构，不确定时选择通用包 |
+
+应以安卓**系统支持的架构**为准，不能只看处理器是否为 64 位。各包功能相同；以所选版本实际发布的文件为准，旧版本可能只有通用包。官网默认通用包，也会记住手动选择的架构；优先展示最新稳定版，没有稳定版时明确标注最新预览版，不通过浏览器猜测设备架构。iOS 不使用 APK，目前可通过源码构建体验。
+
+应用内进入「**设置 → 版本更新**」。稳定版渠道不接收 Beta / RC，想体验预览版本请切换到「**测试版**」。支持架构识别的 Android 版本会自动匹配更新包，展示架构、大小与下载进度，校验后由用户确认安装，无需手动选架构或卸载重装。已经安装的旧客户端仍先通过通用包升级，升级后后续更新即可使用对应的小包。
+
+推送 `vX.Y.Z` 标签后，GitHub Actions 自动检查、构建各架构正式签名 APK 并发布到 GitHub Releases；Beta / RC 标签发布为测试版。首次发布前需配置签名 Secrets，见[发布配置说明](docs/android-releases.md)。正式对外发布前仍需在 Android 真机验证覆盖升级。
 
 ## 构建原生应用
 

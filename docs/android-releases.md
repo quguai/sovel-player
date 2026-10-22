@@ -38,13 +38,35 @@ Do this only when ready to publish. `.github/workflows/android-release.yml` trig
 1. Derives the version and Android version code from the tag; updates `mobile/app.json` only inside the CI checkout.
 2. Installs locked npm dependencies and applies the project's native audio patches.
 3. Runs lint, TypeScript checks and tests.
-4. Builds a signed universal release APK for `armeabi-v7a`, `arm64-v8a`, and `x86_64`, including the JS bundle and assets. This APK does not need Metro or Expo Go.
-5. Verifies the APK signature, rejects packaged WAV/FLAC/DSF test audio, and generates `update.json` and `SHA256SUMS`.
+4. Builds four signed standalone APKs: `arm64-v8a`, `armeabi-v7a`, `x86_64`, and a universal package containing all three ABIs. Every APK includes the JS bundle and assets and does not need Metro or Expo Go.
+5. Verifies every APK's signature, rejects packaged WAV/FLAC/DSF test audio, checks the native library ABIs against the filename, and generates `update.json` and `SHA256SUMS` covering all four APKs.
 6. Uploads all assets to a draft GitHub Release and then publishes it. Beta/RC tags become prereleases.
 
 The APK and update files are also retained as a workflow artifact for 14 days. Builds stop if signing secrets are missing. Existing releases are not overwritten; use a new tag. If publishing fails after creating a draft, inspect and remove the incomplete draft before rerunning the failed publish job.
 
-An Android release is a universal APK, not an AAB. Store publishing and iOS/TestFlight release automation are not part of this workflow.
+Android releases contain standalone APKs, not an AAB or APKs that must be installed together. Store publishing and iOS/TestFlight release automation are not part of this workflow.
+
+## Choose an Android APK
+
+| Filename suffix | Intended device |
+| --- | --- |
+| `-arm64-v8a.apk` | Android systems supporting 64-bit ARM; preferred when supported |
+| `-armeabi-v7a.apk` | Android systems using 32-bit ARM, including some older HiFi players |
+| `-x86_64.apk` | Android x86_64 emulators and compatible Intel/AMD devices |
+| `-universal.apk` | All three supported ABIs; use when unsure |
+
+Install **one** APK. Features are identical; architecture-specific packages omit other ABIs' native libraries to reduce download size. The Android system's supported ABI matters, not just whether the CPU hardware is 64-bit. No separate APK is needed for each Android OS version. The website defaults to universal because a browser cannot reliably identify the Android ABI. Its package selector lists the four architectures, enables only the files actually published, and remembers an explicit selection across all download buttons. A missing saved choice falls back to universal when available; versions containing only universal remain supported. Do not assume older releases have all four APKs.
+
+The GitHub release build enables Gradle ABI splits using `-Psovel.splitApks=true`. Local/debug builds retain their existing behavior unless this flag is passed. To build all four locally, with release signing configured:
+
+```sh
+cd mobile/android
+./gradlew :app:assembleRelease -Psovel.splitApks=true -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64
+cd ..
+node scripts/release.mjs package
+```
+
+Set the tag/repository environment and run `prepare` before building, as in CI. Output APKs and update metadata are collected in `mobile/release/`. All four use the same package ID, signing key and version code, so switching architecture on a later version preserves the app's data. ABI-specific version-code offsets are deliberately not used for this direct GitHub distribution.
 
 ## Tag and version-code rules
 
@@ -72,6 +94,7 @@ Settings → **版本更新** provides manual checks, version, size, progress, c
 - Automatic checks are enabled by default, at most once every 12 hours while the app is active. Failed automatic checks do not interrupt listening; manual checks show errors. GitHub API rate-limit failures can be retried later.
 - Automatic download is opt-in and requires Wi-Fi or Ethernet. The native downloader stops if that connection disappears. Manually requested downloads may use the current network.
 - Downloads stream to private cache storage; size and SHA-256 must match the release manifest. Android package ID, increasing version code and the current installation's signing certificate must match before offering installation. The cached APK is checked again when installing. Signing-key rotation is not supported by this first implementation.
+- New clients use Android's supported ABI order to choose a matching package from `update.json`; unavailable/unknown ABIs fall back to universal. Every selected package has its own size and SHA-256. The manifest retains schema 1 and the top-level universal entry, so already-installed older clients continue to update through universal. After upgrading to an ABI-aware client, subsequent updates can use smaller packages. Legacy universal-only manifests remain supported.
 - Installation is always user initiated. If Android needs permission to install apps from Sovel, it opens system settings; return and click **安装更新** again. Cancelling the system installer leaves the downloaded APK available during the current process.
 - Checks and downloads do not pause or reload the music player. Installation can stop the running application. Music files are never part of an update; database migrations are handled by the app on next launch.
 - Unfinished downloads are not resumed across process death. Downloaded APKs are cached and can be discarded by Android; after restarting Sovel, download again. This version does not use a persistent background download service.
@@ -91,6 +114,7 @@ iOS displays release-history access only and never downloads APKs. App Store and
 cd mobile
 npm run lint
 npm run check
+node --test scripts/release-packages.test.mjs
 npx expo export --platform android --output-dir artifacts/android-bundle
 ```
 

@@ -20,6 +20,12 @@ import { palette as p } from "./visuals";
 const bytes = (n: number) => `${(n / 1024 / 1024).toFixed(1)} MB`;
 export function UpdateSettings() {
   const u = useUpdates();
+  const packageLabel = {
+    universal: "通用包",
+    "arm64-v8a": "ARM64",
+    "armeabi-v7a": "ARM32",
+    x86_64: "x86_64",
+  }[u.packageInfo?.abi ?? "universal"];
   const busy =
     u.checking ||
     u.installing ||
@@ -56,7 +62,9 @@ export function UpdateSettings() {
             <View style={s.release} accessibilityLabel="可用更新">
               <View style={s.heroTop}>
                 <Text style={s.releaseTitle}>{u.release.version}</Text>
-                <Text style={s.small}>{bytes(u.packageInfo.size)}</Text>
+                <Text style={s.small}>
+                  {packageLabel} · {bytes(u.packageInfo.size)}
+                </Text>
               </View>
               {["downloading", "verifying"].includes(u.download.phase) ? (
                 <>

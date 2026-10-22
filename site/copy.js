@@ -1,5 +1,6 @@
 // English lives in the HTML so the page remains useful without JavaScript.
 export const zh = {
+  packageLabel: 'Android 安装包', packageChoose: '请选择安装包', packageUniversal: '通用版 · 不确定时选择', packageArm64: 'ARM64 · 64 位 ARM', packageArm32: 'ARM32 · 32 位 ARM', packageX64: 'x86_64 · Intel / AMD 安卓设备',
   storyViewAll: '展开全部画面', storyPresentation: '滚动分镜展示', storySkip: '获取 Sovel ↗', storyScroll: '向下滚动，继续探索 ↓',
   storyTagLibrary: '音乐收藏', storyTagBlack: '纯黑胶', storyTagPlayer: '烟熏黑胶', storyTagBlue: '冰蓝黑胶', storyTagCover: '专辑封面', storyTagImmersive: '沉浸播放', storyTagLyrics: '独立歌词',
   storyLibraryTitle: '自己的收藏，<br /><em>自己的音乐世界。</em>', storyLibraryBody: '专辑、歌手与喜爱的歌曲，尽在一处。在熟悉的收藏里，重新发现值得循环的旋律。',
@@ -34,7 +35,7 @@ export const zh = {
   faqEyebrow: '关于 SOVEL 的几个问题', faqTitle: '播放之前，<br /><em>你可能想知道。</em>',
   faqOne: '导入会重复占用音乐文件的空间吗？', faqOneBody: '选择文件或文件夹时，应用建立本地索引并引用原音频。复制到应用是单独的可选操作。文件提供方可能自行维护缓存，Sovel 也会缓存封面并存储曲库数据。',
   faqTwo: '现在支持 USB 独占或 DSD 吗？', faqTwoBody: '这些仍属于规划，尚未在当前版本提供。DSF 元数据解析已有测试，但没有开放 DSD 播放。外接 USB DAC 当前仍使用系统音频，不承诺 bit-perfect 输出。',
-  faqThree: '可以在哪里下载？', faqThreeBody: '目前是开发预览版，可以从 GitHub 源码与构建说明开始体验；发布的安装包请以仓库 Releases 页面为准。', buildInstructions: '构建说明 ↗',
+  faqThree: '可以在哪里下载？', faqThreeBody: '在本页下载区选择 Android 安装包即可下载，不确定架构时选通用版；以当前版本实际提供的包为准。已安装的应用可在「设置 → 版本更新」检查更新，接收 Beta / RC 请选测试版渠道。iOS 目前可通过源码构建体验。', buildInstructions: '构建说明 ↗',
   faqFour: '我可以怎样参与？', faqFourBody: '体验应用、提供可复现的问题、测试音频和设备，或参与代码与翻译。反馈播放问题时，请附设备、系统版本和音频格式。', openIssue: '提交问题 ↗',
   downloadEyebrow: '把自己的音乐，带在身边', downloadTitle: '下一次聆听，<br /><em>从这里开始。</em>', downloadIntro: '从 GitHub Releases 获取最新 Android 安装包。iOS 目前可通过源码构建体验。',
   releaseGithub: 'GITHUB RELEASE', releaseChecking: '正在检查最新版本…', releaseFallback: '已发布的安装包均可在 GitHub 获取。', viewReleases: '查看 Releases', releaseHistory: '版本发布记录 ↗', buildSource: '从源码构建 ↗',
@@ -45,6 +46,8 @@ export const zh = {
 
 export const labels = {
   en: {
+    choosePackage: 'Choose an Android package below to download.',
+    packageHelp: 'Choose the architecture supported by your Android system. Install one APK.', universalOnly: 'This release provides only a universal APK. It supports all three target architectures.', packageFallback: 'Your saved architecture is unavailable in this release. A universal APK is used when available; you can choose another package.',
     black: 'Classic black vinyl', smoke: 'Smoked vinyl', blue: 'Ice blue vinyl',
     pause: 'Pause vinyl animation', play: 'Play vinyl animation', reduced: 'Animation disabled by your reduced-motion preference',
     switchLanguage: '切换到简体中文', preview: 'Interactive vinyl appearance preview', material: 'Record material', tabs: 'App screens',
@@ -56,6 +59,8 @@ export const labels = {
     checkingRelease: 'Getting download…', loading: 'Loading material…', loadError: 'Could not load this material. Try again.',
   },
   zh: {
+    choosePackage: '请选择下方适合设备的安装包。',
+    packageHelp: '按安卓系统支持的架构选择，安装一个 APK 即可；不确定时选通用版。', universalOnly: '此版本仅提供通用包，兼容三种目标架构。', packageFallback: '此版本未提供上次选择的架构；有通用包时将使用通用包，也可重新选择。',
     black: '纯黑胶', smoke: '烟熏透明', blue: '冰蓝反光',
     pause: '暂停唱片动画', play: '播放唱片动画', reduced: '已根据减少动态效果偏好关闭动画',
     switchLanguage: 'Switch to English', preview: '可交互的唱片外观预览', material: '唱片材质', tabs: '应用界面',

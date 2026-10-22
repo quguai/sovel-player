@@ -45,7 +45,7 @@ class SovelUpdatesModule : Module() {
     }
     Function("appInfo") {
       val info = context.packageManager.getPackageInfo(context.packageName, 0)
-      mapOf("version" to (info.versionName ?: "0.0.0"), "code" to versionCode(info).toDouble(), "packageId" to context.packageName)
+      mapOf("version" to (info.versionName ?: "0.0.0"), "code" to versionCode(info).toDouble(), "packageId" to context.packageName, "supportedAbis" to Build.SUPPORTED_ABIS.toList())
     }
     Function("isWifi") { isWifi() }
     Function("downloadState") { state }

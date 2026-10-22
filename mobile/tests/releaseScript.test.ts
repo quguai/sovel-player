@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawnSync, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 test("release script produces matching version, APK name, checksum and manifest without modifying the checkout", () => {
   const temp = mkdtempSync(join(tmpdir(), "sovel-release-test-"));
@@ -22,6 +22,10 @@ test("release script produces matching version, APK name, checksum and manifest 
     ])
       mkdirSync(join(temp, d), { recursive: true });
     cpSync(resolve("scripts/release.mjs"), join(temp, "scripts/release.mjs"));
+    cpSync(
+      resolve("scripts/release-packages.mjs"),
+      join(temp, "scripts/release-packages.mjs"),
+    );
     cpSync(
       resolve("src/core/appUpdates.ts"),
       join(temp, "src/core/appUpdates.ts"),
@@ -35,10 +39,35 @@ test("release script produces matching version, APK name, checksum and manifest 
         },
       }),
     );
-    const apk = Buffer.from("fixture-apk-bytes");
-    writeFileSync(
-      join(temp, "android/app/build/outputs/apk/release/app-release.apk"),
-      apk,
+    const abis = ["arm64-v8a", "armeabi-v7a", "x86_64"];
+    for (const abi of ["universal", ...abis]) {
+      const source = join(temp, abi);
+      for (const included of abi === "universal" ? abis : [abi]) {
+        const folder = join(source, "lib", included);
+        mkdirSync(folder, { recursive: true });
+        writeFileSync(
+          join(folder, "libfixture.so"),
+          `test fixture ${included}`,
+        );
+      }
+      execFileSync(
+        "zip",
+        [
+          "-qr",
+          join(
+            temp,
+            `android/app/build/outputs/apk/release/app-${abi}-release.apk`,
+          ),
+          "lib",
+        ],
+        { cwd: source },
+      );
+    }
+    const apk = readFileSync(
+      join(
+        temp,
+        "android/app/build/outputs/apk/release/app-universal-release.apk",
+      ),
     );
     const env = {
       ...process.env,
@@ -59,6 +88,7 @@ test("release script produces matching version, APK name, checksum and manifest 
     );
     assert.equal(manifest.version, "0.2.0-rc.1");
     assert.equal(manifest.versionCode, 200101);
+    assert.equal(manifest.packages.length, 4);
     assert.equal(
       manifest.sha256,
       createHash("sha256").update(apk).digest("hex"),
@@ -67,7 +97,12 @@ test("release script produces matching version, APK name, checksum and manifest 
     assert.deepEqual(readFileSync(join(temp, "release", manifest.name)), apk);
     assert.equal(
       readFileSync(join(temp, "release/SHA256SUMS"), "utf8"),
-      `${manifest.sha256}  ${manifest.name}\n`,
+      manifest.packages
+        .map(
+          (pkg: { sha256: string; name: string }) =>
+            `${pkg.sha256}  ${pkg.name}\n`,
+        )
+        .join(""),
     );
     assert.match(readFileSync(join(temp, "outputs"), "utf8"), /preview=true/);
     const invalid = spawnSync(

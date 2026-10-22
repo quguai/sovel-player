@@ -158,3 +158,70 @@ test("update preferences default to check-only and sanitize persisted values", (
     false,
   );
 });
+
+test("architecture updates prefer the device ABI order and keep universal compatibility", () => {
+  const release = find(
+    [githubRelease("v0.2.0-beta.1", { prerelease: true })],
+    "preview",
+  )!;
+  const entry = (abi: string) => ({
+    abi,
+    version: release.version,
+    versionCode: release.code,
+    packageId: "cn.quguai.music.sovel",
+    name: `sovel-${release.version}-${abi}.apk`,
+    sha256: "a".repeat(64),
+    size: 1000,
+    url: releaseAssetUrl(
+      repo,
+      release.tag,
+      `sovel-${release.version}-${abi}.apk`,
+    ),
+  });
+  const universal = { schema: 1, ...entry("universal") };
+  const manifest = {
+    ...universal,
+    packages: [entry("armeabi-v7a"), entry("x86_64"), entry("arm64-v8a")],
+  };
+  const parse = (abis: string[], value: unknown = manifest) =>
+    parseUpdatePackage(value, release, repo, universal.packageId, abis);
+  assert.equal(parse(["arm64-v8a", "armeabi-v7a"]).abi, "arm64-v8a");
+  assert.equal(parse(["armeabi-v7a"]).abi, "armeabi-v7a");
+  assert.equal(parse(["x86_64", "arm64-v8a"]).abi, "x86_64");
+  assert.equal(parse([]).abi, "universal");
+  assert.equal(parse(["riscv64"]).abi, "universal");
+  assert.equal(parse(["arm64-v8a"], universal).abi, "universal");
+  assert.equal(
+    parse(["arm64-v8a", "armeabi-v7a"], {
+      ...universal,
+      packages: [entry("armeabi-v7a")],
+    }).abi,
+    "armeabi-v7a",
+  );
+  assert.equal(
+    parse(["arm64-v8a"], { ...universal, packages: [entry("armeabi-v7a")] })
+      .abi,
+    "universal",
+  );
+  for (const patch of [
+    { size: 0 },
+    { sha256: "bad" },
+    { packageId: "other.app" },
+    { versionCode: 1 },
+    { name: entry("armeabi-v7a").name },
+    { url: releaseAssetUrl("evil/fork", release.tag, entry("arm64-v8a").name) },
+  ])
+    assert.throws(() =>
+      parse(["arm64-v8a"], {
+        ...universal,
+        packages: [{ ...entry("arm64-v8a"), ...patch }],
+      }),
+    );
+  assert.throws(() =>
+    parse(["arm64-v8a"], {
+      ...universal,
+      packages: [entry("arm64-v8a"), entry("arm64-v8a")],
+    }),
+  );
+  assert.throws(() => parse(["arm64-v8a"], { ...universal, packages: {} }));
+});

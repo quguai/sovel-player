@@ -270,6 +270,17 @@
         <div class="release-top"><svg class="icon"><use href="#download-icon"/></svg><span>ANDROID</span><span class="release-channel" id="release-channel" data-i18n="releaseGithub">GITHUB RELEASE</span></div>
         <h3 id="release-title" data-i18n="releaseChecking">Checking the latest release…</h3>
         <p id="release-status" role="status" aria-live="polite" data-i18n="releaseFallback">Published packages are always available on GitHub.</p>
+        <div class="package-picker" id="package-picker" hidden>
+          <label for="package-select" data-i18n="packageLabel">Android package</label>
+          <select id="package-select" aria-describedby="package-help" disabled>
+            <option value="" disabled data-i18n="packageChoose">Choose a package</option>
+            <option value="universal" data-i18n="packageUniversal">Universal · if you’re unsure</option>
+            <option value="arm64-v8a" data-i18n="packageArm64">ARM64 · 64-bit ARM</option>
+            <option value="armeabi-v7a" data-i18n="packageArm32">ARM32 · 32-bit ARM</option>
+            <option value="x86_64" data-i18n="packageX64">x86_64 · Intel / AMD Android</option>
+          </select>
+          <p id="package-help">Choose the architecture supported by your Android system. Install one APK.</p>
+        </div>
         <a class="button button-gold release-download" id="release-download" data-release-download href="https://github.com/quguai/sovel-player/releases"><span data-i18n="viewReleases">View releases</span><svg class="icon"><use href="#arrow-up"/></svg></a>
         <div class="release-links"><a id="release-notes" href="https://github.com/quguai/sovel-player/releases" target="_blank" rel="noopener noreferrer" data-i18n="releaseHistory">Release history ↗</a><a href="https://github.com/quguai/sovel-player#build-the-native-app" target="_blank" rel="noopener noreferrer" data-i18n="buildSource">Build from source ↗</a></div>
       </div>
@@ -313,7 +324,7 @@
     <section class="faq-section wrap" aria-labelledby="faq-title"><div><p class="eyebrow" data-i18n="faqEyebrow">A FEW THINGS TO KNOW</p><h2 id="faq-title" data-i18n-html="faqTitle">Before you<br /><em>press play.</em></h2></div><div class="faq-list">
       <details><summary><span data-i18n="faqOne">Will importing duplicate my music files?</span><span class="faq-plus" aria-hidden="true"></span></summary><p data-i18n="faqOneBody">Selecting files or folders builds a local index and references the original audio. Copying into the app is a separate option. File providers may maintain their own caches, and Sovel caches artwork and stores your library data.</p></details>
       <details><summary><span data-i18n="faqTwo">Does it support USB exclusive output or DSD?</span><span class="faq-plus" aria-hidden="true"></span></summary><p data-i18n="faqTwoBody">These are planned capabilities, not features of the current build. DSF metadata parsing is tested, but DSD playback is not enabled. USB DAC connections currently use system audio; bit-perfect output is not promised.</p></details>
-      <details><summary><span data-i18n="faqThree">Where can I get the app?</span><span class="faq-plus" aria-hidden="true"></span></summary><p><span data-i18n="faqThreeBody">The project is a development preview. Start with the source and build instructions on GitHub, and check the repository’s Releases page for published packages.</span> <a href="https://github.com/quguai/sovel-player#build-the-native-app" target="_blank" rel="noopener noreferrer" data-i18n="buildInstructions">Build instructions ↗</a></p></details>
+      <details><summary><span data-i18n="faqThree">Where can I get the app?</span><span class="faq-plus" aria-hidden="true"></span></summary><p><span data-i18n="faqThreeBody">Choose an Android package in this page’s download section; use universal if unsure. Only packages published for the displayed release are available. Installed apps can check in Settings → 版本更新; select the preview channel for Beta / RC updates. iOS is currently available to build from source.</span> <a href="https://github.com/quguai/sovel-player#build-the-native-app" target="_blank" rel="noopener noreferrer" data-i18n="buildInstructions">Build instructions ↗</a></p></details>
       <details><summary><span data-i18n="faqFour">How can I contribute?</span><span class="faq-plus" aria-hidden="true"></span></summary><p><span data-i18n="faqFourBody">Try the app, share a reproducible issue, help test audio files and devices, or contribute code and translations. For playback reports, include your device, OS, and audio format.</span> <a href="https://github.com/quguai/sovel-player/issues" target="_blank" rel="noopener noreferrer" data-i18n="openIssue">Open an issue ↗</a></p></details>
     </div></section>
 

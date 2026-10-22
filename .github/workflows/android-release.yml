@@ -52,6 +52,8 @@ jobs:
         run: npm ci --no-audit --no-fund --fetch-retries=2 --fetch-timeout=30000 --timing
       - run: npm run lint
       - run: npm run check
+      - name: Test release packaging
+        run: node --test scripts/release-packages.test.mjs
       - name: Validate native decoding and directory discovery
         timeout-minutes: 15
         run: |
@@ -81,7 +83,7 @@ jobs:
           }
           writeFileSync(`${process.env.RUNNER_TEMP}/sovel-release.keystore`, Buffer.from(process.env.KEYSTORE_BASE64, 'base64'), {mode: 0o600});
           NODE
-      - name: Build signed universal APK
+      - name: Build signed APKs for each architecture and universal
         env:
           NODE_ENV: production
           SOVEL_KEYSTORE_PATH: ${{ runner.temp }}/sovel-release.keystore
@@ -91,11 +93,14 @@ jobs:
         run: |
           chmod +x android/gradlew
           cd android
-          ./gradlew :app:assembleRelease --no-daemon --max-workers=2 -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64 -Dorg.gradle.jvmargs='-Xmx4g -XX:MaxMetaspaceSize=1g'
+          ./gradlew :app:assembleRelease --no-daemon --max-workers=2 -Psovel.splitApks=true -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64 -Dorg.gradle.jvmargs='-Xmx4g -XX:MaxMetaspaceSize=1g'
       - name: Verify APK signature and prepare update manifest
         run: |
-          "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose android/app/build/outputs/apk/release/app-release.apk
-          node scripts/check-listening-assets.mjs android/app/build/outputs/apk/release/app-release.apk
+          for abi in universal arm64-v8a armeabi-v7a x86_64; do
+            apk="android/app/build/outputs/apk/release/app-$abi-release.apk"
+            "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose "$apk"
+            node scripts/check-listening-assets.mjs "$apk"
+          done
           node scripts/release.mjs package
       - uses: actions/upload-artifact@v4
         with:

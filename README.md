@@ -46,7 +46,20 @@ File bit depth and sample rate describe the source, not the DAC output. Metadata
 
 ## Releases and updates
 
-Push a `vX.Y.Z` tag to build a signed Android APK and publish a GitHub Release. Beta/RC tags publish prereleases. The GitHub Android build includes version checks, release notes, verified downloads and user-confirmed installation under Settings → 版本更新. Release signing secrets must be configured first; see the [release setup guide](docs/android-releases.md). Android device upgrade verification is still required before public distribution.
+Download from the [website](https://sovel.quguai.cn/#download) or [GitHub Releases](https://github.com/quguai/sovel-player/releases). Choose **one** Android APK:
+
+| Package suffix | Choose for |
+| --- | --- |
+| `arm64-v8a.apk` | Android systems supporting 64-bit ARM; use this smaller package when supported |
+| `armeabi-v7a.apk` | 32-bit ARM Android systems, including some older HiFi players |
+| `x86_64.apk` | Android x86_64 emulators and compatible Intel/AMD devices |
+| `universal.apk` | All three supported ABIs; choose this if unsure |
+
+Use the ABI supported by the Android **system**, not just the CPU hardware. Features are identical. Available files depend on the selected release; older releases may provide only universal. The website defaults to universal and remembers an explicit package choice. It prefers the latest stable release, or clearly labels the latest preview if no stable release exists. It never infers the ABI from the browser. iOS does not use APKs; build from source for now.
+
+In the app, open **设置 → 版本更新** (Settings → Version updates). Stable checks exclude Beta/RC; select **测试版** to receive previews. ABI-aware Android builds automatically select a compatible package, show its architecture and size, verify the download and ask before installation. Existing older clients continue through universal; subsequent updates can use smaller packages after upgrading. No reinstall or manual architecture selection is needed for in-app updates.
+
+Push a `vX.Y.Z` tag to build the signed Android packages and publish a GitHub Release. Beta/RC tags publish prereleases. Release signing secrets must be configured first; see the [release setup guide](docs/android-releases.md). Android device upgrade verification is still required before public distribution.
 
 ## Build the native app
 

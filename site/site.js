@@ -1,6 +1,6 @@
 import { zh, labels } from './copy.js';
 import { initStory } from './story.js';
-import { loadGitHub, releaseView, repositoryUrl, bindReleaseDownloads } from './github.js';
+import { loadGitHub, releaseView, repositoryUrl, bindReleaseDownloads, packageAbis } from './github.js';
 
 const preview = document.querySelector('#record-preview');
 const playButton = document.querySelector('#record-play');
@@ -27,6 +27,8 @@ function savePreference(key, value) {
 const requested = new URLSearchParams(location.search).get('lang');
 let language = (requested ?? readPreference('language')) === 'zh' ? 'zh' : 'en';
 let github = { stars: null, release: undefined, error: false };
+let preferredAbi = readPreference('package');
+if (!packageAbis.includes(preferredAbi)) preferredAbi = 'universal';
 let playing = !reducedMotion.matches;
 let visible = true;
 let material = 'smoke';
@@ -115,8 +117,15 @@ function refreshGitHub() {
   const count = document.querySelector('#star-count');
   count.textContent = github.stars === null ? '—' : new Intl.NumberFormat(language).format(github.stars);
   star.setAttribute('aria-label', `${copy.star}${github.stars === null ? '' : ` · ${github.stars} ${copy.starCount}`}`);
-  const view = releaseView(github, copy, language);
+  const view = releaseView(github, copy, language, preferredAbi);
   refreshDownloads(view, copy);
+  const picker = document.querySelector('#package-picker');
+  const select = document.querySelector('#package-select');
+  picker.hidden = !view?.packages?.length;
+  select.disabled = picker.hidden;
+  for (const option of select.options) option.disabled = !view?.packages?.some(asset => asset.abi === option.value);
+  select.value = view?.asset?.abi ?? '';
+  document.querySelector('#package-help').textContent = view?.packageHint ?? copy.packageHelp;
   document.querySelector('#release-card').setAttribute('aria-busy', String(github.release === undefined && !github.error));
   if (view) {
     document.querySelector('#release-title').textContent = view.title;
@@ -129,6 +138,12 @@ function refreshGitHub() {
 }
 
 document.querySelector('#language-toggle').addEventListener('click', () => setLanguage(language === 'en' ? 'zh' : 'en', true));
+document.querySelector('#package-select').addEventListener('change', event => {
+  if (!packageAbis.includes(event.target.value)) return;
+  preferredAbi = event.target.value;
+  savePreference('package', preferredAbi);
+  refreshGitHub();
+});
 playButton.addEventListener('click', () => { playing = !playing; refreshAnimation(); });
 swatches.forEach(button => button.addEventListener('click', () => setMaterial(button.dataset.material)));
 reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) playing = false; refreshAnimation(); });

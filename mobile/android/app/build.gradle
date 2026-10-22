@@ -104,6 +104,15 @@ android {
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
+    // GitHub releases contain standalone APKs, not install-time split APKs.
+    splits {
+        abi {
+            enable (findProperty('sovel.splitApks') ?: 'false').toBoolean()
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            universalApk true
+        }
+    }
     signingConfigs {
         release {
             if (hasReleaseSigning) {

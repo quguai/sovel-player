@@ -115,3 +115,58 @@ test('unavailable downloads show an explicit Releases fallback instead of an APK
   assert.equal(link.attributes.has('download'), false);
   assert.equal(link.href, 'https://github.com/quguai/sovel-player/releases');
 });
+
+test('package selection updates every direct download and the displayed filename and size', () => {
+  const arm = { ...apk('sovel-0.1.0-arm64-v8a.apk'), size: 30 * 1024 * 1024 };
+  const intel = apk('sovel-0.1.0-x86_64.apk');
+  const state = { release: normalizeRelease(release({ assets: [apk(), arm, intel] })) };
+  const links = Array.from({ length: 3 }, downloadLink);
+  const update = bindReleaseDownloads(links);
+  const view = releaseView(state, labels.zh, 'zh', 'arm64-v8a');
+  assert.equal(view.asset.abi, 'arm64-v8a');
+  assert.match(view.description, /30\.0 MB/);
+  assert.ok(view.description.includes(arm.name));
+  update(view, labels.zh);
+  for (const link of links) {
+    link.click();
+    assert.deepEqual(link.navigations, [arm.browser_download_url]);
+    assert.equal(link.attributes.get('download'), arm.name);
+  }
+  update(releaseView(state, labels.en, 'en', 'x86_64'), labels.en);
+  for (const link of links) {
+    assert.equal(link.href, intel.browser_download_url);
+    assert.equal(link.label.textContent, labels.en.download);
+  }
+});
+
+test('universal-only and missing saved packages fall back without guessing unpublished URLs', () => {
+  const state = { release: normalizeRelease(release()) };
+  const view = releaseView(state, labels.zh, 'zh', 'arm64-v8a');
+  assert.equal(view.href, apk().browser_download_url);
+  assert.equal(view.packageHint, labels.zh.universalOnly);
+  const available = normalizeRelease(release({ assets: [apk(), apk('sovel-0.1.0-armeabi-v7a.apk')] }));
+  assert.equal(releaseView({ release: available }, labels.en, 'en', 'arm64-v8a').packageHint, labels.en.packageFallback);
+  assert.equal(releaseView({ release: available }, labels.en, 'en', 'arm64-v8a').asset.abi, 'universal');
+});
+
+test('architecture-only releases require a user choice and ambiguous ABI assets are not guessed', () => {
+  const arm = apk('sovel-0.1.0-arm64-v8a.apk');
+  const state = { release: normalizeRelease(release({ assets: [arm] })) };
+  assert.equal(releaseView(state, labels.en, 'en').asset, null);
+  assert.ok(releaseView(state, labels.en, 'en').description.includes(labels.en.choosePackage));
+  assert.equal(releaseView(state, labels.en, 'en', 'arm64-v8a').href, arm.browser_download_url);
+  const ambiguous = normalizeRelease(release({ assets: [arm, apk('other-arm64-v8a.apk')] }));
+  assert.equal(ambiguous.packages.length, 0);
+  assert.equal(releaseView({ release: ambiguous }, labels.en, 'en', 'arm64-v8a').asset, null);
+});
+
+test('download options reject assets from another version or with mismatched filenames', () => {
+  for (const value of [
+    apk('sovel-arm64-v8a.apk', 'https://github.com/quguai/sovel-player/releases/download/v0.0.1/sovel-arm64-v8a.apk'),
+    apk('sovel-arm64-v8a.apk', 'https://github.com/quguai/sovel-player/releases/download/v0.1.0/other.apk'),
+  ]) {
+    const normalized = normalizeRelease(release({ assets: [value] }));
+    assert.equal(normalized.packages.length, 0);
+    assert.equal(normalized.asset, null);
+  }
+});

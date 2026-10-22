@@ -1,6 +1,7 @@
 export const repositoryUrl = 'https://github.com/quguai/sovel-player';
 const api = 'https://api.github.com/repos/quguai/sovel-player';
 const history = `${repositoryUrl}/releases`;
+export const packageAbis = ['universal', 'arm64-v8a', 'armeabi-v7a', 'x86_64'];
 
 function safeReleaseUrl(value, asset = false) {
   try {
@@ -14,16 +15,22 @@ export function normalizeRelease(value) {
   if (!value || value.draft || typeof value.tag_name !== 'string' || !value.tag_name.trim() || !Number.isFinite(Date.parse(value.published_at))) return null;
   const url = safeReleaseUrl(value.html_url);
   if (!url) return null;
+  const assetBase = `/quguai/sovel-player/releases/download/${encodeURIComponent(value.tag_name)}/`;
   const assets = (Array.isArray(value.assets) ? value.assets : []).filter(asset =>
     typeof asset?.name === 'string' && /\.apk$/i.test(asset.name) && asset.state === 'uploaded' &&
-    Number.isSafeInteger(asset.size) && asset.size > 0 && safeReleaseUrl(asset.browser_download_url, true),
-  );
+    Number.isSafeInteger(asset.size) && asset.size > 0 && safeReleaseUrl(asset.browser_download_url, true) &&
+    new URL(asset.browser_download_url).pathname === `${assetBase}${encodeURIComponent(asset.name)}`,
+  ).map(asset => ({
+    name: asset.name, size: asset.size, url: safeReleaseUrl(asset.browser_download_url, true),
+    abi: /-(universal|arm64-v8a|armeabi-v7a|x86_64)\.apk$/i.exec(asset.name)?.[1].toLowerCase() ?? null,
+  }));
+  const packages = assets.filter(asset => asset.abi && assets.filter(other => other.abi === asset.abi).length === 1);
   // Do not guess an ABI when a release contains several architecture-specific packages.
-  const asset = assets.find(item => /universal/i.test(item.name)) ?? (assets.length === 1 ? assets[0] : null);
+  const asset = packages.find(item => item.abi === 'universal') ?? (assets.length === 1 && !assets[0].abi ? assets[0] : null);
   return {
     tag: value.tag_name.slice(0, 100), url, preview: value.prerelease === true,
     date: value.published_at,
-    asset: asset ? { name: asset.name, size: asset.size, url: safeReleaseUrl(asset.browser_download_url, true) } : null,
+    asset, packages,
   };
 }
 
@@ -76,19 +83,23 @@ export async function loadGitHub(update) {
   ]);
 }
 
-export function releaseView(state, copy, language) {
+export function releaseView(state, copy, language, preferredAbi = 'universal') {
   if (state.error) return { title: copy.releaseError, description: copy.releaseErrorBody, channel: 'GITHUB', href: history, button: copy.viewReleases };
   if (state.release === undefined) return null;
   if (state.release === null) return { title: copy.noRelease, description: copy.noReleaseBody, channel: copy.comingSoon, href: history, button: copy.viewReleases };
   const release = state.release;
+  const packages = release.packages ?? [];
+  const asset = packages.find(item => item.abi === preferredAbi) ?? release.asset;
   const info = [new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(release.date))];
-  if (release.asset) info.push(`${(release.asset.size / 1024 / 1024).toFixed(1)} MB`, release.asset.name);
-  else info.push(copy.noPackage);
+  if (asset) info.push(`${(asset.size / 1024 / 1024).toFixed(1)} MB`, asset.name);
+  else info.push(packages.length ? copy.choosePackage : copy.noPackage);
   return {
     title: `Sovel HiFi ${release.tag.replace(/^v(?=\d)/, '')}`, description: info.join(' · '),
-    channel: release.preview ? copy.beta : copy.stable, asset: release.asset,
-    href: release.asset?.url ?? release.url, notes: release.url,
-    button: release.asset ? copy.download : copy.viewReleases,
+    channel: release.preview ? copy.beta : copy.stable, asset, packages,
+    href: asset?.url ?? release.url, notes: release.url,
+    button: asset ? copy.download : copy.viewReleases,
+    packageHint: packages.length === 1 && packages[0].abi === 'universal' ? copy.universalOnly
+      : preferredAbi !== 'universal' && asset?.abi !== preferredAbi ? copy.packageFallback : copy.packageHelp,
   };
 }
 
@@ -111,6 +122,7 @@ export function bindReleaseDownloads(links) {
       link.querySelector('span').textContent = view?.button ?? copy.checkingRelease;
       if (!view) continue;
       link.href = view.href;
+      link.title = view.asset?.name ?? view.button;
       if (view.asset) link.setAttribute('download', view.asset.name);
       else link.removeAttribute('download');
       link.querySelector('use')?.setAttribute('href', view.asset ? '#download-icon' : '#arrow-up');

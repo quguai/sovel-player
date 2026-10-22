@@ -31,7 +31,12 @@ type DownloadState = {
   sha256?: string;
   versionCode?: number;
 };
-type AppInfo = { version: string; code: number; packageId: string };
+type AppInfo = {
+  version: string;
+  code: number;
+  packageId: string;
+  supportedAbis?: string[];
+};
 const native = requireOptionalNativeModule<{
   appInfo(): AppInfo;
   isWifi(): boolean;
@@ -51,7 +56,7 @@ const extra = config.expo.extra as {
   distribution?: string;
 };
 export const updateRepository = repositoryName(extra.githubRepository);
-export const installedApp = native?.appInfo() || {
+export const installedApp: AppInfo = native?.appInfo() || {
   version: config.expo.version,
   code: releaseVersion(config.expo.version)?.code || 1,
   packageId: config.expo.android.package,
@@ -231,6 +236,7 @@ function useUpdateStore() {
           result,
           updateRepository,
           installedApp.packageId,
+          installedApp.supportedAbis ?? [],
         );
         if (!alive.current || channel !== prefsRef.current.channel) return;
         if (!manual && result.tag === prefsRef.current.ignoredTag) return;

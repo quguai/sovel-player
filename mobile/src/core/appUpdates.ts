@@ -113,6 +113,11 @@ export function findUpdate(
       .sort((a, b) => b.code - a.code)[0] || null
   );
 }
+export const androidPackageAbis = [
+  "arm64-v8a",
+  "armeabi-v7a",
+  "x86_64",
+] as const;
 export type UpdatePackage = {
   version: string;
   versionCode: number;
@@ -121,29 +126,49 @@ export type UpdatePackage = {
   size: number;
   sha256: string;
   url: string;
+  abi?: (typeof androidPackageAbis)[number] | "universal";
 };
 export function parseUpdatePackage(
   input: unknown,
   release: Release,
   repo: string,
   packageId: string,
+  supportedAbis: readonly string[] = [],
 ): UpdatePackage {
-  const p = input as Partial<UpdatePackage> & { schema?: number };
-  if (
-    !p ||
-    p.schema !== 1 ||
-    p.version !== release.version ||
-    p.versionCode !== release.code ||
-    p.packageId !== packageId ||
-    typeof p.name !== "string" ||
-    !/^sovel-[0-9A-Za-z.-]+-universal\.apk$/.test(p.name) ||
-    !Number.isSafeInteger(p.size) ||
-    p.size! <= 0 ||
-    p.size! > 1024 * 1024 * 1024 ||
-    typeof p.sha256 !== "string" ||
-    !/^[0-9a-f]{64}$/.test(p.sha256) ||
-    p.url !== releaseAssetUrl(repo, release.tag, p.name)
-  )
-    throw new Error("安装包信息不完整或与此版本不匹配");
-  return p as UpdatePackage;
+  const manifest = input as Partial<UpdatePackage> & {
+    schema?: number;
+    packages?: unknown;
+  };
+  if (!manifest || manifest.schema !== 1)
+    throw new Error("更新信息格式不受支持");
+  const validate = (value: unknown, abi: string): UpdatePackage => {
+    const p = value as Partial<UpdatePackage>;
+    if (
+      !p ||
+      p.version !== release.version ||
+      p.versionCode !== release.code ||
+      p.packageId !== packageId ||
+      p.name !== `sovel-${release.version}-${abi}.apk` ||
+      !Number.isSafeInteger(p.size) ||
+      p.size! <= 0 ||
+      p.size! > 1024 * 1024 * 1024 ||
+      typeof p.sha256 !== "string" ||
+      !/^[0-9a-f]{64}$/.test(p.sha256) ||
+      p.url !== releaseAssetUrl(repo, release.tag, p.name)
+    )
+      throw new Error("安装包信息不完整或与此版本不匹配");
+    return p as UpdatePackage;
+  };
+  // Keep schema 1's top-level universal entry for already-distributed clients.
+  const universal = validate(manifest, "universal");
+  if (manifest.packages === undefined) return universal;
+  if (!Array.isArray(manifest.packages) || manifest.packages.length > 4)
+    throw new Error("更新安装包列表无效");
+  for (const abi of supportedAbis) {
+    if (!androidPackageAbis.some((supported) => supported === abi)) continue;
+    const matches = manifest.packages.filter((entry) => entry?.abi === abi);
+    if (matches.length > 1) throw new Error("更新安装包架构重复");
+    if (matches.length === 1) return validate(matches[0], abi);
+  }
+  return universal;
 }
