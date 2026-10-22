@@ -30,7 +30,12 @@ const config = {
     android: { versionCode: version.code, package: "cn.quguai.music.sovel" },
   },
 };
-function fixture(t, wrongAbi = false, missingAbi = false) {
+function fixture(
+  t,
+  wrongAbi = false,
+  missingAbi = false,
+  universalAbis = androidPackageAbis,
+) {
   const root = mkdtempSync(resolve(tmpdir(), "sovel-release-test-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const output = resolve(root, "android/app/build/outputs/apk/release");
@@ -39,7 +44,7 @@ function fixture(t, wrongAbi = false, missingAbi = false) {
     if (missingAbi && abi === "x86_64") continue;
     const source = resolve(root, abi);
     for (const included of abi === "universal"
-      ? androidPackageAbis
+      ? universalAbis
       : [wrongAbi && abi === "arm64-v8a" ? "x86_64" : abi]) {
       const folder = resolve(source, "lib", included);
       mkdirSync(folder, { recursive: true });
@@ -127,4 +132,13 @@ test("requires matching prepared version information", (t) => {
       }),
     /Run prepare/,
   );
+});
+
+test("rejects extra prebuilt x86 libraries in the universal APK", (t) => {
+  const root = fixture(t, false, false, [...androidPackageAbis, "x86"]);
+  assert.throws(
+    () => packageRelease(root, tag, repo, config),
+    /Wrong native architectures.*x86/,
+  );
+  assert.equal(existsSync(resolve(root, "release")), false);
 });

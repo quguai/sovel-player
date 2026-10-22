@@ -147,6 +147,11 @@ android {
         jniLibs {
             def enableLegacyPackaging = findProperty('expo.useLegacyPackaging') ?: 'false'
             useLegacyPackaging enableLegacyPackaging.toBoolean()
+            if ((findProperty('sovel.splitApks') ?: 'false').toBoolean()) {
+                // Prebuilt dependencies also contain x86; universal otherwise keeps it
+                // even though our release ABI splits and native builds exclude x86.
+                excludes.add('**/x86/**')
+            }
         }
     }
     androidResources {
