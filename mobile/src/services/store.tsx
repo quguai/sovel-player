@@ -14,12 +14,22 @@ import {
   useAudioPlaylist,
   useAudioPlaylistStatus,
 } from "expo-audio";
+import type { CatalogQuery } from "../core/catalog";
+import {
+  type ServerSession,
+  type ServerKind,
+  type ServerLibrary,
+} from "../core/mediaServer";
+import { saveSourceToken, sourceToken, remoteLyrics } from "./remoteSources";
+import type { RemoteProgress } from "../core/remoteSync";
 import { Library } from "../core/library";
 import { StartupAttempt } from "../core/startup";
 import { runScanJob } from "../core/scanJob";
 import { normalizeScanRules } from "../core/scanRules";
 import {
   defaults,
+  isRemoteSource,
+  type MusicSource,
   playbackModes,
   type PlaybackMode,
   type Preferences,
@@ -70,6 +80,13 @@ function shuffleTracks(list: Track[]) {
   return result;
 }
 function useStore() {
+  const collectionRequest = useRef(0);
+  const [catalogRevision, setCatalogRevision] = useState(0);
+  const [remoteProgress, setRemoteProgress] = useState<RemoteProgress | null>(
+    null,
+  );
+  const [sourceWorking, setSourceWorking] = useState(false);
+  const remoteAbort = useRef<AbortController | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]),
     [prefs, setPrefs] = useState<Preferences>(defaults);
   const [startupAttempt, setStartupAttempt] = useState(0);
@@ -196,12 +213,18 @@ function useStore() {
     await refreshListening();
   };
   const refresh = async () => {
-    const all = await library.current!.list();
+    const all = (
+      await library.current!.catalog.page({ limit: 100, dsf: supportsDsf })
+    ).items;
     const visible = all.map((t) => ({
       ...t,
-      available: t.available && !files.sourceStatus(t.sourceId)?.error,
+      available:
+        t.available &&
+        !files.sourceStatus(t.sourceId)?.error &&
+        files.sourceStatus(t.sourceId)?.enabled !== false,
     }));
     setTracks(visible);
+    setCatalogRevision((n) => n + 1);
     return visible;
   };
   const restoreSources = async () => {
@@ -209,6 +232,7 @@ function useStore() {
     for (const source of await library.current!.sources()) {
       const active = await files.activate(source);
       restored.push(active);
+      library.current!.catalog.setSourceAvailability(source.id, !active.error);
       if (!active.error) await library.current!.saveSource(active);
     }
     setSources(restored);
@@ -243,25 +267,17 @@ function useStore() {
         }
         return databaseInit.current;
       });
-      const [
-        saved,
-        all,
-        sourceList,
-        offsets,
-        storedSession,
-        checkpoint,
-        lastScan,
-      ] = await stage("读取曲库与设置", () =>
-        Promise.all([
-          lib.get("preferences", defaults).then(normalizePreferences),
-          lib.list(),
-          lib.sources(),
-          lib.lyricOffsets(),
-          lib.get("playbackSession", null),
-          lib.get("playbackCheckpoint", null),
-          lib.get<ScanReport | null>("lastScan", null),
-        ]),
-      );
+      const [saved, sourceList, offsets, storedSession, checkpoint, lastScan] =
+        await stage("读取曲库与设置", () =>
+          Promise.all([
+            lib.get("preferences", defaults).then(normalizePreferences),
+            lib.sources(),
+            lib.lyricOffsets(),
+            lib.get("playbackSession", null),
+            lib.get("playbackCheckpoint", null),
+            lib.get<ScanReport | null>("lastScan", null),
+          ]),
+        );
       // Permissions are checked once per source, never once per song.
       const restoredSources: SourceStatus[] = [];
       await stage("恢复音乐文件夹访问", async () => {
@@ -272,6 +288,9 @@ function useStore() {
           );
           if (!attempt.active) return;
           restoredSources.push(...batch);
+          batch.forEach((source) =>
+            lib.catalog.setSourceAvailability(source.id, !source.error),
+          );
           for (const source of batch) {
             if (!attempt.active) return;
             if (!source.error) await lib.saveSource(source);
@@ -288,9 +307,26 @@ function useStore() {
           interruptionMode: "doNotMix",
         });
       });
-      const visible = all.map((t) => ({
+      const catalogStart = (
+        await lib.catalog.page({ limit: 100, dsf: supportsDsf })
+      ).items;
+      const savedQueue = normalizeSession(storedSession);
+      const extraTracks = await lib.catalog.byIds([
+        ...new Set([
+          ...(savedQueue?.queueIds || []),
+          ...(saved.lastTrack ? [saved.lastTrack] : []),
+        ]),
+      ]);
+      const visible = [
+        ...new Map(
+          [...catalogStart, ...extraTracks].map((t) => [t.id, t]),
+        ).values(),
+      ].map((t) => ({
         ...t,
-        available: t.available && !files.sourceStatus(t.sourceId)?.error,
+        available:
+          t.available &&
+          !files.sourceStatus(t.sourceId)?.error &&
+          files.sourceStatus(t.sourceId)?.enabled !== false,
       }));
       library.current = lib;
       prefsRef.current = saved;
@@ -412,6 +448,7 @@ function useStore() {
     originalIds = original.map((t) => t.id),
     mode = prefsRef.current.playbackMode,
     reuse = false,
+    attempted: string[] = [],
   ) {
     const timerAtStart = sleepState(nativePlaylist);
     const revision = ++queueRevision.current;
@@ -437,6 +474,12 @@ function useStore() {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       if (revision !== queueRevision.current) return;
       playlist.pause();
+      const detail = await library.current!.catalog.detail(track.id);
+      if (detail) {
+        track = { ...track, ...detail };
+        ordered = ordered.map((item) => (item.id === track.id ? track : item));
+        setPendingTrack(track);
+      }
       await library.current!.set("playbackSession", snapshot);
       if (revision !== queueRevision.current) return;
       if (!reuse) {
@@ -444,8 +487,7 @@ function useStore() {
         if (
           !(await addQueueSources(
             ordered,
-            (item) =>
-              playlist.add({ uri: files.trackUri(item), name: item.title }),
+            (item) => playlist.add(files.playbackSource(item)),
             () => revision === queueRevision.current,
           ))
         )
@@ -453,8 +495,11 @@ function useStore() {
       }
       // A favorite tap may have happened while this queue was being installed.
       const latestFavorite = (item: Track) =>
-        favoriteValues.current.has(item.id)
-          ? { ...item, favorite: favoriteValues.current.get(item.id)! }
+        favoriteValues.current.has(item.songKey || item.id)
+          ? {
+              ...item,
+              favorite: favoriteValues.current.get(item.songKey || item.id)!,
+            }
           : item;
       queueRef.current = ordered.map(latestFavorite);
       setQueue(queueRef.current);
@@ -508,6 +553,35 @@ function useStore() {
       }
     } catch (e) {
       if (revision === queueRevision.current) {
+        const tried = [...attempted, track.id];
+        const alternatives = track.songKey
+          ? await library.current!.catalog.copies(track.songKey).catch(() => [])
+          : [];
+        const fallback = alternatives.find(
+          (item) =>
+            !tried.includes(item.id) &&
+            canPlay(item) &&
+            !files.sourceStatus(item.sourceId)?.error &&
+            files.sourceStatus(item.sourceId)?.enabled !== false,
+        );
+        if (playing && fallback && revision === queueRevision.current) {
+          setRestoreNote("当前来源暂不可用，已尝试其他已勾选来源");
+          const replace = (item: Track) =>
+            item.id === track.id ? fallback : item;
+          await installQueue(
+            ordered.map(replace),
+            fallback,
+            time,
+            playing,
+            original.map(replace),
+            undefined,
+            undefined,
+            mode,
+            false,
+            tried,
+          );
+          return;
+        }
         intendedPlaying.current = false;
         setControlIntent(false);
         playlist.pause();
@@ -753,7 +827,12 @@ function useStore() {
       let lastPhase = "";
       const aggregate = await runScanJob({
         library: library.current!,
-        sources: active.filter((source) => !only || only.includes(source.id)),
+        sources: active.filter(
+          (source) =>
+            !isRemoteSource(source) &&
+            source.enabled !== false &&
+            (!only || only.includes(source.id)),
+        ),
         mode,
         rules,
         signal: abort.current.signal,
@@ -802,6 +881,7 @@ function useStore() {
       );
       throw e;
     } finally {
+      await restoreSources();
       await refresh();
     }
   };
@@ -833,7 +913,12 @@ function useStore() {
       }
     });
   const play = (track: Track, list = tracks) => {
-    if (!canPlay(track)) {
+    collectionRequest.current++;
+    if (
+      !canPlay(track) ||
+      files.sourceStatus(track.sourceId)?.error ||
+      files.sourceStatus(track.sourceId)?.enabled === false
+    ) {
       Alert.alert(
         "暂时无法播放",
         track.available
@@ -849,7 +934,12 @@ function useStore() {
     nativePlaylist.finishSovelListening?.(
       track.id === current?.id ? "replay" : "selected",
     );
-    const playable = list.filter(canPlay),
+    const playable = list.filter(
+        (item) =>
+          canPlay(item) &&
+          !files.sourceStatus(item.sourceId)?.error &&
+          files.sourceStatus(item.sourceId)?.enabled !== false,
+      ),
       pool = playable.some((t) => t.id === track.id) ? playable : [track];
     const reuse =
       !transitioning.current &&
@@ -937,12 +1027,14 @@ function useStore() {
   };
   const favorite = (track: Track) =>
     favoriteUpdates.current.toggle(
-      track.id,
+      track.songKey || track.id,
       track.favorite,
       (value) => {
-        favoriteValues.current.set(track.id, value);
+        favoriteValues.current.set(track.songKey || track.id, value);
         const update = (t: Track) =>
-          t.id === track.id ? { ...t, favorite: value } : t;
+          t.id === track.id || (track.songKey && t.songKey === track.songKey)
+            ? { ...t, favorite: value }
+            : t;
         setTracks((all) => all.map(update));
         queueRef.current = queueRef.current.map(update);
         originalQueue.current = originalQueue.current.map(update);
@@ -952,9 +1044,219 @@ function useStore() {
       },
       async (value) => {
         await library.current!.favorite(track.id, value);
+        setCatalogRevision((n) => n + 1);
       },
       (e) => setError(`收藏保存失败：${String(e)}`),
     );
+  const catalogPage = useCallback(
+    (query: CatalogQuery) =>
+      library.current!.catalog.page({ ...query, dsf: supportsDsf }),
+    [],
+  );
+  const catalogCollection = useCallback(async (query: CatalogQuery) => {
+    const scope = { ...query, kind: "tracks" as const, dsf: supportsDsf };
+    if (
+      scope.collectionKind === "albums" &&
+      scope.collection &&
+      !scope.sourceIds?.length
+    ) {
+      const source = await library.current!.catalog.completeAlbumSource(
+        scope.collection,
+        supportsDsf,
+      );
+      if (source) scope.sourceIds = [source];
+    }
+    const items: Track[] = [];
+    for (;;) {
+      const page = await library.current!.catalog.page({
+        ...scope,
+        offset: items.length,
+        limit: 200,
+      });
+      items.push(...page.items);
+      if (!page.items.length || items.length >= page.total) return items;
+    }
+  }, []);
+  const playCollection = async (track: Track, query: CatalogQuery) => {
+    const request = ++collectionRequest.current;
+    setPendingTrack(track);
+    try {
+      const items = await catalogCollection(query);
+      if (request !== collectionRequest.current) return;
+      const selected =
+        items.find((item) => item.songKey === track.songKey) || track;
+      play(selected, items);
+    } catch (error) {
+      if (request === collectionRequest.current) {
+        setPendingTrack(null);
+        setError(String(error));
+      }
+    }
+  };
+  const catalogCopies = useCallback(
+    (key: string) => library.current!.catalog.copies(key),
+    [],
+  );
+  const sourceBusy = sourceWorking || busy;
+  const configureSource = async (
+    id: string,
+    patch: { enabled?: boolean; priority?: number },
+  ) => {
+    if (operation.current) throw new Error("请等待当前扫描完成");
+    await library.current!.catalog.configureSource(id, patch);
+    await restoreSources();
+    await refresh();
+    if (
+      patch.enabled === false &&
+      queueRef.current.some((item) => item.sourceId === id)
+    ) {
+      const oldCurrent = queueRef.current[playlist.currentIndex];
+      const remaining = queueRef.current.filter(
+        (item) => files.sourceStatus(item.sourceId)?.enabled !== false,
+      );
+      const next =
+        remaining.find((item) => item.id === oldCurrent?.id) || remaining[0];
+      if (next)
+        await installQueue(
+          remaining,
+          next,
+          next.id === oldCurrent?.id ? playlist.currentTime : 0,
+          playlist.playing,
+          remaining,
+          activeSession.current?.queueIds,
+          activeSession.current?.originalIds,
+        );
+      else {
+        await savePlayback();
+        playlist.pause();
+        playlist.clear();
+        queueRef.current = [];
+        setQueue([]);
+      }
+    }
+  };
+  const connectSource = async (
+    kind: ServerKind,
+    url: string,
+    session: ServerSession,
+    selected: ServerLibrary[],
+  ) => {
+    if (!selected.length) throw new Error("请至少选择一个音乐库");
+    if (operation.current) throw new Error("请等待当前扫描完成");
+    const previous = await library.current!.sources();
+    for (const old of previous) {
+      if (
+        old.kind === kind &&
+        old.config?.serverId === session.serverId &&
+        old.config?.userId === session.userId &&
+        !selected.some((item) => item.id === old.config?.libraryId)
+      )
+        await library.current!.catalog.configureSource(old.id, {
+          enabled: false,
+        });
+    }
+    for (const item of selected) {
+      const candidate: MusicSource = {
+        id: `remote-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        name: item.name,
+        kind,
+        uri: `${url}#${session.serverId}/${session.userId}/${item.id}`,
+      };
+      const source = await library.current!.saveSource(candidate);
+      await saveSourceToken(source.id, session.token);
+      await library.current!.catalog.configureSource(source.id, {
+        enabled: true,
+        config: {
+          baseUrl: url,
+          serverId: session.serverId,
+          userId: session.userId,
+          libraryId: item.id,
+          deviceId: session.deviceId,
+        },
+      });
+    }
+    await restoreSources();
+    await refresh();
+  };
+  const syncSource = async (id: string) => {
+    if (operation.current) throw new Error("已有扫描或同步正在进行");
+    const source = (await library.current!.sources()).find((s) => s.id === id);
+    if (!source) return;
+    if (!isRemoteSource(source)) {
+      await run(() => scanWork("incremental", [id]));
+      return;
+    }
+    operation.current = true;
+    setSourceWorking(true);
+    const controller = new AbortController();
+    remoteAbort.current = controller;
+    try {
+      await library.current!.syncRemote(
+        source,
+        sourceToken(id),
+        controller.signal,
+        setRemoteProgress,
+      );
+      await restoreSources();
+      await refresh();
+    } finally {
+      operation.current = false;
+      remoteAbort.current = null;
+      setRemoteProgress(null);
+      setSourceWorking(false);
+    }
+  };
+  const moveSource = async (id: string, direction: -1 | 1) => {
+    if (operation.current) throw new Error("请等待当前扫描完成");
+    const ordered = await library.current!.sources();
+    const index = ordered.findIndex((source) => source.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= ordered.length) return;
+    [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+    for (let i = 0; i < ordered.length; i++)
+      await library.current!.catalog.configureSource(ordered[i].id, {
+        priority: i * 10,
+      });
+    await restoreSources();
+    await refresh();
+  };
+  const preferCopy = async (songKey: string, copyId: string | null) => {
+    await library.current!.catalog.prefer(songKey, copyId);
+    await refresh();
+  };
+  const detailId = current?.id;
+  const detailHydrated = current?.hydrated;
+  const detailRemoteId = current?.remoteId;
+  const detailLyricsLoaded = current?.remoteLyricsLoaded;
+  useEffect(() => {
+    if (
+      !ready ||
+      !detailId ||
+      (detailHydrated && (!detailRemoteId || detailLyricsLoaded))
+    )
+      return;
+    const id = detailId;
+    let disposed = false;
+    void library
+      .current!.catalog.detail(id)
+      .then(async (detail) => {
+        if (detail?.remoteId) detail = await remoteLyrics(detail);
+        if (disposed || !detail) return;
+        setTracks((items) =>
+          items.map((t) => (t.id === detail.id ? { ...t, ...detail } : t)),
+        );
+        queueRef.current = queueRef.current.map((t) =>
+          t.id === detail.id ? { ...t, ...detail } : t,
+        );
+        setQueue(queueRef.current);
+      })
+      .catch((e) => {
+        if (!disposed) setError(String(e));
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [ready, detailId, detailHydrated, detailRemoteId, detailLyricsLoaded]);
   const reorderMode = async (mode: PlaybackMode) => {
     playlist.loop = mode === "single" ? "single" : "all";
     const now = queueRef.current[playlist.currentIndex];
@@ -1013,6 +1315,19 @@ function useStore() {
       setStartupAttempt((value) => value + 1);
     },
     tracks,
+    catalogRevision,
+    catalogPage,
+    catalogCopies,
+    catalogCollection,
+    playCollection,
+    configureSource,
+    moveSource,
+    connectSource,
+    syncSource,
+    preferCopy,
+    sourceBusy,
+    remoteProgress,
+    cancelRemote: () => remoteAbort.current?.abort(),
     prefs,
     preferences,
     current,

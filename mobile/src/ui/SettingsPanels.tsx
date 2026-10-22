@@ -1,3 +1,4 @@
+import { MusicSourcesScreen } from "./MusicSourcesScreen";
 import { UpdateSettings } from "./UpdateSettings";
 import { installedApp, useUpdates } from "../services/appUpdates";
 import React, { useState } from "react";
@@ -22,6 +23,7 @@ import { dsdLicense } from "../core/thirdPartyNotices";
 import { pcmRates } from "../core/dsd";
 
 export type SettingsSection =
+  | "sources"
   | "root"
   | "appearance"
   | "playback"
@@ -37,6 +39,7 @@ export type SettingsSection =
   | "history";
 export const settingsTitles: Record<SettingsSection, string> = {
   root: "设置",
+  sources: "音乐来源",
   appearance: "样式管理",
   playback: "高级设置",
   sleep: "定时停止播放",
@@ -132,7 +135,7 @@ export function SettingsHome({
 }) {
   const updates = useUpdates();
   const {
-    tracks,
+    sources,
     prefs,
     sleepEnd,
     sleepRemaining,
@@ -146,9 +149,14 @@ export function SettingsHome({
       <Text style={s.intro}>让音乐，按你的习惯播放。</Text>
       <SettingGroup title="曲库与外观">
         <SettingRow
+          title="音乐来源"
+          note="本地 / Jellyfin / Emby · 聚合与优先级"
+          onPress={() => open("sources")}
+        />
+        <SettingRow
           title="文件扫描"
           note="选择来源、过滤规则与扫描方式"
-          value={`${tracks.filter((t) => t.available).length} 首`}
+          value={`${sources.filter((source) => source.kind !== "jellyfin" && source.kind !== "emby").reduce((count, source) => count + (source.trackCount || 0), 0)} 首`}
           onPress={onSources}
         />
         <SettingRow
@@ -345,6 +353,7 @@ export function AdvancedAudioSettings() {
 export function SettingsInfo({ section }: { section: SettingsSection }) {
   const [details, setDetails] = useState(false);
   const [licenses, setLicenses] = useState(false);
+  if (section === "sources") return <MusicSourcesScreen />;
   if (section === "updates") return <UpdateSettings />;
   if (section === "sleep") return <SleepSettings />;
   if (section === "backup") return <BackupSettings />;

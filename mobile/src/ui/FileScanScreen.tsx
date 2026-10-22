@@ -10,14 +10,13 @@ import {
 } from "react-native";
 import { useMusic } from "../services/store";
 import { normalizeScanRules } from "../core/scanRules";
-import { type ScanRules } from "../core/types";
+import { isRemoteSource, type ScanRules } from "../core/types";
 import { Action, Button, navigationHeader } from "./components";
 import { SettingGroup, SettingRow, SettingSwitch } from "./SettingsPanels";
 import { palette as p } from "./visuals";
 export function FileScanScreen({ onBack }: { onBack: () => void }) {
   const {
-    tracks,
-    sources,
+    sources: allSources,
     prefs,
     preferences,
     busy,
@@ -28,6 +27,7 @@ export function FileScanScreen({ onBack }: { onBack: () => void }) {
     scan,
     cancel,
   } = useMusic();
+  const sources = allSources.filter((source) => !isRemoteSource(source));
   const rules = prefs.scanRules;
   const [minSize, setMinSize] = useState(String(rules.minSizeKB));
   const [showSources, setShowSources] = useState(false);
@@ -69,7 +69,8 @@ export function FileScanScreen({ onBack }: { onBack: () => void }) {
           <Text style={s.title}>
             音乐来源{" "}
             <Text style={s.note}>
-              · {tracks.filter((t) => t.available).length} 首已索引
+              · {sources.reduce((n, source) => n + (source.trackCount || 0), 0)}{" "}
+              首已索引
             </Text>
           </Text>
           <View style={s.actions}>
@@ -105,7 +106,7 @@ export function FileScanScreen({ onBack }: { onBack: () => void }) {
                 note={
                   source.error
                     ? "暂时离线 · 保留原有曲库"
-                    : `${tracks.filter((t) => t.sourceId === source.id).length} 首 · ${source.kind === "managed" ? "应用内文件" : "引用原文件"}`
+                    : `${source.trackCount || 0} 首 · ${source.kind === "managed" ? "应用内文件" : "引用原文件"}`
                 }
               />
             ))}

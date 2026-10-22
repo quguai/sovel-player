@@ -4,6 +4,8 @@
 
 React Native and TypeScript implementation of Sovel HiFi. This directory contains the application, committed iOS/Android projects, native audio extensions, and tests. The browser demo at the repository root is a separate visual reference.
 
+This guide describes the current source. New Jellyfin / Emby integration requires a native build until included in a release; consult that release's notes for APK availability. iOS simulator integration uses a mock server. Real Jellyfin / Emby deployments and Android validation for this integration remain outstanding.
+
 ## Android releases
 
 The root [Android release workflow](../.github/workflows/android-release.yml) runs on `v*` tags, validates the version, runs checks, builds a signed APK and publishes the APK plus update manifest to GitHub Releases. Configure the four signing secrets before creating a release tag. [Release setup and update behavior](../docs/android-releases.md).
@@ -41,7 +43,7 @@ npm run android
 | Wordmark / native project | Sovel |
 | Android application ID / iOS Bundle ID | `cn.quguai.music.sovel` |
 | URL scheme | `sovel://` |
-| SQLite file | `sovel.db`, schema version 4 |
+| SQLite file | `sovel.db`, schema version 5 |
 
 The pre-release rename uses a new application identity and database without runtime migration from the earlier brand. Database schema upgrades are separate from branding, and ordinary scans update the existing database.
 
@@ -66,10 +68,10 @@ Selecting files or adding a folder indexes the original audio without copying or
 - iOS uses the local `SovelAccess` module, `UIDocumentPicker` access-in-place, and security-scoped bookmarks. Access is restored on restart and retained for native playback.
 - SQLite stores source identity, paths/URIs, size, modification time, metadata, lyrics, favorites, and preferences. Artwork is cached separately; audio is not stored in SQLite.
 - A folder grant can discover new songs and same-name `.lrc` files. A single-file grant indexes only selected files.
-- Moves/renames currently create new path identities; previous records remain missing. Overlapping sources can create duplicate index entries without duplicating audio.
+- Moves/renames currently create new path identities; previous records remain missing. Overlapping sources retain independent file copies; confident matches are aggregated into one visible song without duplicating audio.
 - Offline storage, revoked permissions, and removed files retain index/favorite records. Reconnect and rescan; select the source again if its grant has expired.
 - **复制音乐到应用** is an explicit optional copy action. iOS exposes this directory in Files → Sovel HiFi → Music.
-- Cloud file providers may download/cache files themselves. This implementation targets local, randomly readable files and does not mirror remote music libraries.
+- Cloud file providers may download/cache files themselves. File scanning uses local random access; Jellyfin/Emby have separate paged API adapters and stream original audio without copying it into the app.
 
 All sources share one database. Scanning first enumerates the entire selected scope and applies filters, then imports against one fixed total. Settings include minimum file size, hidden content, and subfolder inclusion. Source-management selection does not automatically start a scan; quick import actions also perform an incremental scan.
 
@@ -129,7 +131,7 @@ Daily mixes are stable for the local day and contain up to 30 playable tracks. R
 
 WAV/FLAC metadata and iOS playback have been verified with the samples. DSF ID3 tags, artwork, and lyrics parsing are tested. MP3, AAC, ALAC, AIFF, Ogg, Opus, and other playback formats remain platform/codec-dependent. DSF/DFF/APE/WavPack may be indexed but are blocked from playback pending decoder work. Neither TagLib nor an FFmpeg playback backend is integrated.
 
-Remote library adapters, USB exclusive output, DoP/native DSD, vendor-specific internal DAC support, bit-perfect detection, guaranteed gapless playback, crossfade, arbitrary custom themes, and additional app languages remain unimplemented. USB DAC connections currently use system audio. Long background sessions, interruptions, Bluetooth, and physical outputs need real-device validation.
+Jellyfin / Emby catalog sync and original-file streaming are implemented in development source; real-server and Android integration validation remain open. DLNA/UPnP, SMB, WebDAV and OpenSubsonic adapters, USB exclusive output, DoP/native DSD, vendor-specific internal DAC support, bit-perfect detection, guaranteed gapless playback, crossfade, arbitrary custom themes, and additional app languages remain unimplemented. USB DAC connections currently use system audio. Long background sessions, interruptions, Bluetooth, and physical outputs need real-device validation.
 
 ## Validation
 
@@ -138,7 +140,7 @@ npm run check
 npm run lint
 ```
 
-The current baseline is 54 passing core tests, a passing TypeScript check, and zero ESLint errors with seven existing warnings. Tests use real SQLite and WAV/FLAC/DSF metadata fixtures; they cover scanning, cancellation/offline behavior, source identity, schema upgrades, history, queue restoration, backups, lyrics offsets, discovery, and placeholders.
+Run the commands above for the current test count, TypeScript diagnostics and ESLint warnings. Tests use real SQLite and WAV/FLAC/DSF metadata fixtures; they cover scanning, cancellation/offline behavior, source identity, schema upgrades, history, queue restoration, backups, lyrics offsets, discovery, and placeholders.
 
 Optional JS bundle export checks:
 
@@ -172,3 +174,21 @@ The [feature review](../docs/feature-adoption-review.md), [settings/scan notes](
 Generated icons, turntable textures, and bundled placeholders retain provenance records beside their assets. Real embedded images take priority over the four default album covers and two neutral portraits. Defaults are shared packaged files, do not alter audio metadata, and are not presented as actual artist photographs. There is currently no manual placeholder-image picker or online artist-image service.
 
 The project uses the root [MIT License](../LICENSE) and retains the [Expo starter notice](LICENSE).
+
+
+## Aggregated libraries and media servers
+
+Open **设置 → 音乐来源** to add a Jellyfin/Emby server. Enter the full HTTP(S) address (including any reverse-proxy prefix), authenticate, then select the server's music libraries. Each selected library becomes an independently enabled, prioritized source. Use **同步曲库** to discover the complete server listing, then import against a fixed count. Server audio and tags are read-only. This first adapter uses a complete paged inventory and metadata upserts; it does not claim a server-side change feed.
+
+- `tracks`, physical IDs, `favorites`, lyric offsets, history and saved queues remain intact. Schema 5 adds `catalog_copies`, source options, version preferences and an on-disk synchronization staging table. Backfill runs in bounded batches and can resume after interruption. Do not delete `sovel.db` when upgrading.
+- Album/song/artist/folder browsing uses SQLite pages. Lists use lightweight summaries; full local lyrics/tags are loaded for the current track. FTS5 trigram search accelerates long substrings when available; short Chinese searches and older SQLite builds use a literal substring fallback.
+- Older cached local tags may not contain release identifiers/year. A full local scan reads the new fields while preserving existing IDs and favorites.
+- Aggregation uses recording/release identifiers where available, otherwise conservative album/artist/title/disc/track/duration keys. Unknown tags remain separate. Live/remastered/different editions are not merged by title alone. Manual merge/split editing is not part of this iteration.
+- Playback selection favors available and supported copies, remembered user choice, lossless files, local files, then source priority. A complete album from one source is preferred when there are no per-song overrides. Unsupported DSD does not win merely because it has larger technical parameters.
+- Disabling a source retains its index, favorites and credentials; it removes that source from aggregate browsing and future queue candidates. Library filter chips change only the current view. Re-enable to show the saved index again.
+- Access tokens use `expo-secure-store` (iOS Keychain / Android encrypted storage). Passwords are not saved. SQLite stores server/user/library identities, not tokens. Auth headers are supplied to native playback; authenticated artwork URLs exist only in memory. New native builds are required for SecureStore. Proper iOS signing entitlements are required; an unsigned simulator binary cannot access Keychain.
+- Both adapters request original-file streaming (`Static=true`). There is no automatic server transcoding in this iteration. Native codec/DSF support still determines whether playback succeeds. Jellyfin lyrics load on demand when the server exposes its lyrics API; Emby lyrics are not yet integrated.
+- Offline/failed/cancelled inventories never mark old tracks missing. Import cancellation rolls back the source update; successful syncs retain missing entries instead of deleting favorites. A fixed page count changing during discovery causes a safe retry.
+- DLNA/UPnP, SMB, WebDAV and OpenSubsonic remain future adapters. Remote writes, cross-server favorite synchronization, audio downloads and a persistent stream cache are not implemented.
+
+For a **mock server**, not a real Jellyfin/Emby deployment, run `python3 tests/mock-media-server.py` on the host. The optional `SovelUITests.testMusicSourcesAndRemotePlayback` integration test uses this loopback server and development WAV fixtures to exercise native login, sync, aggregation, source toggles and playback. It skips when the server is absent. The server and development audio are not packaged in release APKs.

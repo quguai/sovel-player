@@ -2,12 +2,18 @@ import { Directory, File, FileMode, Paths } from "expo-file-system";
 import { Platform } from "react-native";
 import {
   isAudio,
+  isRemoteSource,
   type Entry,
   type MusicSource,
   type SourceStatus,
   type Track,
   type ScanRules,
 } from "../core/types";
+import {
+  activateRemote,
+  remotePlaybackSource,
+  remoteArtworkUri,
+} from "./remoteSources";
 import { discoverDirectory } from "../core/directoryScan";
 import { readMetadata } from "../core/metadata";
 import { parseLyrics } from "../core/lyrics";
@@ -20,11 +26,24 @@ export function prepareFiles() {
   art.create({ idempotent: true, intermediates: true });
 }
 export const artUri = (path?: string) =>
-  path ? new File(art, path).uri : undefined;
+  path
+    ? path.startsWith("sovel-art:")
+      ? remoteArtworkUri(path)
+      : /^https?:\/\//.test(path)
+        ? path
+        : new File(art, path).uri
+    : undefined;
+export function playbackSource(track: Track) {
+  const source = roots.get(track.sourceId);
+  if (source && isRemoteSource(source))
+    return { ...remotePlaybackSource(track), name: track.title };
+  return { uri: trackUri(track), name: track.title };
+}
 export function trackUri(track: Track): string {
   const source = roots.get(track.sourceId);
   if (source?.error)
     throw new Error(`${source.name} 暂时不可访问，请连接设备或重新授权`);
+  if (source && isRemoteSource(source)) return remotePlaybackSource(track).uri;
   if (track.sourceId === "local") return new File(music, track.path).uri;
   if (!source) throw new Error("音乐来源尚未授权");
   if (source.kind === "file") return source.uri;
@@ -41,6 +60,11 @@ export function markUnavailable(id: string, error: string) {
   if (source) roots.set(id, { ...source, error });
 }
 export async function activate(source: MusicSource): Promise<SourceStatus> {
+  if (isRemoteSource(source)) {
+    const active = await activateRemote(source);
+    roots.set(source.id, active);
+    return active;
+  }
   let active: SourceStatus = { ...source };
   try {
     if (source.kind !== "managed") {

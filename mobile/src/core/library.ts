@@ -9,22 +9,21 @@ import {
   type ScanRules,
 } from "./types";
 import { excludesEntry } from "./scanRules";
+import { syncMediaSource, type RemoteProgress } from "./remoteSync";
+import { Catalog } from "./catalog";
 import { ListeningHistory } from "./listeningHistory";
-export interface Database {
-  execAsync(sql: string): Promise<void>;
-  runAsync(sql: string, ...params: any[]): Promise<unknown>;
-  getAllAsync<T>(sql: string, ...params: any[]): Promise<T[]>;
-  getFirstAsync<T>(sql: string, ...params: any[]): Promise<T | null>;
-  withTransactionAsync(task: () => Promise<void>): Promise<void>;
-}
+import { atomic, type Database } from "./database";
+export type { Database } from "./database";
 export class Library {
   private scanning = false;
   readonly history: ListeningHistory;
+  readonly catalog: Catalog;
   constructor(private db: Database) {
     this.history = new ListeningHistory(db);
+    this.catalog = new Catalog(db);
   }
   async init() {
-    await this.db.execAsync(`PRAGMA journal_mode=WAL;
+    await this.db.execAsync(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
       CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, source_id TEXT NOT NULL DEFAULT 'local', uri TEXT NOT NULL DEFAULT '', path TEXT NOT NULL, size INTEGER NOT NULL, mtime REAL NOT NULL, metadata TEXT NOT NULL, available INTEGER NOT NULL DEFAULT 1, UNIQUE(source_id,path));
       CREATE TABLE IF NOT EXISTS sources (id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL, uri TEXT NOT NULL, bookmark TEXT, UNIQUE(kind,uri));
       CREATE TABLE IF NOT EXISTS favorites (track_id TEXT PRIMARY KEY);
@@ -45,18 +44,32 @@ export class Library {
       });
     }
     await this.history.init();
-    await this.db.execAsync("PRAGMA user_version=4");
+
     await this.saveSource({
       id: "local",
       name: "Sovel 应用文件",
       kind: "managed",
       uri: "sovel:music",
     });
+    await this.catalog.init();
+    await this.db.execAsync("PRAGMA user_version=5");
+  }
+  async syncRemote(
+    source: MusicSource,
+    token: string,
+    signal: AbortSignal,
+    progress: (p: RemoteProgress) => void,
+  ) {
+    if (this.scanning) throw new Error("扫描正在进行");
+    this.scanning = true;
+    try {
+      return await syncMediaSource(this.db, source, token, signal, progress);
+    } finally {
+      this.scanning = false;
+    }
   }
   async sources(): Promise<MusicSource[]> {
-    return this.db.getAllAsync<MusicSource>(
-      "SELECT * FROM sources ORDER BY rowid",
-    );
+    return this.catalog.sources();
   }
   async saveSource(source: MusicSource): Promise<MusicSource> {
     const existing = await this.db.getFirstAsync<MusicSource>(
@@ -108,6 +121,7 @@ export class Library {
   }
 
   async favorite(id: string, selected: boolean) {
+    await this.catalog.favorite(id, selected);
     await this.db.runAsync(
       selected
         ? "INSERT OR IGNORE INTO favorites VALUES (?)"
@@ -289,14 +303,14 @@ export class Library {
           !(rules && excludesEntry(t, rules)),
       );
       report.missing = missing.length;
-      await this.db.withTransactionAsync(async () => {
+      await atomic(this.db, async (transaction) => {
         for (const track of missing)
-          await this.db.runAsync(
+          await transaction.runAsync(
             "UPDATE tracks SET available=0 WHERE id=?",
             track.id,
           );
         for (const entry of reactivated)
-          await this.db.runAsync(
+          await transaction.runAsync(
             "UPDATE tracks SET available=1,uri=? WHERE source_id=? AND path=?",
             entry.uri || "",
             sourceId,
@@ -307,7 +321,7 @@ export class Library {
         for (let start = 0; start < changed.length; start += 64) {
           if (signal?.aborted) throw new Error("扫描已取消，曲库未改动");
           const batch = changed.slice(start, start + 64);
-          await this.db.runAsync(
+          await transaction.runAsync(
             `INSERT INTO tracks(id,source_id,uri,path,size,mtime,metadata,available) VALUES ${batch.map(() => "(?,?,?,?,?,?,?,1)").join(",")}
           ON CONFLICT(source_id,path) DO UPDATE SET size=excluded.size,mtime=excluded.mtime,metadata=excluded.metadata,uri=excluded.uri,available=1`,
             ...batch.flatMap(({ entry, metadata, id }) => [
@@ -321,13 +335,27 @@ export class Library {
             ]),
           );
         }
+        for (let start = 0; start < changed.length; start += 64) {
+          await new Catalog(transaction).index(
+            changed.slice(start, start + 64).map(({ id, entry, metadata }) => ({
+              id,
+              source_id: sourceId,
+              path: entry.path,
+              metadata: JSON.stringify(metadata),
+            })),
+          );
+        }
         if (signal?.aborted) throw new Error("扫描已取消，曲库未改动");
-        await this.db.runAsync(
+        await transaction.runAsync(
           "UPDATE scans SET status='complete',report=? WHERE id=?",
           JSON.stringify(report),
           job!.id,
         );
-        await this.set("lastScan", report);
+        await transaction.runAsync(
+          "INSERT OR REPLACE INTO preferences VALUES (?,?)",
+          "lastScan",
+          JSON.stringify(report),
+        );
       });
       return report;
     } catch (error) {

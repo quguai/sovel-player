@@ -2,6 +2,14 @@
 
 An independent static product website for [Sovel HiFi](https://github.com/quguai/sovel-player). English is the default, with a remembered Simplified Chinese switch and shareable `?lang=zh` links. No framework, bundler, runtime dependencies, analytics or server is required in production.
 
+## Capability documentation
+
+Keep feature updates aligned across `index.html` (English and no-JavaScript fallback), `copy.js` (Simplified Chinese and search/social descriptions), and the English/Chinese root and mobile READMEs. `#music-sources` explains Jellyfin / Emby connections, source selection, aggregation and original-file streaming; the FAQ explains duplicate-version defaults. It is an editorial feature overview, not an interactive server-connection demo.
+
+Distinguish **implemented in development source**, **available in a published APK**, and **verified on real hardware/servers**. The new remote integration has mock-server iOS simulator coverage; real Jellyfin / Emby deployments and Android integration remain unverified. The download card explicitly directs users to the selected release notes for availability. DLNA / UPnP, SMB, WebDAV and OpenSubsonic remain planned. Keep release fetching and ABI selection automatic; do not hardcode a new version or APK URL for a feature announcement.
+
+新增能力需要同步根目录与移动端的中英文 README，以及网站的英文 HTML、中文文案和搜索／分享描述。远程曲库说明位于 `#music-sources`，明确区分开发源码、已发布安装包与真实服务器／硬件验证；不要把模拟服务器联调写成真实服务器兼容性验证，也不要把规划中的协议写成已支持。
+
 ## Local preview
 
 From the **repository root** (Node.js 22 or newer):

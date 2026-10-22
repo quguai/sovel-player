@@ -4,10 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#151613" />
-  <meta name="description" content="Sovel HiFi is an open-source music player for the collection you own. A thoughtful local library, expressive vinyl visuals, and room to listen." />
+  <meta name="description" content="Sovel HiFi is an open-source music player for your collection. Explore a local library, customizable vinyl, and Jellyfin / Emby integration in development." />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Sovel HiFi — A little closer to your music." />
-  <meta property="og:description" content="A thoughtful library. Expressive vinyl. An open-source listening space for the music you own." />
+  <meta property="og:description" content="Sovel HiFi is an open-source music player for your collection. Explore a local library, customizable vinyl, and Jellyfin / Emby integration in development." />
   <meta property="og:image" content="/assets/icon.png" />
   <meta name="twitter:card" content="summary" />
   <meta name="color-scheme" content="dark light" />
@@ -58,7 +58,7 @@
       <div class="hero-copy">
         <p class="eyebrow"><span class="live-dot"></span><span data-i18n="heroEyebrow">AN OPEN-SOURCE HIFI MUSIC PLAYER</span></p>
         <h1 id="hero-title" data-i18n-html="heroTitle">A little closer<br />to <em>your music.</em></h1>
-        <p class="hero-description" data-i18n="heroDescription">Your music, beautifully at home. A local music player with a thoughtful library, expressive vinyl, and room to listen.</p>
+        <p class="hero-description" data-i18n="heroDescription">A considered home for your collection. Local listening, expressive vinyl, and Jellyfin / Emby libraries now taking shape.</p>
         <div class="hero-actions">
           <a class="button button-gold" data-release-download href="https://github.com/quguai/sovel-player/releases"><svg class="icon"><use href="#download-icon"/></svg><span data-i18n="heroCta">Get Sovel</span></a>
           <a class="text-link" href="#experience"><span data-i18n="heroSecondary">Take a closer look</span><svg class="icon"><use href="#arrow"/></svg></a>
@@ -283,6 +283,7 @@
         </div>
         <a class="button button-gold release-download" id="release-download" data-release-download href="https://github.com/quguai/sovel-player/releases"><span data-i18n="viewReleases">View releases</span><svg class="icon"><use href="#arrow-up"/></svg></a>
         <div class="release-links"><a id="release-notes" href="https://github.com/quguai/sovel-player/releases" target="_blank" rel="noopener noreferrer" data-i18n="releaseHistory">Release history ↗</a><a href="https://github.com/quguai/sovel-player#build-the-native-app" target="_blank" rel="noopener noreferrer" data-i18n="buildSource">Build from source ↗</a></div>
+        <p class="release-scope" data-i18n="downloadScope">Remote-library features are in development source. Check release notes to see whether the selected package includes them.</p>
       </div>
     </section>
 
@@ -303,18 +304,36 @@
       </div>
     </section>
 
+    <section class="sources-section wrap section-space" id="music-sources" aria-labelledby="sources-title">
+      <div class="sources-heading">
+        <div><p class="eyebrow" data-i18n="sourcesEyebrow">03 / YOUR MUSIC, TOGETHER</p><h2 id="sources-title" data-i18n-html="sourcesTitle">Different places.<br /><em>One collection.</em></h2></div>
+        <div class="sources-intro"><span class="sources-badge" data-i18n="sourcesBadge">IN DEVELOPMENT SOURCE</span><p data-i18n="sourcesIntro">Keep your files where they belong. Bring local folders and selected Jellyfin or Emby libraries into the same listening space.</p></div>
+      </div>
+      <div class="source-providers" aria-label="Music sources">
+        <span><svg class="icon" aria-hidden="true"><use href="#folder"/></svg><span data-i18n="sourcesLocal">Local files</span></span><span>Jellyfin</span><span>Emby</span>
+      </div>
+      <div class="sources-features">
+        <article><span class="micro">01 / SELECT</span><h3 data-i18n="sourcesSelect">Choose what belongs.</h3><p data-i18n="sourcesSelectBody">Enable each library separately and set its priority. Turning a source off keeps its saved index and favorites.</p></article>
+        <article><span class="micro">02 / COLLECT</span><h3 data-i18n="sourcesCollect">One song. Your choice.</h3><p data-i18n="sourcesCollectBody">Matching copies share a song row. Choose a version and remember it; distinct editions stay separate.</p></article>
+        <article><span class="micro">03 / LISTEN</span><h3 data-i18n="sourcesListen">Stream the original.</h3><p data-i18n="sourcesListenBody">Sync the catalog, then stream from your server. No audio download or automatic transcoding; playback depends on the device codec.</p></article>
+      </div>
+      <div class="sources-foot"><p data-i18n="sourcesEntry">In the app: Settings → 音乐来源. Add a server, select music libraries, then sync. Discovery comes first; import follows with a fixed total.</p><a class="text-link" href="https://github.com/quguai/sovel-player#music-sources" target="_blank" rel="noopener noreferrer" data-i18n="sourcesGuide">Connection & version selection ↗</a></div>
+      <p class="sources-validation" data-i18n="sourcesValidation">Development-source feature; check release notes for package availability. Integration tested on an iOS simulator with a mock server. Real Jellyfin / Emby servers and Android playback still need validation. DLNA / UPnP, SMB, WebDAV and OpenSubsonic are planned.</p>
+    </section>
+
     <section class="progress-section wrap section-space" id="progress" aria-labelledby="progress-title">
-      <div class="progress-heading"><div><p class="eyebrow" data-i18n="progressEyebrow">03 / GROWING IN THE OPEN</p><h2 id="progress-title" data-i18n-html="progressTitle">Built with care.<br /><em>Still taking shape.</em></h2></div><p data-i18n="progressIntro">Sovel is an early, actively developed project. Here is what you can explore today, and where we are heading next.</p></div>
+      <div class="progress-heading"><div><p class="eyebrow" data-i18n="progressEyebrow">04 / GROWING IN THE OPEN</p><h2 id="progress-title" data-i18n-html="progressTitle">Built with care.<br /><em>Still taking shape.</em></h2></div><p data-i18n="progressIntro">Sovel is an early, actively developed project. Source capabilities and published packages may differ; release notes describe each package.</p></div>
       <div class="progress-board">
-        <article class="progress-current"><span class="board-label"><i class="live-dot"></i><span data-i18n="availableToday">IN THE CURRENT BUILD</span></span><h3 data-i18n="currentTitle">The local listening essentials.</h3><ul>
+        <article class="progress-current"><span class="board-label"><i class="live-dot"></i><span data-i18n="availableToday">IMPLEMENTED IN SOURCE</span></span><h3 data-i18n="currentTitle">A home for your collection.</h3><ul>
           <li><svg class="icon"><use href="#check"/></svg><span data-i18n="currentOne">Local library, two-stage scanning & favorites</span></li>
           <li><svg class="icon"><use href="#check"/></svg><span data-i18n="currentTwo">WAV / FLAC playback verified on iOS</span></li>
           <li><svg class="icon"><use href="#check"/></svg><span data-i18n="currentThree">Vinyl views, lyrics & queue restoration</span></li>
           <li><svg class="icon"><use href="#check"/></svg><span data-i18n="currentFour">Native graphic EQ & a sleep timer</span></li>
           <li><svg class="icon"><use href="#check"/></svg><span data-i18n="currentFive">Settings backup & local listening history</span></li>
-        </ul><p class="board-footnote" data-i18n="currentNote">iOS simulator verified. Android implementation is included; build and device validation are still in progress.</p></article>
+          <li><svg class="icon"><use href="#check"/></svg><span data-i18n="currentSix">Jellyfin / Emby sources & duplicate-version selection</span></li>
+        </ul><p class="board-footnote" data-i18n="currentNote">Local playback verified on an iOS simulator; remote flow tested with a mock server. Real-server compatibility and Android validation for the new integration remain open.</p></article>
         <article class="progress-next"><span class="board-label"><span class="outline-dot"></span><span data-i18n="onTheHorizon">ON THE HORIZON</span></span><h3 data-i18n="nextTitle">More ways to reach your music.</h3><ul>
-          <li><span>01</span><div><strong data-i18n="nextOne">Remote libraries</strong><small>SMB · WebDAV · DLNA · OpenSubsonic</small></div></li>
+          <li><span>01</span><div><strong data-i18n="nextOne">More source connections</strong><small>SMB · WebDAV · DLNA / UPnP · OpenSubsonic</small></div></li>
           <li><span>02</span><div><strong data-i18n="nextTwo">Dedicated HiFi output</strong><small data-i18n="nextTwoNote">Android USB exclusive output & DAC validation</small></div></li>
           <li><span>03</span><div><strong data-i18n="nextThree">A broader audio toolkit</strong><small data-i18n="nextThreeNote">DSD playback · PEQ · ReplayGain</small></div></li>
         </ul><a class="text-link" href="https://github.com/quguai/sovel-player#roadmap" target="_blank" rel="noopener noreferrer"><span data-i18n="followProgress">Follow the progress</span><svg class="icon"><use href="#arrow-up"/></svg></a></article>
@@ -323,6 +342,7 @@
 
     <section class="faq-section wrap" aria-labelledby="faq-title"><div><p class="eyebrow" data-i18n="faqEyebrow">A FEW THINGS TO KNOW</p><h2 id="faq-title" data-i18n-html="faqTitle">Before you<br /><em>press play.</em></h2></div><div class="faq-list">
       <details><summary><span data-i18n="faqOne">Will importing duplicate my music files?</span><span class="faq-plus" aria-hidden="true"></span></summary><p data-i18n="faqOneBody">Selecting files or folders builds a local index and references the original audio. Copying into the app is a separate option. File providers may maintain their own caches, and Sovel caches artwork and stores your library data.</p></details>
+      <details><summary><span data-i18n="faqRemote">Which copy plays when a song exists in several libraries?</span><span class="faq-plus" aria-hidden="true"></span></summary><p data-i18n="faqRemoteBody">Among available, supported copies, your remembered choice comes first. Automatic selection then prefers lossless, local files, and source priority. Matching is conservative; Live and remastered editions are not merged by title alone. A complete album from one source is preferred when there are no per-song overrides.</p></details>
       <details><summary><span data-i18n="faqTwo">Does it support USB exclusive output or DSD?</span><span class="faq-plus" aria-hidden="true"></span></summary><p data-i18n="faqTwoBody">These are planned capabilities, not features of the current build. DSF metadata parsing is tested, but DSD playback is not enabled. USB DAC connections currently use system audio; bit-perfect output is not promised.</p></details>
       <details><summary><span data-i18n="faqThree">Where can I get the app?</span><span class="faq-plus" aria-hidden="true"></span></summary><p><span data-i18n="faqThreeBody">Choose an Android package in this page’s download section; use universal if unsure. Only packages published for the displayed release are available. Installed apps can check in Settings → 版本更新; select the preview channel for Beta / RC updates. iOS is currently available to build from source.</span> <a href="https://github.com/quguai/sovel-player#build-the-native-app" target="_blank" rel="noopener noreferrer" data-i18n="buildInstructions">Build instructions ↗</a></p></details>
       <details><summary><span data-i18n="faqFour">How can I contribute?</span><span class="faq-plus" aria-hidden="true"></span></summary><p><span data-i18n="faqFourBody">Try the app, share a reproducible issue, help test audio files and devices, or contribute code and translations. For playback reports, include your device, OS, and audio format.</span> <a href="https://github.com/quguai/sovel-player/issues" target="_blank" rel="noopener noreferrer" data-i18n="openIssue">Open an issue ↗</a></p></details>

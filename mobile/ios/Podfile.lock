@@ -81,6 +81,8 @@ PODS:
   - ExpoModulesWorklets (58.0.22):
     - ExpoModulesCore
     - ExpoModulesJSI
+  - ExpoSecureStore (58.0.2):
+    - ExpoModulesCore
   - ExpoSharing (58.0.19):
     - ExpoModulesCore
   - ExpoSQLite (58.0.13):
@@ -1966,6 +1968,7 @@ DEPENDENCIES:
   - ExpoModulesCore (from `../node_modules/expo-modules-core/ExpoModulesCore.podspec`)
   - ExpoModulesJSI (from `../node_modules/expo-modules-jsi/apple`)
   - ExpoModulesWorklets (from `../node_modules/expo-modules-core/ExpoModulesWorklets.podspec`)
+  - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
   - ExpoSharing (from `../node_modules/expo-sharing/ios`)
   - ExpoSQLite (from `../node_modules/expo-sqlite/ios`)
   - fast_float (from `build/rndeps-facades/fast_float`)
@@ -2090,6 +2093,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-modules-jsi/apple"
   ExpoModulesWorklets:
     :podspec: "../node_modules/expo-modules-core/ExpoModulesWorklets.podspec"
+  ExpoSecureStore:
+    :path: "../node_modules/expo-secure-store/ios"
   ExpoSharing:
     :path: "../node_modules/expo-sharing/ios"
   ExpoSQLite:
@@ -2287,6 +2292,7 @@ SPEC CHECKSUMS:
   ExpoModulesCore: 74a609f07383707988f15b76b7223325433c5534
   ExpoModulesJSI: e9fb62ad17ae4d7bb4f45e9728ae7cd29ba3e852
   ExpoModulesWorklets: 6256cf8b2b591c89c3576638d9f70bb46ef51ece
+  ExpoSecureStore: 64e1fe78b5b0a1edb61beff044bb2cad03084f9c
   ExpoSharing: 50a4b4e2686aa32214ffa1cbf1999b3db86f35e6
   ExpoSQLite: 7fe5c25b7bcc15897c67d1e2e7bc5a1d108921e8
   fast_float: 7c925d1cebf8328d4018d061f49377e9f887e3b4

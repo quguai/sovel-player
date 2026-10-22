@@ -17,6 +17,7 @@ export function trackDetails(
     }
   }
   const displayPath =
+    track.remotePath ||
     filePath ||
     (source?.kind === "directory" || source?.kind === "managed"
       ? `${track.path}（相对音乐目录）`
@@ -48,7 +49,7 @@ export function trackDetails(
     ["文件大小", `${(track.size / 1024 / 1024).toFixed(2)} MiB`],
   ];
   const file: DetailRow[] = [
-    ["文件名", track.path.split("/").pop() || track.path],
+    ["文件名", (track.remotePath || track.path).split("/").pop() || track.path],
     ["文件路径", displayPath],
     [
       "修改时间",

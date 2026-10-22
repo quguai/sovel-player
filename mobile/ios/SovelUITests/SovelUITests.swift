@@ -30,6 +30,56 @@ final class SovelUITests: XCTestCase {
   func capture(_ name: String) {
     let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
   }
+  func testMusicSourcesAndRemotePlayback() throws {
+    guard (try? Data(contentsOf: URL(string: "http://127.0.0.1:18767/Users/mock-user/Views")!)) != nil else {
+      throw XCTSkip("Start python3 tests/mock-media-server.py for this integration test")
+    }
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch()
+    tap("设置", timeout: 40); tap("音乐来源")
+    capture("sources-local-migration")
+    tap("添加远程来源")
+    tap("服务器地址"); element("服务器地址").typeText("http://127.0.0.1:18767")
+    tap("服务器用户名"); element("服务器用户名").typeText("demo")
+    tap("服务器密码"); element("服务器密码").typeText("demo")
+    tap("连接并选择音乐库")
+    XCTAssertTrue(element("添加 1 个音乐库").waitForExistence(timeout: 15))
+    capture("sources-library-picker")
+    for surface in [app, XCUIApplication(bundleIdentifier: "com.apple.springboard")] {
+      for label in ["以后", "Not Now"] {
+        let later = surface.buttons[label].firstMatch
+        if later.exists { later.tap() }
+      }
+    }
+    let addLibrary = element("添加 1 个音乐库")
+    XCTAssertTrue(addLibrary.waitForExistence(timeout: 15))
+    let readyToAdd = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true AND enabled == true"), object: addLibrary)
+    _ = XCTWaiter.wait(for: [readyToAdd], timeout: 3)
+    tap("添加 1 个音乐库")
+    tap("联调示例 · 模拟曲库 同步曲库")
+    XCTAssertTrue(app.staticTexts["联调示例 · 模拟曲库 同步完成"].waitForExistence(timeout: 30), app.debugDescription)
+    capture("sources-remote-connected")
+    if element("联调示例 · 模拟曲库 提高优先级").isEnabled { tap("联调示例 · 模拟曲库 提高优先级") }
+    tap("返回设置"); tap("返回音乐库"); tap("按歌曲浏览")
+    tap("选择 初见 的来源")
+    capture("sources-duplicate-versions")
+    tap("关闭版本选择")
+    tap("播放 云端来信")
+    assertClockAdvanced(2)
+    capture("sources-native-remote-playback")
+    tap("暂停")
+    tap("返回音乐库"); tap("设置"); tap("音乐来源")
+    tap("联调示例 · 模拟曲库 参与聚合")
+    capture("sources-disabled-keeps-index")
+    tap("返回设置"); tap("返回音乐库"); tap("按歌曲浏览")
+    XCTAssertFalse(element("播放 云端来信").exists, app.debugDescription)
+    XCTAssertTrue(element("播放 初见").exists)
+    app.terminate(); app.launch()
+    tap("设置"); tap("音乐来源")
+    XCTAssertTrue(element("联调示例 · 模拟曲库 参与聚合").exists)
+    capture("sources-restart-preserves-choices")
+  }
   func testColdStartRestoresPlaybackAfterLibraryOpens() {
     continueAfterFailure = false
     XCUIDevice.shared.orientation = .portrait

@@ -18,6 +18,7 @@ import {
   BackHandler,
   AccessibilityInfo,
   Animated,
+  ActivityIndicator,
   AppState,
   type GestureResponderHandlers,
 } from "react-native";
@@ -43,6 +44,8 @@ import {
   type RecordSpeed,
   type TonearmStyle,
 } from "../core/types";
+import { useCatalogPage } from "../services/useCatalogPage";
+import { TrackVersions } from "./TrackVersions";
 import { CartridgeColorOptions } from "./CartridgeColorOptions";
 import { lyricSeekTime } from "../core/lyrics";
 import { FocusedLyricLine } from "./FocusedLyricLine";
@@ -108,6 +111,8 @@ export function LibraryScreen({
     busy,
     status,
     listeningProfile,
+    playCollection,
+    sources,
   } = useMusic();
   const [query, setQuery] = useState(""),
     [search, setSearch] = useState(false),
@@ -116,6 +121,17 @@ export function LibraryScreen({
     ),
     [filter, setFilter] = useState(""),
     [favorites, setFavorites] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [versionTrack, setVersionTrack] = useState<Track | null>(null);
+  const [filterTitle, setFilterTitle] = useState("");
+  const page = useCatalogPage({
+    query,
+    favorites,
+    sourceIds: sourceFilter ? [sourceFilter] : undefined,
+    kind: filter ? "tracks" : tab,
+    collection: filter || undefined,
+    collectionKind: tab === "tracks" ? undefined : tab,
+  });
   const [mix, setMix] = useState<{ title: string; ids: string[] } | null>(null);
   const highlightsOffset = useRef(0);
   const day = localDayKey();
@@ -148,44 +164,43 @@ export function LibraryScreen({
     setFilter("");
     setMix(null);
   }
-  const { base, shown, grouped, groups, rows, groupValue } = useMemo(() => {
-    const trackById = new Map(tracks.map((t) => [t.id, t]));
-    const sourceTracks = mix
-      ? mix.ids.map((id) => trackById.get(id)).filter((t): t is Track => !!t)
-      : tracks;
-    const base = sourceTracks.filter(
-      (t) =>
-        (!favorites || t.favorite) &&
-        `${t.title} ${t.artist} ${t.album} ${t.path}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-    );
-    const groupValue = (t: Track) =>
-      tab === "albums"
-        ? `${t.album}\u0000${t.albumArtist || t.artist}`
-        : tab === "artists"
-          ? t.artist
-          : t.path.includes("/")
-            ? t.path.split("/").slice(0, -1).join("/")
-            : "导入的音乐";
-    const shown = filter ? base.filter((t) => groupValue(t) === filter) : base;
-    const grouped = tab !== "tracks" && !filter;
-    const groups = new Map<string, Track[]>();
-    if (grouped)
-      base.forEach((t) => {
-        const key = groupValue(t);
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key)!.push(t);
-      });
-    const rows = grouped ? [...groups.values()].map((g) => g[0]) : shown;
-    return { base, shown, grouped, groups, rows, groupValue };
-  }, [tracks, mix, favorites, query, tab, filter]);
+  const grouped = tab !== "tracks" && !filter;
+  const groupValue = (t: Track) =>
+    t.collectionKey ||
+    (tab === "artists"
+      ? t.artist
+      : tab === "albums"
+        ? t.releaseKey || t.album
+        : `${t.sourceId}\u0000${t.path.split("/").slice(0, -1).join("/")}`);
+  const shown = mix
+    ? mix.ids
+        .map((id) => tracks.find((t) => t.id === id))
+        .filter((t): t is Track => !!t)
+    : page.items;
+  const rows = shown;
+  const total = mix ? shown.length : page.total;
   const layout = tab === "artists" ? prefs.artistLayout : prefs.albumLayout;
   const grid = grouped && (tab === "folders" || layout === "cards");
   const choose = (track: Track) => {
-    if (grouped) setFilter(groupValue(track));
-    else {
-      play(track, shown);
+    if (grouped) {
+      setFilter(groupValue(track));
+      setFilterTitle(
+        tab === "albums"
+          ? track.album
+          : tab === "artists"
+            ? track.artist
+            : track.collectionKey?.split("\u0000")[1] || "音乐目录",
+      );
+    } else {
+      if (mix) play(track, shown);
+      else
+        void playCollection(track, {
+          query,
+          favorites,
+          sourceIds: sourceFilter ? [sourceFilter] : undefined,
+          collection: filter || undefined,
+          collectionKind: tab === "tracks" ? undefined : tab,
+        });
       if (canPlay(track)) onPlayer();
     }
   };
@@ -230,7 +245,7 @@ export function LibraryScreen({
           style={s.search}
         />
       )}
-      {tracks.length > 0 && (
+      {(tracks.length > 0 || page.total > 0) && (
         <LibraryHighlights
           current={current}
           daily={daily}
@@ -259,16 +274,60 @@ export function LibraryScreen({
           }}
         />
       )}
-      {!tracks.length && !query && !favorites && (
-        <View style={s.emptyHero}>
-          <Text style={s.heroTitle}>{"收藏声音，\n从一首歌开始。"}</Text>
-          <Text style={s.subtitle}>选择音乐文件夹，直接索引原文件。</Text>
-          <View style={{ gap: 12, marginTop: 20 }}>
-            <Button disabled={busy} onPress={() => importMusic("folder")}>
-              导入音乐文件夹
-            </Button>
+      {!tracks.length &&
+        !page.total &&
+        !page.loading &&
+        !query &&
+        !favorites && (
+          <View style={s.emptyHero}>
+            <Text style={s.heroTitle}>{"收藏声音，\n从一首歌开始。"}</Text>
+            <Text style={s.subtitle}>选择音乐文件夹，直接索引原文件。</Text>
+            <View style={{ gap: 12, marginTop: 20 }}>
+              <Button disabled={busy} onPress={() => importMusic("folder")}>
+                导入音乐文件夹
+              </Button>
+            </View>
           </View>
-        </View>
+        )}
+      {(sourceFilter ||
+        sources.filter((source) => source.enabled !== false).length > 1) && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingBottom: 14 }}
+        >
+          {[
+            { id: "", name: "全部来源" },
+            ...sources.filter((source) => source.enabled !== false),
+          ].map((source) => (
+            <Pressable
+              key={source.id}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: sourceFilter === source.id }}
+              onPress={() => {
+                setSourceFilter(source.id);
+                setMix(null);
+              }}
+              style={{
+                minHeight: 36,
+                paddingHorizontal: 14,
+                borderRadius: 18,
+                justifyContent: "center",
+                backgroundColor:
+                  sourceFilter === source.id ? "#d5b78222" : "#ffffff07",
+              }}
+            >
+              <Text
+                style={{
+                  color: sourceFilter === source.id ? p.gold : p.muted,
+                  fontSize: 12,
+                }}
+              >
+                {source.name}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
       )}
       <View style={[s.tabs, { marginTop: 8 }]}>
         {(
@@ -319,7 +378,7 @@ export function LibraryScreen({
           />
         )}
       </View>
-      {tracks.length > 0 && (
+      {(tracks.length > 0 || page.total > 0) && (
         <View
           style={{
             flexDirection: "row",
@@ -360,8 +419,8 @@ export function LibraryScreen({
           )}
           <Text style={{ color: p.muted, fontSize: 11, letterSpacing: 0.4 }}>
             {grouped
-              ? `${groups.size} ${tab === "albums" ? "张专辑" : tab === "artists" ? "位艺术家" : "个文件夹"} · ${base.length} 首`
-              : `${shown.length} 首歌曲`}
+              ? `${total} ${tab === "albums" ? "张专辑" : tab === "artists" ? "位艺术家" : "个文件夹"}`
+              : `${total} 首歌曲`}
           </Text>
         </View>
       )}
@@ -378,7 +437,7 @@ export function LibraryScreen({
         >
           <Icon name="back" size={17} color={p.gold} />
           <Text style={{ color: p.gold }}>
-            {filter.split("\u0000")[0]} · {shown.length} 首
+            {filterTitle} · {total} 首
           </Text>
         </Pressable>
       )}
@@ -391,6 +450,17 @@ export function LibraryScreen({
           key={`${grid ? columns : 1}-${tab}`}
           numColumns={grid ? columns : 1}
           data={rows}
+          onEndReached={() => {
+            if (!mix) void page.loadMore();
+          }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            page.loading ? (
+              <ActivityIndicator color={p.gold} style={{ padding: 24 }} />
+            ) : page.error ? (
+              <Text style={s.subtitle}>{page.error}</Text>
+            ) : undefined
+          }
           initialNumToRender={12}
           maxToRenderPerBatch={8}
           windowSize={5}
@@ -405,7 +475,7 @@ export function LibraryScreen({
             <Text
               style={[s.subtitle, { marginVertical: 30, textAlign: "center" }]}
             >
-              {mix && !base.length
+              {mix && !shown.length
                 ? "暂时没有合适的歌曲\n收藏更多音乐，或先听听每日精选"
                 : tracks.length
                   ? "没有找到匹配的音乐"
@@ -417,61 +487,96 @@ export function LibraryScreen({
             grouped ? (
               <CollectionItem
                 kind={tab as "albums" | "artists" | "folders"}
-                tracks={groups.get(groupValue(item))!}
-                title={groupValue(item).split("\u0000")[0]}
+                tracks={[item]}
+                count={item.collectionCount}
+                title={
+                  tab === "albums"
+                    ? item.album
+                    : tab === "artists"
+                      ? item.artist
+                      : item.collectionKey?.split("\u0000")[1] || "音乐目录"
+                }
                 layout={grid ? "cards" : "list"}
                 width={(width - 48 - 14 * (columns - 1)) / columns}
                 onPress={() => choose(item)}
               />
             ) : (
-              <Pressable
-                onPress={() => choose(item)}
-                style={s.trackRow}
-                accessibilityLabel={`播放 ${item.title}`}
-              >
-                <Cover track={item} size={48} />
-                <View style={{ flex: 1 }}>
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      s.trackTitle,
-                      item.id === current?.id && { color: p.gold },
-                    ]}
-                  >
-                    {item.title}
-                  </Text>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                      marginTop: 3,
-                    }}
-                  >
-                    {item.available && <FormatTag format={item.format} />}
+              <View style={s.trackRow}>
+                <Pressable
+                  onPress={() => choose(item)}
+                  style={{
+                    flex: 1,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 14,
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`播放 ${item.title}`}
+                >
+                  <Cover track={item} size={48} />
+                  <View style={{ flex: 1 }}>
                     <Text
                       numberOfLines={1}
-                      style={[s.tiny, { flexShrink: 1, marginTop: 0 }]}
+                      style={[
+                        s.trackTitle,
+                        item.id === current?.id && { color: p.gold },
+                      ]}
                     >
-                      {item.artist}
-                      {!item.available
-                        ? " · 文件不可用"
-                        : !canPlay(item)
-                          ? " · 待解码支持"
-                          : ""}
+                      {item.title}
                     </Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                        marginTop: 3,
+                      }}
+                    >
+                      {item.available && <FormatTag format={item.format} />}
+                      <Text
+                        numberOfLines={1}
+                        style={[s.tiny, { flexShrink: 1, marginTop: 0 }]}
+                      >
+                        {item.artist}
+                        {!item.available
+                          ? " · 文件不可用"
+                          : !canPlay(item)
+                            ? " · 待解码支持"
+                            : ""}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                {item.id === current?.id ? (
-                  <Icon
-                    name={status.playing ? "pause" : "play"}
-                    size={17}
-                    color={p.gold}
-                  />
-                ) : (
-                  <Text style={s.tiny}>{item.favorite ? "♥" : ""}</Text>
+                  {item.id === current?.id ? (
+                    <Icon
+                      name={status.playing ? "pause" : "play"}
+                      size={17}
+                      color={p.gold}
+                    />
+                  ) : (
+                    <Text style={s.tiny}>{item.favorite ? "♥" : ""}</Text>
+                  )}
+                </Pressable>
+                {(item.copyCount || 0) > 1 && (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`选择 ${item.title} 的来源`}
+                    onPress={() => setVersionTrack(item)}
+                    style={{
+                      minHeight: 44,
+                      minWidth: 55,
+                      paddingHorizontal: 8,
+                      borderRadius: 12,
+                      backgroundColor: "#d5b7820b",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={{ color: p.gold, fontSize: 10 }}>
+                      {item.copyCount} 个来源
+                    </Text>
+                  </Pressable>
                 )}
-              </Pressable>
+              </View>
             )
           }
         />
@@ -556,6 +661,17 @@ export function LibraryScreen({
           ))}
         </View>
       </View>
+      <TrackVersions
+        track={versionTrack}
+        onClose={() => setVersionTrack(null)}
+        onPlay={(track) => {
+          play(
+            track,
+            shown.map((t) => (t.songKey === track.songKey ? track : t)),
+          );
+          onPlayer();
+        }}
+      />
     </View>
   );
 }

@@ -6,7 +6,7 @@
 
 Sovel HiFi is an open-source, cross-platform music player being built for local and remote libraries. It combines a charcoal-and-gold library, customizable vinyl visuals, and a dedicated lyrics view with a focus on the music you own.
 
-**Development preview.** Local-library features are implemented, with playback and native EQ verified on the iOS simulator. Signed Android APK builds are verified in GitHub Actions; Android device playback and hardware behavior still need validation. Remote libraries and dedicated HiFi output are on the roadmap. The app UI currently uses Simplified Chinese; documentation is available in English and Chinese.
+**Development preview.** Local-library features are implemented, with playback and native EQ verified on the iOS simulator. Signed Android APK builds are verified in GitHub Actions; Android device playback and hardware behavior still need validation. Jellyfin/Emby adapters are implemented; real-server compatibility and dedicated HiFi output still need validation. The app UI currently uses Simplified Chinese; documentation is available in English and Chinese.
 
 ## A look inside
 
@@ -16,16 +16,31 @@ Sovel HiFi is an open-source, cross-platform music player being built for local 
 
 Actual iOS simulator screenshots using the project's original listening samples. The browser demo is a separate design preview.
 
-## What you can use today
+## Features in the current source
+
+Source capabilities and released APKs can differ. The new Jellyfin / Emby integration needs a build from the current source until included in a release; check the selected release notes before downloading.
 
 - **Bring your own files.** Index authorized files and folders in place. Copying audio into the app is a separate, explicit action.
 - **Scan without rebuilding your library.** Discover files first, then import against a fixed total. Incremental and full scans preserve favorites and preferences, with filters for size, hidden files, and subfolders.
+- **Connect your music servers.** Sign in to Jellyfin or Emby, select music libraries, sync their indexes and play original audio. Source cards control aggregation and priority; duplicate copies stay selectable.
 - **Browse your collection.** Albums, songs, artists, folders, search, favorites, and independently remembered card/list views for albums and artists.
 - **Make playback your own.** Cover, vinyl, and immersive views; nine record materials, two tonearms, cartridge colors, stylus lighting, and three rotation speeds.
 - **Read and adjust lyrics.** Separate lyrics and song-information pages, timestamp highlighting, tap-to-seek, and per-song timing adjustments.
 - **Pick up where you left off.** Restore the queue, order, track, and position after restart, initially paused. Background playback, lock-screen controls, and a native sleep timer are included.
 - **Shape the sound.** Native ten-band EQ, six built-in presets, custom presets, preamp control, and automatic headroom. iOS processing is verified; Android integration awaits validation.
 - **Keep preferences local.** SQLite stores the library and listening history. Export settings and EQ presets to JSON and restore after a preview. Local discovery uses library tags, favorites, and listening history.
+
+## Music sources
+
+Open **设置 → 音乐来源** (Settings → Music sources), add a **Jellyfin** or **Emby** server using its full HTTP(S) address, sign in, and select the music libraries you want. Reverse-proxy path prefixes are supported. Each selected library becomes a separate source you can enable and prioritize. Tap **同步曲库** to discover the complete catalog first, then import metadata with a fixed-total progress indicator.
+
+- **One collection, selectable versions.** Matching copies share a song row. Open the source/version selector to choose a copy and remember it, or restore automatic selection. Different Live, remastered and release editions are not merged by title alone.
+- **Predictable defaults.** Among available, supported copies: remembered choice → lossless → local → source priority. Without per-song overrides, album playback prefers a complete album from one source.
+- **Keep your collection.** Disabling a source retains its index and favorites. Upgrades migrate the existing database; do not delete it or rebuild it from scratch. SQLite pages and search indexes keep browsing separate from full metadata loading.
+- **Index, then stream.** Remote sync currently enumerates the complete library in pages and updates metadata; it is not a server-side incremental change feed. Playback streams the original file, with no automatic transcoding, audio download or persistent stream cache. Native codec support still applies.
+- **Local credentials and listening data.** Tokens use the system secure store; the app does not save passwords. Server files are read-only; favorites and listening history are local, not synchronized back to the server.
+
+Integration has been exercised on an **iOS simulator with a mock server**, with contract tests for both adapters. Real Jellyfin / Emby deployments and Android native playback of this integration still need validation. **DLNA / UPnP, SMB, WebDAV and OpenSubsonic remain planned.** For migration details and the mock test setup, see the [mobile guide](mobile/README.md#aggregated-libraries-and-media-servers).
 
 ## Capability status
 
@@ -37,6 +52,7 @@ Actual iOS simulator screenshots using the project's original listening samples.
 | Other audio formats | Platform- and codec-dependent; no blanket compatibility claim |
 | Ten-band EQ | Native integration on both platforms; iOS processing and presets verified |
 | Background playback / sleep timer | Native implementation; iOS simulator checks passed; real-device checks remain |
+| Jellyfin / Emby | Source selection, paged sync, aggregation and original-file streaming implemented; real-server validation pending |
 | SMB / WebDAV / DLNA / OpenSubsonic | Planned |
 | PEQ / AutoEQ / ReplayGain | Planned |
 | USB exclusive output / DoP / native DSD | Planned; requires Android and DAC validation |
@@ -88,7 +104,7 @@ npm run android
 
 `npm start` runs Metro separately. Custom native modules require a native development build; **Expo Go is not sufficient**. Native projects are committed, so routine development does not require Prebuild. Installation and start scripts apply the maintained audio integrations automatically.
 
-Open **设置 → 文件扫描** (Settings → File scanning) and select your own music files or folders. Development audio fixtures remain in `mobile/tests/fixtures` for tests; they are not included in the app or downloaded by it.
+Open **设置 → 文件扫描** (Settings → File scanning) for local files, or **设置 → 音乐来源** (Settings → Music sources) for Jellyfin / Emby libraries. Development audio fixtures remain in `mobile/tests/fixtures` for tests; they are not included in the app or downloaded by it.
 
 ## Explore the browser demo
 
@@ -133,7 +149,7 @@ npm run check    # TypeScript and core tests
 npm run lint     # ESLint
 ```
 
-Current verification: 54 core tests pass; TypeScript passes; ESLint reports no errors and seven existing warnings. iOS simulator checks cover import, playback, lyrics, scanning, restart recovery, EQ, and presets. Android hardware and USB DAC output have not been validated. Native test commands are in the [development guide](mobile/README.md).
+Run the commands above for the current test count and diagnostics. Core coverage includes real SQLite migrations and paging, aggregation, source selection, and Jellyfin / Emby HTTP contracts. iOS simulator checks cover local listening and remote login, synchronization, version selection and playback against a mock server. Real media-server deployments, Android validation of the new integration and USB DAC output remain outstanding. Native test commands are in the [development guide](mobile/README.md).
 
 Contributions are welcome. Include reproduction steps and device, OS, and audio-format details for playback issues. Native audio changes should include platform-specific validation. Reference checkouts belong in the ignored `repos/` directory and are not dependencies or submodules.
 

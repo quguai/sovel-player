@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { albumKey } from "../core/artistAlbums";
 import type { Track } from "../core/types";
 import { ArtistAvatar, Cover, Icon, palette as p } from "./visuals";
 
@@ -13,6 +12,7 @@ export function CollectionItem({
   layout,
   width,
   onPress,
+  count,
 }: {
   kind: "albums" | "artists" | "folders";
   tracks: Track[];
@@ -20,16 +20,18 @@ export function CollectionItem({
   layout: "cards" | "list";
   width: number;
   onPress: () => void;
+  count?: number;
 }) {
+  const trackCount = count ?? tracks.length;
   const artist = kind === "artists";
   const cover = tracks.find((t) => t.artwork) || tracks[0];
   const portrait = tracks.find((t) => t.artistArtwork)?.artistArtwork;
-  const albums = new Set(tracks.map(albumKey)).size;
+
   const subtitle = artist
-    ? `${albums} 张专辑 · ${tracks.length} 首歌曲`
+    ? `${trackCount} 首歌曲`
     : kind === "albums"
       ? cover.albumArtist || cover.artist
-      : `${tracks.length} 首歌曲`;
+      : `${trackCount} 首歌曲`;
   if (layout === "list")
     return (
       <Pressable
@@ -53,7 +55,7 @@ export function CollectionItem({
         </View>
         {!artist && (
           <Text style={s.count}>
-            {tracks.length}
+            {trackCount}
             <Text style={{ fontSize: 10 }}> 首</Text>
           </Text>
         )}
@@ -98,7 +100,7 @@ export function CollectionItem({
             />
             <View style={s.badge}>
               <Icon name="disc" size={11} color="#fff" />
-              <Text style={s.badgeText}>{tracks.length} 首</Text>
+              <Text style={s.badgeText}>{trackCount} 首</Text>
             </View>
           </View>
         </View>

@@ -1,6 +1,7 @@
 import type { Track } from "./types";
 
 export const albumKey = (track: Track) =>
+  track.releaseKey ||
   JSON.stringify([track.albumArtist || track.artist, track.album]);
 
 export type ArtistAlbum = {

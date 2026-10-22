@@ -9,13 +9,14 @@ import {
 } from "react-native";
 import type { Track } from "../core/types";
 import { canPlay, supportsDsf } from "../services/playbackSupport";
+import { TrackVersions } from "./TrackVersions";
 import { useMusic } from "../services/store";
 import { PlaybackControls } from "./components";
 import { trackDetails, type DetailRow } from "../core/trackDetails";
 import { albumKey, artistAlbums } from "../core/artistAlbums";
 import { relatedSelection } from "../core/discovery";
 import { sourceStatus, trackUri } from "../services/files";
-import { ArtistAvatar, Cover, Icon } from "./visuals";
+import { ArtistAvatar, Cover, Icon, palette as p } from "./visuals";
 
 type Collection =
   | { kind: "artist" }
@@ -29,7 +30,24 @@ export function SongContextScreen({
   onPlay: () => void;
   onQueue: () => void;
 }) {
-  const { current, tracks, play, status, listeningProfile } = useMusic();
+  const {
+    current,
+    tracks,
+    play,
+    status,
+    listeningProfile,
+    catalogCollection,
+    catalogRevision,
+  } = useMusic();
+  const [artistLibrary, setArtistLibrary] = useState<{
+    artist: string;
+    tracks: Track[];
+  }>({ artist: "", tracks: [] });
+  const [albumLibrary, setAlbumLibrary] = useState<{
+    key: string;
+    tracks: Track[];
+  }>({ key: "", tracks: [] });
+  const [showVersions, setShowVersions] = useState(false);
   const [collection, setCollection] = useState<Collection>(null);
   const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const { width, height } = useWindowDimensions();
@@ -38,21 +56,59 @@ export function SongContextScreen({
   if (previousTrack !== current?.id) {
     setPreviousTrack(current?.id);
     setCollection(null);
+    setShowVersions(false);
   }
   useEffect(() => {
     scroll.current?.scrollTo({ y: 0, animated: false });
   }, [current?.id]);
+  const artistName = current?.artist;
+  const selectedRelease =
+    collection?.kind === "album" ? collection.key : undefined;
+  useEffect(() => {
+    let live = true;
+    if (artistName)
+      void catalogCollection({
+        artistAlbumsOf: artistName,
+      })
+        .then((items) => {
+          if (live) setArtistLibrary({ artist: artistName, tracks: items });
+        })
+        .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [artistName, catalogCollection, catalogRevision]);
+  useEffect(() => {
+    let live = true;
+    if (selectedRelease)
+      void catalogCollection({
+        collectionKind: "albums",
+        collection: selectedRelease,
+      })
+        .then((items) => {
+          if (live) setAlbumLibrary({ key: selectedRelease, tracks: items });
+        })
+        .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [selectedRelease, catalogCollection, catalogRevision]);
   const { artistTracks, albums, related } = useMemo(() => {
     if (!current) return { artistTracks: [], albums: [], related: [] };
-    const artistTracks = tracks.filter((t) => t.artist === current.artist);
-    const albums = artistAlbums(tracks, current);
+    const artistTracks = (
+      artistLibrary.artist === current.artist ? artistLibrary.tracks : tracks
+    ).filter((t) => t.artist === current.artist);
+    const albums = artistAlbums(
+      artistLibrary.artist === current.artist ? artistLibrary.tracks : tracks,
+      current,
+    );
     const related = relatedSelection(
       tracks.filter(canPlay),
       current,
       listeningProfile,
     ).slice(0, 4);
     return { artistTracks, albums, related };
-  }, [current, tracks, listeningProfile]);
+  }, [current, tracks, listeningProfile, artistLibrary]);
   if (!current)
     return (
       <View style={styles.empty}>
@@ -73,7 +129,11 @@ export function SongContextScreen({
       ? albums.find((album) => album.key === collection.key)
       : undefined;
   const list =
-    collection?.kind === "album" ? selectedAlbum?.tracks || [] : related;
+    collection?.kind === "album"
+      ? albumLibrary.key === collection.key
+        ? albumLibrary.tracks
+        : selectedAlbum?.tracks || []
+      : related;
   const openCollection = (next: Collection) => {
     setCollection(next);
     scroll.current?.scrollTo({ y: 0, animated: false });
@@ -248,6 +308,27 @@ export function SongContextScreen({
               </Text>
             </View>
           </View>
+          {!!current.sourceName && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="选择当前歌曲来源"
+              onPress={() => setShowVersions(true)}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                paddingVertical: 14,
+              }}
+            >
+              <Icon name="disc" size={15} color={p.gold} />
+              <Text style={{ color: p.muted, fontSize: 12, flex: 1 }}>
+                {current.sourceName} · {current.format}
+              </Text>
+              <Text style={{ color: p.gold, fontSize: 12 }}>
+                {current.copyCount || 1} 个来源 ›
+              </Text>
+            </Pressable>
+          )}
           <View style={styles.links}>
             <Pressable
               accessibilityRole="button"
@@ -329,6 +410,14 @@ export function SongContextScreen({
           )}
         </View>
       </ScrollView>
+      <TrackVersions
+        track={showVersions ? current : null}
+        onClose={() => setShowVersions(false)}
+        onPlay={(track) => {
+          play(track, [track]);
+          onPlay();
+        }}
+      />
       <View style={styles.footer}>
         <PlaybackControls onQueue={onQueue} />
       </View>

@@ -118,14 +118,36 @@ export type Metadata = {
   artwork?: string;
   artistArtwork?: string;
   warning?: string;
+  recordingId?: string;
+  releaseId?: string;
+  edition?: string;
+  year?: number;
+  remotePath?: string;
+  lossless?: boolean;
+  remoteId?: string;
+  mediaSourceId?: string;
 };
 export type MusicSource = {
   id: string;
   name: string;
-  kind: "managed" | "directory" | "file";
+  kind: "managed" | "directory" | "file" | "jellyfin" | "emby";
   uri: string;
   bookmark?: string;
+  enabled?: boolean;
+  priority?: number;
+  config?: RemoteSourceConfig;
+  syncedAt?: number;
+  trackCount?: number;
 };
+export type RemoteSourceConfig = {
+  baseUrl: string;
+  userId: string;
+  serverId: string;
+  libraryId: string;
+  deviceId?: string;
+};
+export const isRemoteSource = (source: MusicSource) =>
+  source.kind === "jellyfin" || source.kind === "emby";
 export type SourceStatus = MusicSource & { error?: string };
 export type Track = Metadata & {
   id: string;
@@ -136,6 +158,15 @@ export type Track = Metadata & {
   mtime: number;
   available: boolean;
   favorite: boolean;
+  songKey?: string;
+  releaseKey?: string;
+  copyCount?: number;
+  collectionCount?: number;
+  collectionKey?: string;
+  sourceName?: string;
+  sourceKind?: MusicSource["kind"];
+  hydrated?: boolean;
+  remoteLyricsLoaded?: boolean;
 };
 export type Entry = {
   path: string;
