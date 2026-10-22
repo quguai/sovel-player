@@ -14,7 +14,13 @@ import {
   releaseAssetUrl,
 } from "../src/core/appUpdates.ts";
 
-export function packageRelease(root, tag, repo, config) {
+export function packageRelease(
+  root,
+  tag,
+  repo,
+  config,
+  apkDirectory = "android/app/build/outputs/apk/release",
+) {
   const version = releaseVersion(tag);
   if (
     !version ||
@@ -23,10 +29,7 @@ export function packageRelease(root, tag, repo, config) {
   )
     throw new Error("Run prepare before packaging.");
   const packages = ["universal", ...androidPackageAbis].map((abi) => {
-    const path = resolve(
-      root,
-      `android/app/build/outputs/apk/release/app-${abi}-release.apk`,
-    );
+    const path = resolve(root, apkDirectory, `app-${abi}-release.apk`);
     const apk = readFileSync(path);
     const entries = execFileSync("unzip", ["-Z1", path], {
       encoding: "utf8",
@@ -62,10 +65,7 @@ export function packageRelease(root, tag, repo, config) {
   mkdirSync(output, { recursive: true });
   for (const pkg of packages) {
     copyFileSync(
-      resolve(
-        root,
-        `android/app/build/outputs/apk/release/app-${pkg.abi}-release.apk`,
-      ),
+      resolve(root, apkDirectory, `app-${pkg.abi}-release.apk`),
       resolve(output, pkg.name),
     );
     console.log(`${pkg.abi}: ${(pkg.size / 1024 / 1024).toFixed(1)} MB`);

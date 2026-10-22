@@ -15,11 +15,7 @@ import { createHash } from "node:crypto";
 test("release script produces matching version, APK name, checksum and manifest without modifying the checkout", () => {
   const temp = mkdtempSync(join(tmpdir(), "sovel-release-test-"));
   try {
-    for (const d of [
-      "scripts",
-      "src/core",
-      "android/app/build/outputs/apk/release",
-    ])
+    for (const d of ["scripts", "src/core", "staged-apks"])
       mkdirSync(join(temp, d), { recursive: true });
     cpSync(resolve("scripts/release.mjs"), join(temp, "scripts/release.mjs"));
     cpSync(
@@ -52,22 +48,12 @@ test("release script produces matching version, APK name, checksum and manifest 
       }
       execFileSync(
         "zip",
-        [
-          "-qr",
-          join(
-            temp,
-            `android/app/build/outputs/apk/release/app-${abi}-release.apk`,
-          ),
-          "lib",
-        ],
+        ["-qr", join(temp, `staged-apks/app-${abi}-release.apk`), "lib"],
         { cwd: source },
       );
     }
     const apk = readFileSync(
-      join(
-        temp,
-        "android/app/build/outputs/apk/release/app-universal-release.apk",
-      ),
+      join(temp, "staged-apks/app-universal-release.apk"),
     );
     const env = {
       ...process.env,
@@ -78,7 +64,11 @@ test("release script produces matching version, APK name, checksum and manifest 
     for (const action of ["prepare", "package"]) {
       const result = spawnSync(
         process.execPath,
-        [join(temp, "scripts/release.mjs"), action],
+        [
+          join(temp, "scripts/release.mjs"),
+          action,
+          ...(action === "package" ? ["staged-apks"] : []),
+        ],
         { env, encoding: "utf8" },
       );
       assert.equal(result.status, 0, result.stderr);

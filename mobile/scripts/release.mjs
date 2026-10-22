@@ -26,5 +26,8 @@ if (process.argv[2] === "prepare") {
     );
   console.log(`Preparing ${tag} (${version.code}) for ${repo}`);
 } else if (process.argv[2] === "package") {
-  packageRelease(root, tag, repo, config);
-} else throw new Error("Usage: node scripts/release.mjs prepare|package");
+  packageRelease(root, tag, repo, config, process.argv[3]);
+} else
+  throw new Error(
+    "Usage: node scripts/release.mjs prepare|package [apk-directory]",
+  );

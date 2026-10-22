@@ -57,13 +57,18 @@ Android releases contain standalone APKs, not an AAB or APKs that must be instal
 
 Install **one** APK. Features are identical; architecture-specific packages omit other ABIs' native libraries to reduce download size. The Android system's supported ABI matters, not just whether the CPU hardware is 64-bit. No separate APK is needed for each Android OS version. The website defaults to universal because a browser cannot reliably identify the Android ABI. Its package selector lists the four architectures, enables only the files actually published, and remembers an explicit selection across all download buttons. A missing saved choice falls back to universal when available; versions containing only universal remain supported. Do not assume older releases have all four APKs.
 
-The GitHub release build enables Gradle ABI splits using `-Psovel.splitApks=true`. Local/debug builds retain their existing behavior unless this flag is passed. To build all four locally, with release signing configured:
+The workflow builds each standalone APK using React Native's `reactNativeArchitectures` property. Gradle ABI splits stay disabled so React Native's NDK filters apply to both locally compiled code and prebuilt dependencies. This also prevents a universal APK from silently including unselected x86 libraries. Successive builds reuse the same Gradle outputs/caches; each APK is saved outside Gradle's output directory before the next build overwrites it. To build all four locally, with release signing configured:
 
 ```sh
-cd mobile/android
-./gradlew :app:assembleRelease -Psovel.splitApks=true -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64
-cd ..
-node scripts/release.mjs package
+cd mobile
+mkdir -p artifacts/release-apks
+for abi in universal arm64-v8a armeabi-v7a x86_64; do
+  architectures="$abi"
+  if [ "$abi" = universal ]; then architectures=armeabi-v7a,arm64-v8a,x86_64; fi
+  (cd android && ./gradlew :app:assembleRelease "-PreactNativeArchitectures=$architectures") || exit 1
+  cp android/app/build/outputs/apk/release/app-release.apk "artifacts/release-apks/app-$abi-release.apk" || exit 1
+done
+node scripts/release.mjs package artifacts/release-apks
 ```
 
 Set the tag/repository environment and run `prepare` before building, as in CI. Output APKs and update metadata are collected in `mobile/release/`. All four use the same package ID, signing key and version code, so switching architecture on a later version preserves the app's data. ABI-specific version-code offsets are deliberately not used for this direct GitHub distribution.

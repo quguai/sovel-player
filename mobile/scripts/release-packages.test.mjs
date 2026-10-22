@@ -8,6 +8,7 @@ import {
   readdirSync,
   rmSync,
   existsSync,
+  renameSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -141,4 +142,23 @@ test("rejects extra prebuilt x86 libraries in the universal APK", (t) => {
     /Wrong native architectures.*x86/,
   );
   assert.equal(existsSync(resolve(root, "release")), false);
+});
+
+test("packages staged APKs without reading the output overwritten by the next Gradle build", (t) => {
+  const root = fixture(t);
+  mkdirSync(resolve(root, "artifacts"));
+  renameSync(
+    resolve(root, "android/app/build/outputs/apk/release"),
+    resolve(root, "artifacts/release-apks"),
+  );
+  const packages = packageRelease(
+    root,
+    tag,
+    repo,
+    config,
+    "artifacts/release-apks",
+  );
+  assert.equal(packages.length, 4);
+  for (const pkg of packages)
+    assert.ok(existsSync(resolve(root, "release", pkg.name)));
 });
