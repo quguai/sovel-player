@@ -2,13 +2,15 @@ import { parseFromTokenizer, selectCover } from "music-metadata";
 import { RangeTokenizer, type RandomReader } from "./RangeTokenizer";
 import { fallbackMetadata, type Metadata } from "./types";
 import { parseLyrics } from "./lyrics";
+export type Picture = { data: Uint8Array; format: string };
+
 export async function readMetadata(
   reader: RandomReader,
   path: string,
 ): Promise<{
   metadata: Metadata;
-  picture?: { data: Uint8Array; format: string };
-  artistPicture?: { data: Uint8Array; format: string };
+  picture?: Picture;
+  artistPicture?: Picture;
 }> {
   const tokenizer = new RangeTokenizer(reader, path);
   try {
@@ -50,6 +52,14 @@ export async function readMetadata(
             (common.genre || []).map((value) => value.trim()).filter(Boolean),
           ),
         ],
+        replayGain: {
+          trackGain: common.replaygain_track_gain?.dB,
+          trackPeak:
+            common.replaygain_track_peak?.ratio ??
+            common.replaygain_track_peak_ratio,
+          albumGain: common.replaygain_album_gain?.dB,
+          albumPeak: common.replaygain_album_peak?.ratio,
+        },
         recordingId: common.musicbrainz_recordingid,
         releaseId: common.musicbrainz_albumid,
         year: common.year,

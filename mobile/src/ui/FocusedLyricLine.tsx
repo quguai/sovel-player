@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useId, useState } from "react";
+import { memo, useEffect, useId, useState } from "react";
 import { Animated, StyleSheet, Text, type TextLayoutEvent } from "react-native";
 import Svg, {
   Defs,

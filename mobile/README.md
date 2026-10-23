@@ -117,7 +117,19 @@ The shared C++ implementation uses peaking biquads based on the [W3C Audio EQ Co
 
 `scripts/patch-audio-equalizer.mjs` and `scripts/patch-audio-playback.mjs` apply maintained integrations to **`expo-audio@58.0.9`**, in that order. Installation/start scripts run both; repeated application is safe. The audio package is explicitly built from source. Upgrading it requires reviewing patch anchors and native behavior; OTA updates cannot add these native extensions.
 
-PEQ, AutoEQ import, ReplayGain, and per-output/device preset memory are not implemented. NeriPlayer informed preset/state behavior; its implementation or full effect presets were not copied.
+## PEQ, AutoEQ and ReplayGain
+
+Settings → **PEQ / AutoEQ** supports up to ten peak, low-shelf and high-shelf filters (PK / LSC / HSC), 10–24,000 Hz, ±24 dB and Q 0.1–20. Import local Equalizer APO / AutoEq parametric TXT files or paste parameters. Unsupported filter syntax and out-of-range values are rejected. Imports replace the current PEQ; no headphone profiles are downloaded automatically. Graphic EQ and PEQ stack in the native DSP; headroom estimates their combined response.
+
+Settings → **高级设置** offers off/track/album ReplayGain, ±12 dB preamp and tag-peak protection. Album mode falls back to track tags; missing tags preserve original gain. Existing files need a full tag rescan to populate these fields. Local files and SMB/WebDAV file-tag scans provide the tags; server catalogs without ReplayGain data stay unnormalized. Native queue bindings apply gains without JS timers, including background transitions; iOS prebuffered items own independent gains. Peak protection uses stored peaks, not a true-peak limiter. Presets and settings migrate into older v1 backups without touching music or favorites.
+
+Per-output/device preset memory is not implemented. NeriPlayer informed preset/state behavior; its implementation or full effect presets were not copied. The DSP uses published W3C equations, and AutoEq is a text-format reference.
+
+## Custom theme colors
+
+Settings → **样式管理** provides black/gold, deep sea, pine and dusk presets. Custom six-digit hex background/accent colors have dark-background and contrast validation, apply immediately after saving, survive restarts and are included in settings backups. The cover-derived player background stays independent; light/image themes are not included.
+
+The About page uses `src/ui/AboutBrandCard.tsx`: bounded touch-driven tilt, layered parallax, a moving sheen and a spring return. It observes touch events without taking over vertical scrolling, respects reduced motion and has no idle animation or motion-sensor dependency. Version and license information remain outside the decorative card.
 
 ## Listening history and local discovery
 
@@ -129,15 +141,16 @@ Daily mixes are stable for the local day and contain up to 30 playable tracks. R
 
 ## Format and output boundaries
 
-WAV/FLAC metadata and iOS playback have been verified with the samples. DSF ID3 tags, artwork, and lyrics parsing are tested. MP3, AAC, ALAC, AIFF, Ogg, Opus, and other playback formats remain platform/codec-dependent. DSF/DFF/APE/WavPack may be indexed but are blocked from playback pending decoder work. Neither TagLib nor an FFmpeg playback backend is integrated.
+WAV/FLAC metadata and iOS playback have been verified with the samples. DSF ID3 tags, artwork, and lyrics parsing are tested. MP3, AAC, ALAC, AIFF, Ogg, Opus, and other playback formats remain platform/codec-dependent. Android integrates DSF-to-float-PCM decoding; playback is enabled only in native builds containing that decoder, with mono/stereo and selectable PCM rates. Physical-device playback and output remain unverified. iOS uses a bounded, seekable virtual CAF stream backed by the same decoder; simulator playback and restored-position checks passed. It does not write a decoded copy to disk. HTTP sources must honor exact Range requests; remote DSF and physical-device compatibility need further validation. DFF/APE/WavPack can be indexed but remain blocked from playback. Neither TagLib nor an FFmpeg playback backend is integrated.
 
-Jellyfin / Emby catalog sync and original-file streaming are implemented in development source; real-server and Android integration validation remain open. DLNA/UPnP, SMB, WebDAV and OpenSubsonic adapters, USB exclusive output, DoP/native DSD, vendor-specific internal DAC support, bit-perfect detection, guaranteed gapless playback, crossfade, arbitrary custom themes, and additional app languages remain unimplemented. USB DAC connections currently use system audio. Long background sessions, interruptions, Bluetooth, and physical outputs need real-device validation.
+Jellyfin / Emby catalog sync and original-file streaming are implemented in development source; real-server and Android integration validation remain open. USB exclusive output, DoP/native DSD, vendor-specific internal DAC support, bit-perfect detection, guaranteed gapless playback, crossfade, theme images/light themes, and additional app languages remain unimplemented. USB DAC connections currently use system audio. Long background sessions, interruptions, Bluetooth, and physical outputs need real-device validation.
 
 ## Validation
 
 ```sh
 npm run check
 npm run lint
+npm run test:dsd:stream # macOS: virtual CAF, seek and Apple AudioFile validation
 ```
 
 Run the commands above for the current test count, TypeScript diagnostics and ESLint warnings. Tests use real SQLite and WAV/FLAC/DSF metadata fixtures; they cover scanning, cancellation/offline behavior, source identity, schema upgrades, history, queue restoration, backups, lyrics offsets, discovery, and placeholders.
@@ -178,7 +191,7 @@ The project uses the root [MIT License](../LICENSE) and retains the [Expo starte
 
 ## Aggregated libraries and media servers
 
-Open **设置 → 音乐来源** to add a Jellyfin/Emby server. Enter the full HTTP(S) address (including any reverse-proxy prefix), authenticate, then select the server's music libraries. Each selected library becomes an independently enabled, prioritized source. Use **同步曲库** to discover the complete server listing, then import against a fixed count. Server audio and tags are read-only. This first adapter uses a complete paged inventory and metadata upserts; it does not claim a server-side change feed.
+Open **设置 → 音乐来源**. Use LAN discovery for Jellyfin/Emby/DLNA, or enter a manual address for any supported adapter (Jellyfin, Emby, DLNA, SMB, WebDAV, OpenSubsonic). Authenticate when needed, then select music libraries or directories. HTTP reverse-proxy prefixes are retained. Each selected library becomes an independently enabled, prioritized source. Compact two-column cards show the name, type, track count and status; tap a card for its address, sync controls, aggregation toggle, priority and reconnection. Use **同步曲库** to discover the complete server listing, then import against a fixed count. Server audio and tags are read-only. This first adapter uses a complete paged inventory and metadata upserts; it does not claim a server-side change feed.
 
 - `tracks`, physical IDs, `favorites`, lyric offsets, history and saved queues remain intact. Schema 5 adds `catalog_copies`, source options, version preferences and an on-disk synchronization staging table. Backfill runs in bounded batches and can resume after interruption. Do not delete `sovel.db` when upgrading.
 - Album/song/artist/folder browsing uses SQLite pages. Lists use lightweight summaries; full local lyrics/tags are loaded for the current track. FTS5 trigram search accelerates long substrings when available; short Chinese searches and older SQLite builds use a literal substring fallback.
@@ -186,9 +199,37 @@ Open **设置 → 音乐来源** to add a Jellyfin/Emby server. Enter the full H
 - Aggregation uses recording/release identifiers where available, otherwise conservative album/artist/title/disc/track/duration keys. Unknown tags remain separate. Live/remastered/different editions are not merged by title alone. Manual merge/split editing is not part of this iteration.
 - Playback selection favors available and supported copies, remembered user choice, lossless files, local files, then source priority. A complete album from one source is preferred when there are no per-song overrides. Unsupported DSD does not win merely because it has larger technical parameters.
 - Disabling a source retains its index, favorites and credentials; it removes that source from aggregate browsing and future queue candidates. Library filter chips change only the current view. Re-enable to show the saved index again.
-- Access tokens use `expo-secure-store` (iOS Keychain / Android encrypted storage). Passwords are not saved. SQLite stores server/user/library identities, not tokens. Auth headers are supplied to native playback; authenticated artwork URLs exist only in memory. New native builds are required for SecureStore. Proper iOS signing entitlements are required; an unsigned simulator binary cannot access Keychain.
+- Jellyfin/Emby tokens and SMB/WebDAV/OpenSubsonic credentials use `expo-secure-store` (iOS Keychain / Android encrypted storage). Passwords for those latter protocols are required for reconnecting and remain in secure storage; SQLite and settings backups contain no credentials. SQLite stores server/user/library identities. Auth headers are supplied to native playback; authenticated artwork URLs exist only in memory. New native builds are required for SecureStore. Proper iOS signing entitlements are required; an unsigned simulator binary cannot access Keychain.
 - Both adapters request original-file streaming (`Static=true`). There is no automatic server transcoding in this iteration. Native codec/DSF support still determines whether playback succeeds. Jellyfin lyrics load on demand when the server exposes its lyrics API; Emby lyrics are not yet integrated.
 - Offline/failed/cancelled inventories never mark old tracks missing. Import cancellation rolls back the source update; successful syncs retain missing entries instead of deleting favorites. A fixed page count changing during discovery causes a safe retry.
-- DLNA/UPnP, SMB, WebDAV and OpenSubsonic remain future adapters. Remote writes, cross-server favorite synchronization, audio downloads and a persistent stream cache are not implemented.
+- All six adapters share source selection, priority and aggregation. Remote writes, cross-server favorite synchronization, audio downloads and a persistent stream cache are not implemented.
 
 For a **mock server**, not a real Jellyfin/Emby deployment, run `python3 tests/mock-media-server.py` on the host. The optional `SovelUITests.testMusicSourcesAndRemotePlayback` integration test uses this loopback server and development WAV fixtures to exercise native login, sync, aggregation, source toggles and playback. It skips when the server is absent. The server and development audio are not packaged in release APKs.
+
+
+### Network adapters and discovery
+
+- **LAN discovery:** Jellyfin/Emby UDP probes on port 7359 and DLNA SSDP M-SEARCH on 1900. Search is user initiated, bounded and cancellable; it does not enumerate every IP. Select a result to fill its address, then authenticate and select libraries. Manual entry is always available. The phone and server must share a reachable LAN; multicast/broadcast filtering, VPNs and container networking can prevent discovery.
+- **iOS:** allow Local Network access. The app declares `com.apple.developer.networking.multicast`; physical-device distribution requires Apple's entitlement approval and a matching provisioning profile. This is separate from simulator testing. Without a usable discovery entitlement, enter an HTTP(S) address manually. Native changes require rebuilding the application, not an Expo Go reload.
+- **SMB:** enter `smb://host/Music` (or `smb://host:port/Music/subfolder`). Choose the share root or its listed subfolders; nested folders follow the scan rule. Accounts can be blank for guest access; domain accounts use `DOMAIN\user`. The iOS library negotiates SMB 2.0.2/2.1; Android uses SMBJ's supported SMB2/3 dialects. SMB1 and shares requiring SMB3-only encryption are not a cross-platform compatibility promise. No share writes are exposed. A per-run secret loopback HTTP proxy serves byte ranges from the original SMB file to native playback; it does not materialize a full audio copy. Connections open lazily for sync/playback so an offline NAS cannot delay local-library startup.
+- **WebDAV:** enter the directory's full HTTP(S) URL, optionally with Basic-auth credentials in the separate fields. PROPFIND Depth 1 enumerates directories; the app traverses within selected roots. HTTP Range support is required for tag parsing. Native readers reject a full response before accepting its audio body and cap each read. Digest/OAuth login and automatic redirect authentication are not implemented.
+- **Folder scanning:** SMB/WebDAV honor hidden-folder, recursion and minimum-size rules from File scanning. Phase 1 inventories matching files; phase 2 parses embedded tags, cover/artist images and lyrics using ranged reads. Only artwork is cached. Root and child-folder choices are mutually exclusive to avoid overlapping imports. A broken/cancelled scan retains the prior index and favorites.
+- **DLNA:** discover a MediaServer or enter its device-description XML URL. ContentDirectory Browse supplies music metadata and HTTP resources, including paged child directories. It uses the server's published metadata and does not write tags or guarantee that a published resource is untranscoded. This is library browsing/reading, not a DLNA renderer, casting controller or AirPlay implementation.
+- **OpenSubsonic:** enter the server base URL and account, then select music folders. Catalog import pages albums and their songs; streaming requests `format=raw`. Authentication uses a random per-session salt and token; authenticated stream/cover URLs remain in memory. Compatibility with servers lacking these album/folder endpoints, transcoding-only servers and remote lyrics APIs needs separate work.
+- **Transactional imports:** full inventories and parsed tags are staged before replacing the source snapshot. Existing local files, favorites, queue IDs and schema-5 indexes are retained. No destructive database rebuild is needed. A network source is read-only; server-side writes, password exports, full-audio downloads and persistent audio caching are absent.
+
+Reproducible development checks (local fixtures, not real-NAS certification):
+
+```bash
+# Run from mobile/. Python dependencies are for testing only; do not package them.
+python3 -m venv artifacts/network-test-env
+artifacts/network-test-env/bin/pip install impacket
+artifacts/network-test-env/bin/python tests/mock-network-sources.py
+# In another terminal:
+swift test --package-path modules/sovel-network
+JAVA_HOME=/path/to/jdk17 ./android/gradlew -p modules/sovel-network/tests/jvm test
+# iOS simulator, after starting tests/mock-media-server.py as well:
+# SovelUITests.testNetworkSourcesDiscoveryAndPlayback
+```
+
+The Swift checks exercise UDP discovery, real SMB2 authentication/listing/range reads and the loopback proxy, plus bounded WebDAV HTTP reads. The JVM checks compile the real SMBJ/NanoHTTPD adapters and exercise the same SMB2 and HTTP range paths; they are **not** a complete Android APK/device test. The iOS UI test covers discovery/manual entry, folder/library selection, synchronization, native playback and retained source selections using local fixtures. Physical NASes, signed iOS multicast discovery and Android device playback remain explicit validation targets. Native dependency/license details are in [network sources](../docs/network-sources.md).

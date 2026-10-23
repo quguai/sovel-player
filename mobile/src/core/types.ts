@@ -1,4 +1,11 @@
 import { defaultEqualizer, type EqualizerSettings } from "./equalizer";
+import {
+  defaultReplayGain,
+  type ReplayGainSettings,
+  type ReplayGainTags,
+} from "./replayGain";
+import { defaultTheme, type ThemeSettings } from "./theme";
+import { defaultPeq, type PeqSettings } from "./peq";
 import { defaultDsd, type DsdSettings } from "./dsd";
 export type HomeStyle = "gallery" | "library" | "quiet";
 export type PlayerStyle = "cover" | "vinyl" | "immersive";
@@ -124,13 +131,14 @@ export type Metadata = {
   year?: number;
   remotePath?: string;
   lossless?: boolean;
+  replayGain?: ReplayGainTags;
   remoteId?: string;
   mediaSourceId?: string;
 };
 export type MusicSource = {
   id: string;
   name: string;
-  kind: "managed" | "directory" | "file" | "jellyfin" | "emby";
+  kind: "managed" | "directory" | "file" | RemoteKind;
   uri: string;
   bookmark?: string;
   enabled?: boolean;
@@ -146,8 +154,12 @@ export type RemoteSourceConfig = {
   libraryId: string;
   deviceId?: string;
 };
+export type RemoteKind =
+  "jellyfin" | "emby" | "smb" | "dlna" | "webdav" | "subsonic";
 export const isRemoteSource = (source: MusicSource) =>
-  source.kind === "jellyfin" || source.kind === "emby";
+  source.kind !== "managed" &&
+  source.kind !== "directory" &&
+  source.kind !== "file";
 export type SourceStatus = MusicSource & { error?: string };
 export type Track = Metadata & {
   id: string;
@@ -189,6 +201,7 @@ export type ScanReport = {
 };
 export type Preferences = {
   home: HomeStyle;
+  theme: ThemeSettings;
   player: PlayerStyle;
   record: RecordStyle;
   recordSpeed: RecordSpeed;
@@ -201,12 +214,15 @@ export type Preferences = {
   backgroundPlayback: boolean;
   scanRules: ScanRules;
   equalizer: EqualizerSettings;
+  peq: PeqSettings;
+  replayGain: ReplayGainSettings;
   dsd: DsdSettings;
   albumLayout: "cards" | "list";
   artistLayout: "cards" | "list";
 };
 export const defaults: Preferences = {
   home: "gallery",
+  theme: defaultTheme,
   player: "cover",
   record: "clear",
   recordSpeed: "standard",
@@ -218,6 +234,8 @@ export const defaults: Preferences = {
   backgroundPlayback: true,
   scanRules: defaultScanRules,
   equalizer: defaultEqualizer,
+  peq: defaultPeq,
+  replayGain: defaultReplayGain,
   dsd: defaultDsd,
   albumLayout: "cards",
   artistLayout: "cards",

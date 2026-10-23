@@ -1,4 +1,4 @@
-import React, { useRef, type ComponentRef } from "react";
+import { useRef, type ComponentRef } from "react";
 import {
   Pressable,
   ScrollView,

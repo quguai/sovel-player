@@ -131,3 +131,48 @@ patch(kotlin + "BaseAudioPlayer.kt", "        if (reason == Player.DISCONTINUITY
             else playlist.sovelHistory.transition(oldPosition.mediaItemIndex, "skip")
           }`);
 console.log("Sovel native listening journal integration applied");
+
+patch(
+  "ios/AudioPlaylist.swift",
+  "  private var previousTrackIndex = 0",
+  `  private var previousTrackIndex = 0
+  private var sovelReplayGains: [Double] = []
+  func setSovelReplayGains(_ gains: [Double]) {
+    sovelReplayGains = gains
+    for (i, item) in playerItems.enumerated() {
+      if let item { SovelEqualizer.setReplayGain(i < gains.count ? gains[i] : 0, for: item) }
+    }
+  }`,
+);
+patch(
+  "ios/AudioPlaylist.swift",
+  "    playerItems = items\n",
+  "    playerItems = items\n    setSovelReplayGains(sovelReplayGains)\n",
+);
+patch(
+  "ios/AudioModule.swift",
+  '      Function("finishSovelListening")',
+  `      Function("setSovelReplayGains") { (playlist: AudioPlaylist, gains: [Double]) in SovelPlaybackState.onMain { playlist.setSovelReplayGains(gains) } }
+      Function("finishSovelListening")`,
+);
+patch(
+  kotlin + "AudioPlaylist.kt",
+  "  private var previousMediaItemIndex = 0",
+  `  private var previousMediaItemIndex = 0
+  private var sovelReplayGains = emptyList<Double>()
+  fun setSovelReplayGains(gains: List<Double>) { sovelReplayGains = gains; applySovelReplayGain() }
+  private fun applySovelReplayGain() {
+    if (SovelEqualizer.available) SovelEqualizer.setReplayGain(sovelReplayGains.getOrNull(ref.currentMediaItemIndex) ?: 0.0)
+  }`,
+);
+patch(
+  kotlin + "AudioPlaylist.kt",
+  "    val currentIndex = ref.currentMediaItemIndex",
+  "    applySovelReplayGain()\n    val currentIndex = ref.currentMediaItemIndex",
+);
+patch(
+  kotlin + "AudioModule.kt",
+  '      Function("finishSovelListening")',
+  `      Function("setSovelReplayGains") { playlist: AudioPlaylist, gains: List<Double> -> runOnMain { playlist.setSovelReplayGains(gains) } }
+      Function("finishSovelListening")`,
+);

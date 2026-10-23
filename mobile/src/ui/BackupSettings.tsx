@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { themeStyles } from "./themeStyles";
+import { useState } from "react";
+import { View, Text } from "react-native";
 import { useMusic } from "../services/store";
 import { exportSettings, pickSettingsBackup } from "../services/settingsBackup";
 import type { SettingsBackup } from "../core/settingsBackup";
@@ -27,16 +28,15 @@ export function BackupSettings() {
     }
   };
   return (
-    <View style={{ gap: 18 }}>
-      <Text style={s.heading}>把习惯，一起带走。</Text>
+    <View style={{ gap: 12 }}>
       <Text style={s.note}>
-        备份外观、播放偏好、扫描规则、十段均衡器和自定义预设。生成本地备份，通过系统分享保存。
+        备份主题、播放、扫描与 EQ / PEQ 设置，通过系统分享保存。
       </Text>
       <View style={s.card}>
         <Text style={s.title}>设置与音色</Text>
         <Text style={s.note}>
-          {prefs.equalizer.userPresets.length} 个自定义 EQ 预设 ·
-          包含卡片／列表偏好
+          {prefs.equalizer.userPresets.length} 个自定义 EQ 预设 · 包含
+          PEQ、回放增益和展示偏好
         </Text>
         <Button
           disabled={working}
@@ -99,20 +99,14 @@ export function BackupSettings() {
     </View>
   );
 }
-const s = StyleSheet.create({
-  heading: {
-    color: p.text,
-    fontSize: 24,
-    fontWeight: "600",
-    marginVertical: 6,
-  },
+const s = themeStyles(() => ({
   card: {
     backgroundColor: "#ffffff05",
-    padding: 18,
-    borderRadius: 18,
-    gap: 16,
+    padding: 14,
+    borderRadius: 14,
+    gap: 10,
   },
   title: { color: p.text, fontSize: 16, fontWeight: "600" },
-  note: { color: p.muted, fontSize: 12, lineHeight: 21 },
+  note: { color: p.muted, fontSize: 12, lineHeight: 18 },
   message: { color: p.gold, fontSize: 13, lineHeight: 21 },
-});
+}));

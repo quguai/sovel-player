@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { themeStyles } from "./themeStyles";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -67,6 +68,8 @@ export function TrackVersions({
             {copies.map((copy) => (
               <Pressable
                 key={copy.id}
+                accessibilityRole="button"
+                accessibilityLabel={`使用 ${copy.sourceName} 的 ${copy.format} 版本`}
                 disabled={saving || !canPlay(copy)}
                 onPress={() => {
                   setSaving(true);
@@ -125,7 +128,7 @@ export function TrackVersions({
     </Modal>
   );
 }
-const s = StyleSheet.create({
+const s = themeStyles(() => ({
   overlay: {
     flex: 1,
     justifyContent: "flex-end",
@@ -170,4 +173,4 @@ const s = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
-});
+}));

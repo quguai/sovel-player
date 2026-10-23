@@ -39,3 +39,15 @@ Sovel 当前安装版本为 `12.2.2`，参考提交的版本号为 `12.2.3`。�
 - LICENSE 为 AGPL v3，README 另有作者使用说明。本轮仅阅读和记录；直接移植代码或分发派生版本前，需要逐项核对相应条款及模块兼容性。
 
 NeriPlayer 与 Auxio 的分析见 [设置与扫描实现参考](settings-and-scan-references.md)。
+
+
+## 网络曲库依赖
+
+SMBClient（iOS，MIT）、SMBJ（Android，Apache 2.0）与 NanoHTTPD（BSD 3-Clause）作为实际依赖接入。局域网发现和媒体服务协议由本项目适配层实现；WebDAV 与 Subsonic 的用途为读取曲库，不混同于参考播放器的设置备份。详细版本、许可及验证边界见[网络曲库说明](network-sources.md)。
+
+## 参数音效与 iOS DSF
+
+- [W3C Audio EQ Cookbook](https://www.w3.org/TR/audio-eq-cookbook/)：峰值、低架、高架双二阶滤波公式；Sovel 自行实现参数约束、叠加余量和实时过渡。
+- [AutoEq](https://github.com/jaakkopasanen/AutoEq)：参考 Equalizer APO 参数文本格式，不打包测量库或自动下载预设。
+- iOS DSF 复用已列明许可的 dsd2pcm 与现有 Sovel DSD FIR，新增原生虚拟 CAF 资源加载；不是移植 NeriPlayer 的播放器。
+- DLNA 仅作为远程音乐目录读取，本项目当前不计划加入投屏。

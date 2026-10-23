@@ -6,7 +6,7 @@ An independent static product website for [Sovel HiFi](https://github.com/quguai
 
 Keep feature updates aligned across `index.html` (English and no-JavaScript fallback), `copy.js` (Simplified Chinese and search/social descriptions), and the English/Chinese root and mobile READMEs. `#music-sources` explains Jellyfin / Emby connections, source selection, aggregation and original-file streaming; the FAQ explains duplicate-version defaults. It is an editorial feature overview, not an interactive server-connection demo.
 
-Distinguish **implemented in development source**, **available in a published APK**, and **verified on real hardware/servers**. The new remote integration has mock-server iOS simulator coverage; real Jellyfin / Emby deployments and Android integration remain unverified. The download card explicitly directs users to the selected release notes for availability. DLNA / UPnP, SMB, WebDAV and OpenSubsonic remain planned. Keep release fetching and ABI selection automatic; do not hardcode a new version or APK URL for a feature announcement.
+Distinguish **implemented in development source**, **available in a published APK**, and **verified on real hardware/servers**. The new remote integration has mock-server iOS simulator coverage; real Jellyfin / Emby deployments and Android integration remain unverified. The download card explicitly directs users to the selected release notes for availability. LAN discovery, DLNA library reading, SMB, WebDAV and OpenSubsonic are now in development source, with local protocol/native tests. DLNA casting is intentionally excluded. Keep release fetching and ABI selection automatic; do not hardcode a new version or APK URL for a feature announcement.
 
 新增能力需要同步根目录与移动端的中英文 README，以及网站的英文 HTML、中文文案和搜索／分享描述。远程曲库说明位于 `#music-sources`，明确区分开发源码、已发布安装包与真实服务器／硬件验证；不要把模拟服务器联调写成真实服务器兼容性验证，也不要把规划中的协议写成已支持。
 
@@ -105,3 +105,10 @@ The hero turntable is an appearance preview and does not play audio. Motion resp
 Star 数和 Android 下载入口实时读取公开 GitHub 数据，缓存五分钟。正式版优先；没有正式版时展示最新预览版并明确标识。尚无安装包时显示“首个版本准备中”，接口失败时保留 GitHub Releases 入口。发布新版本后，无需重建网站。
 
 Inside 通过原生滚动依次展示七幕真实应用截图：曲库、三种黑胶、封面、沉浸与歌词。画面固定在视口内，展示结束后继续进入下载区；支持向上回看与“展开全部画面”。关闭 JavaScript 或启用减少动态效果时，默认展示普通纵向排版。使用参考金砖三代外形的 CSS 概念机身。外壳仅用于展示，不代表已通过该设备兼容性测试。
+
+
+## Music-source capability copy
+
+The music-sources section lists local files, Jellyfin, Emby, SMB, DLNA, WebDAV and OpenSubsonic. LAN discovery covers Jellyfin/Emby/DLNA; other adapters keep manual addresses. Keep both `index.html` and `copy.js` aligned. These are development-source capabilities; never imply that an earlier downloadable release includes them. DLNA library reading is separate from casting. Real-NAS/device compatibility and signed iOS multicast permissions remain validation limits. Connection and credential details belong in the linked repository guides.
+
+Native PEQ/AutoEQ, ReplayGain, custom dark theme colors and iOS DSF-to-PCM are implemented in development source. Keep APK availability and real-DAC output separate from DSP and simulator checks; transitions, more application languages and dedicated USB/DSD output remain future work.

@@ -23,7 +23,8 @@
         "application-identifier": "$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)",
         "keychain-access-groups": [
           "$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)"
-        ]
+        ],
+        "com.apple.developer.networking.multicast": true
       }
     },
     "android": {
@@ -53,7 +54,8 @@
       ],
       "expo-sqlite",
       "expo-sharing",
-      "expo-secure-store"
+      "expo-secure-store",
+      "./config-plugins/with-sovel-network.cjs"
     ],
     "experiments": {
       "typedRoutes": false

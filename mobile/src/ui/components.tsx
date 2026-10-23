@@ -1,3 +1,4 @@
+import { themeStyles } from "./themeStyles";
 import React, {
   useState,
   useRef,
@@ -415,7 +416,7 @@ export function MiniPlayer({
     </FrostedSurface>
   );
 }
-const s = StyleSheet.create({
+const s = themeStyles(() => ({
   time: { fontSize: 11, color: "#ffffff90", fontVariant: ["tabular-nums"] },
   mini: {
     paddingLeft: 6,
@@ -439,7 +440,11 @@ const s = StyleSheet.create({
   miniAction: { width: 44, height: 44 },
   title: { fontSize: 13, fontWeight: "600", color: palette.text },
   miniArtist: { color: "#aaa294", fontWeight: "400" },
-});
+}));
+
+export const settingsContent = StyleSheet.create({
+  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 28 },
+}).content;
 
 // SafeAreaView owns the inset; 6 + (46 - 23) / 2 gives a ~18 pt icon edge.
 export const navigationHeader = StyleSheet.create({

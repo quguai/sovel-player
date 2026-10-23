@@ -24,6 +24,7 @@ export const noSleep: SleepState = {
   expired: false,
 };
 export type SovelPlaylist = AudioPlaylist & {
+  setSovelReplayGains?: (gains: number[]) => void;
   setSovelQueueToken?: (token: string) => void;
   flushSovelCheckpoint?: () => void;
   setSovelSleepTimer?: (seconds: number) => void;

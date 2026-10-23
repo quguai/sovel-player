@@ -1,10 +1,10 @@
+import { themeStyles } from "./themeStyles";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Keyboard,
   PanResponder,
   Pressable,
-  StyleSheet,
   Switch,
   Text,
   TextInput,
@@ -24,7 +24,7 @@ import { useMusic } from "../services/store";
 import { palette as p } from "./visuals";
 
 const db = (n: number) => `${n > 0 ? "+" : ""}${n.toFixed(1)} dB`;
-function EqSlider({
+export function EqSlider({
   value,
   min,
   max,
@@ -41,7 +41,9 @@ function EqSlider({
     start = useRef(0),
     callback = useRef(change),
     last = useRef(0);
-  useEffect(() => { callback.current = change; }, [change]);
+  useEffect(() => {
+    callback.current = change;
+  }, [change]);
   const send = (x: number) =>
     callback.current(
       Math.round(
@@ -131,7 +133,7 @@ export function EqualizerScreen() {
   const detail = !eqStatus.available
     ? "原生音效模块未加载，当前不会改变声音。"
     : !eq.enabled
-      ? "关闭时保留预设，播放原始声音。"
+      ? "关闭本级时保留预设，PEQ 和回放增益独立生效。"
       : !status.playing
         ? "播放音乐后应用当前设置。"
         : !eqStatus.supported
@@ -226,7 +228,7 @@ export function EqualizerScreen() {
               </SvgText>
             </React.Fragment>
           ))}
-          <Path d={`${path} L278,148 L22,148 Z`} fill="#d5b7820b" />
+          <Path d={`${path} L278,148 L22,148 Z`} fill={`${p.gold}0b`} />
           <Path d={path} stroke={p.gold} strokeWidth={1.8} fill="none" />
           {eq.gains.map((g, i) => (
             <Circle
@@ -386,9 +388,13 @@ export function EqualizerScreen() {
             thumbColor={p.text}
           />
         </View>
-        {processing && (
-          <Text style={[s.note, { marginTop: 12 }]}>
-            实际前级 {db(eqStatus.effectivePreamp)} · EQ 处理会改变采样数据
+        {status.playing && eqStatus.processing && (
+          <Text
+            accessibilityLabel="处理链前级"
+            accessibilityValue={{ text: db(eqStatus.effectivePreamp) }}
+            style={[s.note, { marginTop: 12 }]}
+          >
+            处理链前级 {db(eqStatus.effectivePreamp)} · 包含 EQ / PEQ 与回放增益
           </Text>
         )}
       </View>
@@ -398,15 +404,15 @@ export function EqualizerScreen() {
     </>
   );
 }
-const s = StyleSheet.create({
+const s = themeStyles(() => ({
   summary: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginVertical: 12,
+    marginVertical: 4,
   },
   eyebrow: { fontSize: 9, letterSpacing: 2.2, color: p.gold },
-  heading: { fontSize: 25, fontWeight: "600", color: p.text },
+  heading: { fontSize: 21, fontWeight: "600", color: p.text },
   status: {
     flexDirection: "row",
     alignItems: "center",
@@ -419,10 +425,10 @@ const s = StyleSheet.create({
   currentPreset: { color: p.gold, fontSize: 12, marginLeft: "auto" },
   note: { color: p.muted, fontSize: 11, lineHeight: 18 },
   panel: {
-    marginTop: 16,
+    marginTop: 12,
     backgroundColor: "#ffffff05",
-    padding: 16,
-    borderRadius: 20,
+    padding: 12,
+    borderRadius: 16,
   },
   row: {
     flexDirection: "row",
@@ -443,7 +449,7 @@ const s = StyleSheet.create({
     backgroundColor: "#ffffff04",
   },
   bandText: { color: p.muted, fontSize: 11 },
-  selected: { backgroundColor: "#d5b78219" },
+  selected: { backgroundColor: `${p.gold}19` },
   adjust: { flexDirection: "row", alignItems: "center", marginTop: 6 },
   step: {
     width: 38,
@@ -500,9 +506,9 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 11,
-    backgroundColor: "#d5b78219",
+    backgroundColor: `${p.gold}19`,
   },
   saveText: { color: p.gold, fontSize: 12 },
   message: { color: p.gold, fontSize: 12, marginTop: 10 },
   delete: { alignSelf: "flex-start", minHeight: 40, justifyContent: "center" },
-});
+}));

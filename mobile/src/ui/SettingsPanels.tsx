@@ -1,3 +1,7 @@
+import { AboutBrandCard } from "./AboutBrandCard";
+import { themeStyles } from "./themeStyles";
+import { PeqScreen } from "./PeqScreen";
+import { isRemoteSource } from "../core/types";
 import { MusicSourcesScreen } from "./MusicSourcesScreen";
 import { UpdateSettings } from "./UpdateSettings";
 import { installedApp, useUpdates } from "../services/appUpdates";
@@ -14,12 +18,12 @@ import {
 import { useMusic } from "../services/store";
 import { palette as p } from "./visuals";
 import { eqPresetName } from "../core/equalizer";
-import { EqualizerScreen } from "./EqualizerScreen";
+import { EqSlider, EqualizerScreen } from "./EqualizerScreen";
 import { BackupSettings } from "./BackupSettings";
 import { Button } from "./components";
 import { ListeningHistoryScreen } from "./ListeningHistoryScreen";
 import { supportsDsf } from "../services/playbackSupport";
-import { dsdLicense } from "../core/thirdPartyNotices";
+import { dsdLicense, networkLicenses } from "../core/thirdPartyNotices";
 import { pcmRates } from "../core/dsd";
 
 export type SettingsSection =
@@ -68,7 +72,7 @@ export function SettingRow({
 }) {
   const content = (
     <>
-      <View style={{ flex: 1, gap: 5 }}>
+      <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.title}>{title}</Text>
         {note && <Text style={s.note}>{note}</Text>}
       </View>
@@ -80,6 +84,7 @@ export function SettingRow({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title}
+      accessibilityValue={value ? { text: value } : undefined}
       onPress={onPress}
       style={({ pressed }) => [s.row, pressed && { opacity: 0.6 }]}
     >
@@ -146,36 +151,28 @@ export function SettingsHome({
   } = useMusic();
   return (
     <>
-      <Text style={s.intro}>让音乐，按你的习惯播放。</Text>
       <SettingGroup title="曲库与外观">
         <SettingRow
           title="音乐来源"
-          note="本地 / Jellyfin / Emby · 聚合与优先级"
+          value={`${sources.length} 个来源`}
           onPress={() => open("sources")}
         />
         <SettingRow
           title="文件扫描"
-          note="选择来源、过滤规则与扫描方式"
-          value={`${sources.filter((source) => source.kind !== "jellyfin" && source.kind !== "emby").reduce((count, source) => count + (source.trackCount || 0), 0)} 首`}
+          value={`${sources.filter((source) => !isRemoteSource(source)).reduce((count, source) => count + (source.trackCount || 0), 0)} 首`}
           onPress={onSources}
         />
         <SettingRow
           title="样式管理"
-          note="主页、播放画面与唱片细节"
+          value={prefs.theme.name}
           onPress={() => open("appearance")}
         />
-        <SettingRow
-          title="听歌记录与偏好"
-          note="收听时长、完成率与本地推荐"
-          onPress={() => open("history")}
-        />
+        <SettingRow title="听歌记录与偏好" onPress={() => open("history")} />
       </SettingGroup>
       <SettingGroup title="常用设置">
         <SettingRow
           title="定时停止播放"
-          note={
-            sleepEnd ? `约 ${sleepRemaining} 分钟后暂停` : "开启后默认 30 分钟"
-          }
+          note={sleepEnd ? `约 ${sleepRemaining} 分钟后暂停` : undefined}
         >
           <SettingSwitch
             label="定时停止播放"
@@ -189,7 +186,7 @@ export function SettingsHome({
           value={sleepEnd ? `剩余 ${sleepRemaining} 分钟` : "15 / 30 / 60 分钟"}
           onPress={() => open("sleep")}
         />
-        <SettingRow title="后台播放" note="锁屏或离开应用后继续播放">
+        <SettingRow title="后台播放">
           <SettingSwitch
             label="后台播放"
             value={prefs.backgroundPlayback}
@@ -207,22 +204,21 @@ export function SettingsHome({
           }
           onPress={() => open("effects")}
         />
-        <SettingRow title="PEQ" value="未接入" onPress={() => open("peq")} />
+        <SettingRow
+          title="PEQ / AutoEQ"
+          value={prefs.peq.enabled ? `${prefs.peq.bands.length} 段` : "关闭"}
+          onPress={() => open("peq")}
+        />
       </SettingGroup>
       <SettingGroup title="播放与系统">
         <SettingRow
           title="DSD 模式"
-          note="PCM / DoP / Native 与转换采样率"
           value={
             supportsDsf ? `PCM · ${prefs.dsd.pcmRate / 1000} kHz` : "仅索引"
           }
           onPress={() => open("dsd")}
         />
-        <SettingRow
-          title="高级设置"
-          note="播放方式、歌词、过渡与回放增益"
-          onPress={() => open("playback")}
-        />
+        <SettingRow title="高级设置" onPress={() => open("playback")} />
         <SettingRow
           title="USB 输出"
           value="系统输出"
@@ -233,11 +229,7 @@ export function SettingsHome({
           value="简体中文"
           onPress={() => open("language")}
         />
-        <SettingRow
-          title="备份与恢复"
-          note="外观、扫描规则与 EQ 预设"
-          onPress={() => open("backup")}
-        />
+        <SettingRow title="备份与恢复" onPress={() => open("backup")} />
         <SettingRow
           title="版本更新"
           value={
@@ -292,7 +284,7 @@ export function SleepSettings() {
           </Pressable>
         ))}
       </View>
-      <View style={{ gap: 12, marginVertical: 18 }}>
+      <View style={{ gap: 10, marginVertical: 12 }}>
         <Text style={s.title}>自定义时长</Text>
         <TextInput
           accessibilityLabel="定时分钟数"
@@ -304,7 +296,8 @@ export function SleepSettings() {
             color: p.text,
             backgroundColor: "#ffffff08",
             borderRadius: 12,
-            padding: 14,
+            minHeight: 44,
+            padding: 12,
           }}
         />
         <Button
@@ -330,6 +323,7 @@ export function SleepSettings() {
   );
 }
 export function AdvancedAudioSettings() {
+  const { prefs, setReplayGain } = useMusic();
   return (
     <SettingGroup title="音频行为">
       <SettingRow
@@ -344,9 +338,47 @@ export function AdvancedAudioSettings() {
       />
       <SettingRow
         title="回放增益"
-        note="读取标签并调整音量的处理链尚未接入"
-        value="未接入"
+        note="使用文件内的 ReplayGain 标签；没有标签时保持原音量"
       />
+      {(["off", "track", "album"] as const).map((mode, i) => (
+        <SettingRow
+          key={mode}
+          title={["关闭", "按歌曲", "按专辑"][i]}
+          note={
+            mode === "album"
+              ? "整张专辑保留曲目间的音量关系；缺少专辑标签时使用歌曲标签"
+              : undefined
+          }
+          value={prefs.replayGain.mode === mode ? "已选择" : undefined}
+          onPress={() => setReplayGain({ mode })}
+        />
+      ))}
+      <SettingRow
+        title="峰值保护"
+        note="根据标签中的峰值限制放大；未写入峰值时无法预判削波"
+      >
+        <SettingSwitch
+          label="回放增益峰值保护"
+          value={prefs.replayGain.preventClipping}
+          onChange={(preventClipping) => setReplayGain({ preventClipping })}
+        />
+      </SettingRow>
+      <View style={{ padding: 14 }}>
+        <Text style={s.title}>
+          回放增益前级 · {prefs.replayGain.preamp.toFixed(1)} dB
+        </Text>
+        <EqSlider
+          value={prefs.replayGain.preamp}
+          min={-12}
+          max={12}
+          label="回放增益前级"
+          change={(preamp) => setReplayGain({ preamp })}
+        />
+      </View>
+      <Text style={s.note}>
+        已有曲库可执行“全量扫描”以补齐增益信息。开启 EQ / PEQ
+        时仍需预留音效余量。
+      </Text>
     </SettingGroup>
   );
 }
@@ -360,22 +392,7 @@ export function SettingsInfo({ section }: { section: SettingsSection }) {
   if (section === "history") return <ListeningHistoryScreen />;
   if (section === "effects") return <EqualizerScreen />;
   if (section === "dsd") return <DsdSettingsPanel />;
-  if (section === "peq")
-    return (
-      <SettingGroup title="耳机校正">
-        <SettingRow
-          title="参数均衡器 · PEQ"
-          note="频率、增益、Q 值与 AutoEQ 导入待接入"
-        >
-          <SettingSwitch
-            label="PEQ 尚未接入"
-            value={false}
-            disabled
-            onChange={() => {}}
-          />
-        </SettingRow>
-      </SettingGroup>
-    );
+  if (section === "peq") return <PeqScreen />;
   if (section === "usb")
     return (
       <>
@@ -406,19 +423,14 @@ export function SettingsInfo({ section }: { section: SettingsSection }) {
     return (
       <>
         <SettingRow title="简体中文" value="当前语言" />
-        <Text style={[s.note, { marginTop: 20 }]}>
+        <Text style={[s.note, { marginTop: 12 }]}>
           其他语言将在完整翻译后提供。
         </Text>
       </>
     );
   return (
     <>
-      <Text
-        style={[s.title, { fontSize: 30, color: p.gold, marginVertical: 20 }]}
-      >
-        Sovel HiFi
-      </Text>
-      <Text style={s.intro}>收藏声音，慢慢聆听。</Text>
+      <AboutBrandCard version={installedApp.version} />
       <SettingGroup title="应用信息">
         <SettingRow title="版本" value={installedApp.version} />
         <SettingRow title="曲库" note="SQLite 本地索引；引用原音频文件" />
@@ -428,7 +440,7 @@ export function SettingsInfo({ section }: { section: SettingsSection }) {
           onPress={() => setDetails(!details)}
         />
         <SettingRow
-          title="解码器开源许可"
+          title="第三方开源许可"
           value={licenses ? "收起" : "查看"}
           onPress={() => setLicenses(!licenses)}
         />
@@ -443,6 +455,8 @@ export function SettingsInfo({ section }: { section: SettingsSection }) {
       {licenses && (
         <Text selectable style={s.note}>
           {dsdLicense}
+          {"\n\n"}
+          {networkLicenses}
         </Text>
       )}
     </>
@@ -453,12 +467,11 @@ function DsdSettingsPanel() {
   const [saving, setSaving] = useState(false);
   return (
     <>
-      <Text style={s.intro}>选择 DSD 的播放方式，让输出匹配你的设备。</Text>
       <SettingGroup title="输出模式">
         <SettingRow
           title="PCM"
           note="DSD 转为浮点 PCM，经系统音频输出；可使用均衡器"
-          value={supportsDsf ? "使用中" : "需 Android 完整版"}
+          value={supportsDsf ? "使用中" : "需支持软件解码的安装包"}
         />
         <SettingRow
           title="DoP"
@@ -501,8 +514,8 @@ function DsdSettingsPanel() {
       </SettingGroup>
       <Text style={s.note}>
         {saving ? "正在应用采样率，保留队列与播放位置…\n" : ""}
-        支持 DSF 单声道 /
-        立体声，DSD64、128、256、512 共用上方选择的采样率。调整采样率会重新载入播放队列，可能短暂停顿。
+        支持 DSF 单声道 / 立体声，DSD64、128、256、512
+        共用上方选择的采样率。调整采样率会重新载入播放队列，可能短暂停顿。
         {"\n"}少数 48 kHz 系列 DSD 会对应转换为 48 / 96 / 192 / 384 kHz。
         {"\n"}这里设置的是解码后的 PCM 采样率；设备系统仍可能重采样。DFF、DoP 与
         Native 暂不可用。
@@ -510,24 +523,24 @@ function DsdSettingsPanel() {
     </>
   );
 }
-const s = StyleSheet.create({
-  intro: { fontSize: 14, color: p.muted, lineHeight: 23, marginBottom: 12 },
-  group: { marginBottom: 23 },
+const s = themeStyles(() => ({
+  intro: { fontSize: 13, color: p.muted, lineHeight: 20, marginBottom: 10 },
+  group: { marginBottom: 16 },
   groupTitle: {
     fontSize: 12,
     color: p.gold,
-    marginBottom: 10,
+    marginBottom: 7,
     letterSpacing: 1,
   },
   card: {
-    borderRadius: 17,
+    borderRadius: 14,
     overflow: "hidden",
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     backgroundColor: "#ffffff05",
   },
   row: {
-    minHeight: 55,
-    paddingVertical: 14,
+    minHeight: 48,
+    paddingVertical: 10,
     flexDirection: "row",
     gap: 10,
     alignItems: "center",
@@ -535,23 +548,24 @@ const s = StyleSheet.create({
     borderBottomColor: p.line,
   },
   title: { color: p.text, fontSize: 15, fontWeight: "500" },
-  note: { color: p.muted, fontSize: 12, lineHeight: 19 },
+  note: { color: p.muted, fontSize: 12, lineHeight: 17 },
   value: { color: p.muted, fontSize: 12, maxWidth: "46%", textAlign: "right" },
   chevron: { color: p.muted, fontSize: 21 },
   choices: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginVertical: 24,
+    marginVertical: 12,
   },
   choice: {
     width: "47%",
-    padding: 20,
+    minHeight: 48,
+    padding: 12,
     borderRadius: 14,
     backgroundColor: p.surface,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "transparent",
   },
-  selected: { borderColor: p.gold, backgroundColor: "#d5b78212" },
-});
+  selected: { borderColor: p.gold, backgroundColor: `${p.gold}12` },
+}));

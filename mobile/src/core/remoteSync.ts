@@ -1,7 +1,22 @@
 import { atomic, type Database } from "./database";
 import { Catalog } from "./catalog";
 import { MediaServer } from "./mediaServer";
-import { type MusicSource } from "./types";
+import {
+  isRemoteSource,
+  type MusicSource,
+  type RemoteSourceConfig,
+} from "./types";
+import type { RemoteItem } from "./mediaServer";
+export interface RemoteClient {
+  items(
+    config: RemoteSourceConfig,
+    token: string,
+    offset: number,
+    signal: AbortSignal,
+  ): Promise<{ total: number; items: RemoteItem[] }>;
+  stream(config: RemoteSourceConfig, id: string, mediaId?: string): string;
+  hydrate?(item: RemoteItem, signal: AbortSignal): Promise<RemoteItem>;
+}
 export type RemoteProgress = {
   sourceId: string;
   phase: "discovering" | "importing";
@@ -15,11 +30,13 @@ export async function syncMediaSource(
   token: string,
   signal: AbortSignal,
   progress: (p: RemoteProgress) => void,
-  server?: MediaServer,
+  server?: RemoteClient,
 ) {
-  if (!source.config || (source.kind !== "jellyfin" && source.kind !== "emby"))
+  if (!source.config || !isRemoteSource(source))
     throw new Error("来源配置不完整");
-  const client = server || new MediaServer(source.config.baseUrl, source.kind);
+  const client: RemoteClient =
+    server ||
+    new MediaServer(source.config.baseUrl, source.kind as "jellyfin" | "emby");
   const job = `${source.id}-${Date.now()}-${Math.random()}`;
   const check = () => {
     if (signal.aborted) throw new Error("同步已取消，原有曲库已保留");
@@ -69,6 +86,33 @@ export async function syncMediaSource(
     } while (total === null || offset < total);
     check();
     progress({ sourceId: source.id, phase: "importing", done: 0, total });
+    if (client.hydrate) {
+      let done = 0;
+      for (let start = 0; start < offset; start += 64) {
+        const rows = await db.getAllAsync<{ item_id: string; payload: string }>(
+          "SELECT item_id,payload FROM remote_stage WHERE job=? ORDER BY item_id LIMIT 64 OFFSET ?",
+          job,
+          start,
+        );
+        for (const row of rows) {
+          check();
+          const item = await client.hydrate(JSON.parse(row.payload), signal);
+          check();
+          await db.runAsync(
+            "UPDATE remote_stage SET payload=? WHERE job=? AND item_id=?",
+            JSON.stringify(item),
+            job,
+            row.item_id,
+          );
+          progress({
+            sourceId: source.id,
+            phase: "importing",
+            done: ++done,
+            total,
+          });
+        }
+      }
+    }
     await atomic(db, async (transaction) => {
       for (let start = 0; start < offset; start += 64) {
         check();
@@ -80,7 +124,10 @@ export async function syncMediaSource(
         const items = rows.map((row) => {
           const item = JSON.parse(row.payload);
           for (const key of ["artwork", "artistArtwork"]) {
-            if (item.metadata[key])
+            if (
+              item.metadata[key] &&
+              /^(https?:|subsonic-art:)/.test(item.metadata[key])
+            )
               item.metadata[key] =
                 `sovel-art:${JSON.stringify([source.id, item.metadata[key]])}`;
           }
@@ -109,12 +156,13 @@ export async function syncMediaSource(
             }),
           })),
         );
-        progress({
-          sourceId: source.id,
-          phase: "importing",
-          done: Math.min(start + 64, offset),
-          total,
-        });
+        if (!client.hydrate)
+          progress({
+            sourceId: source.id,
+            phase: "importing",
+            done: Math.min(start + 64, offset),
+            total,
+          });
         await new Promise<void>((resolve) => setTimeout(resolve, 0));
       }
       check();

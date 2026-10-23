@@ -1,4 +1,4 @@
-import React from "react";
+import { themeStyles } from "./themeStyles";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { Track } from "../core/types";
@@ -74,7 +74,7 @@ export function CollectionItem({
       {artist ? (
         <View style={[s.portrait, { height: width }]}>
           <LinearGradient
-            colors={["#d5b78213", "#d5b78200"]}
+            colors={[`${p.gold}13`, `${p.gold}00`]}
             style={StyleSheet.absoluteFill}
           />
           <View
@@ -82,7 +82,7 @@ export function CollectionItem({
               padding: 5,
               borderRadius: width,
               borderWidth: 1,
-              borderColor: "#d5b78220",
+              borderColor: `${p.gold}20`,
             }}
           >
             <ArtistAvatar artwork={portrait} name={title} size={width * 0.72} />
@@ -124,7 +124,7 @@ export function CollectionItem({
     </Pressable>
   );
 }
-const s = StyleSheet.create({
+const s = themeStyles(() => ({
   title: { color: p.text, fontSize: 15, fontWeight: "600", letterSpacing: 0.1 },
   subtitle: { color: p.muted, fontSize: 11, lineHeight: 17 },
   portrait: {
@@ -140,7 +140,7 @@ const s = StyleSheet.create({
     right: 13,
     height: 24,
     borderRadius: 10,
-    backgroundColor: "#d5b78220",
+    backgroundColor: `${p.gold}20`,
   },
   frontSleeve: {
     position: "absolute",
@@ -178,4 +178,4 @@ const s = StyleSheet.create({
     borderBottomColor: p.line,
   },
   count: { color: p.gold, fontSize: 14, fontVariant: ["tabular-nums"] },
-});
+}));

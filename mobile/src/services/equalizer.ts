@@ -1,4 +1,5 @@
 import { requireOptionalNativeModule } from "expo";
+import type { PeqSettings } from "../core/peq";
 import type { EqualizerSettings } from "../core/equalizer";
 export type EqStatus = {
   available: boolean;
@@ -16,6 +17,12 @@ type EqModule = {
   configureSovelEqualizer?: (
     enabled: boolean,
     gains: number[],
+    preamp: number,
+    headroom: boolean,
+  ) => void;
+  configureSovelPeq?: (
+    enabled: boolean,
+    filters: number[],
     preamp: number,
     headroom: boolean,
   ) => void;
@@ -47,6 +54,24 @@ export function configureEqualizer(settings: EqualizerSettings) {
   native.configureSovelEqualizer(
     settings.enabled,
     settings.gains,
+    settings.preamp,
+    settings.headroom,
+  );
+}
+
+export function configurePeq(settings: PeqSettings) {
+  if (!native?.configureSovelPeq) {
+    if (settings.enabled) throw new Error("当前安装包尚未包含 PEQ 模块");
+    return;
+  }
+  native.configureSovelPeq(
+    settings.enabled,
+    settings.bands.flatMap((b) => [
+      b.enabled ? { PK: 1, LSC: 2, HSC: 3 }[b.type] : 0,
+      b.frequency,
+      b.gain,
+      b.q,
+    ]),
     settings.preamp,
     settings.headroom,
   );

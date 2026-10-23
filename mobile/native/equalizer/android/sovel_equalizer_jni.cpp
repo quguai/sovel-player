@@ -7,6 +7,13 @@ JNIEXPORT void JNICALL Java_expo_modules_audio_SovelEqualizer_configure(JNIEnv* 
   env->GetDoubleArrayRegion(gains,0,count,values);
   sovel::parameters().set(enabled,values,preamp,headroom);
 }
+JNIEXPORT void JNICALL Java_expo_modules_audio_SovelEqualizer_configurePeq(JNIEnv* env,jobject,jboolean enabled,jdoubleArray filters,jdouble preamp,jboolean headroom) {
+  double values[sovel::bands*4]{};
+  const int count=std::min(sovel::bands*4,int(env->GetArrayLength(filters)));
+  env->GetDoubleArrayRegion(filters,0,count,values);
+  sovel::parameters().setPeq(enabled,values,count,preamp,headroom);
+}
+JNIEXPORT void JNICALL Java_expo_modules_audio_SovelEqualizer_setReplayGain(JNIEnv*,jobject,jdouble db) { sovel::parameters().setReplayGain(db); }
 JNIEXPORT jdoubleArray JNICALL Java_expo_modules_audio_SovelEqualizer_readStatus(JNIEnv* env,jobject) {
   auto& r=sovel::runtime();
   double values[]={double(r.supported.load()),double(r.processing.load()),double(r.frames.load()),double(r.clipped.load()),

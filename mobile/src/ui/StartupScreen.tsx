@@ -1,9 +1,8 @@
-import React from "react";
+import { themeStyles } from "./themeStyles";
 import {
   ActivityIndicator,
   Image,
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -50,7 +49,7 @@ export function StartupScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themeStyles(() => ({
   screen: {
     flex: 1,
     padding: 32,
@@ -75,4 +74,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   retryLabel: { color: p.gold, fontSize: 14, fontWeight: "600" },
-});
+}));

@@ -1,3 +1,5 @@
+import { ThemeSettings } from "./ThemeSettings";
+import { themeStyles } from "./themeStyles";
 import React, {
   useEffect,
   useCallback,
@@ -9,7 +11,6 @@ import React, {
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   TextInput,
   FlatList,
@@ -62,6 +63,7 @@ import {
   MiniPlayer,
   PlaybackControls,
   navigationHeader,
+  settingsContent,
 } from "./components";
 import {
   Cover,
@@ -314,7 +316,7 @@ export function LibraryScreen({
                 borderRadius: 18,
                 justifyContent: "center",
                 backgroundColor:
-                  sourceFilter === source.id ? "#d5b78222" : "#ffffff07",
+                  sourceFilter === source.id ? `${p.gold}22` : "#ffffff07",
               }}
             >
               <Text
@@ -566,7 +568,7 @@ export function LibraryScreen({
                       minWidth: 55,
                       paddingHorizontal: 8,
                       borderRadius: 12,
-                      backgroundColor: "#d5b7820b",
+                      backgroundColor: `${p.gold}0b`,
                       alignItems: "center",
                       justifyContent: "center",
                     }}
@@ -591,7 +593,7 @@ export function LibraryScreen({
       >
         <LinearGradient
           pointerEvents="none"
-          colors={["#17191c00", "#17191ce6", "#17191c", "#17191c"]}
+          colors={[`${p.bg}00`, `${p.bg}e6`, p.bg, p.bg]}
           locations={[0, 0.24, 0.45, 1]}
           style={{
             position: "absolute",
@@ -1302,7 +1304,7 @@ export function SettingsScreen({
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         automaticallyAdjustKeyboardInsets
-        contentContainerStyle={{ padding: 24, paddingBottom: 50 }}
+        contentContainerStyle={settingsContent}
       >
         {section === "root" ? (
           <SettingsHome open={setSection} onSources={onSources} />
@@ -1324,7 +1326,8 @@ function AppearanceSettings() {
   const { prefs, preferences } = useMusic();
   return (
     <>
-      <Text style={s.section}>主页布局</Text>
+      <ThemeSettings />
+      <Text style={[s.section, { marginTop: 0 }]}>主页布局</Text>
       <View style={s.options}>
         {(
           [
@@ -1350,16 +1353,13 @@ function AppearanceSettings() {
               }
               color={p.gold}
             />
-            <Text style={[s.trackTitle, { marginTop: 12 }]}>{name}</Text>
+            <Text style={[s.trackTitle, { marginTop: 8 }]}>{name}</Text>
             <Text style={s.tiny}>{note}</Text>
           </Pressable>
         ))}
       </View>
       <Text style={s.section}>唱片样式</Text>
-      <Text style={[s.subtitle, { marginBottom: 15 }]}>
-        为旋转的音乐，选一种质感。
-      </Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         {(Object.keys(materials) as RecordStyle[]).map((key) => (
           <Pressable
             key={key}
@@ -1369,8 +1369,8 @@ function AppearanceSettings() {
             onPress={() => preferences({ record: key })}
             style={[s.material, prefs.record === key && s.optionSelected]}
           >
-            <Record material={key} size={68} mini />
-            <Text style={[s.trackTitle, { fontSize: 12, marginTop: 12 }]}>
+            <Record material={key} size={58} mini />
+            <Text style={[s.trackTitle, { fontSize: 12, marginTop: 8 }]}>
               {materials[key].name}
             </Text>
             {prefs.record === key && (
@@ -1382,9 +1382,6 @@ function AppearanceSettings() {
         ))}
       </View>
       <Text style={s.section}>唱臂风格</Text>
-      <Text style={[s.subtitle, { marginBottom: 15 }]}>
-        与唱片材质自由搭配，选择后自动保存。
-      </Text>
       <View style={s.options}>
         {(Object.keys(tonearmStyles) as TonearmStyle[]).map((key) => (
           <Pressable
@@ -1397,16 +1394,12 @@ function AppearanceSettings() {
           >
             <View
               style={{
-                height: 132,
+                height: 96,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <TonearmSprite
-                arm={key}
-                color={prefs.cartridgeColor}
-                size={132}
-              />
+              <TonearmSprite arm={key} color={prefs.cartridgeColor} size={96} />
             </View>
             <Text style={[s.trackTitle, { marginTop: 10 }]}>
               {tonearmStyles[key].name}
@@ -1429,7 +1422,7 @@ function AppearanceSettings() {
         accent={p.gold}
       />
       <Text style={s.section}>黑胶转速</Text>
-      <Text style={[s.subtitle, { marginBottom: 15 }]}>
+      <Text style={[s.subtitle, { marginBottom: 8 }]}>
         仅调整唱片动画，歌曲按原速播放。选择后自动保存。
       </Text>
       <View style={s.options}>
@@ -1454,7 +1447,7 @@ function AppearanceSettings() {
         ))}
       </View>
       <Text style={s.section}>唱头灯光</Text>
-      <Text style={[s.subtitle, { marginBottom: 15 }]}>
+      <Text style={[s.subtitle, { marginBottom: 8 }]}>
         播放时在针尖亮起，暂停后渐隐。
       </Text>
       <View style={[s.options, { flexWrap: "wrap" }]}>
@@ -1588,7 +1581,7 @@ export function DetailsScreen({ onBack }: { onBack: () => void }) {
     </ScrollView>
   );
 }
-export const s = StyleSheet.create({
+export const s = themeStyles(() => ({
   top: {
     flexDirection: "row",
     alignItems: "center",
@@ -1709,8 +1702,8 @@ export const s = StyleSheet.create({
     color: p.gold,
     fontSize: 13,
     fontWeight: "600",
-    marginTop: 32,
-    marginBottom: 15,
+    marginTop: 20,
+    marginBottom: 10,
     letterSpacing: 1,
   },
   settingRow: {
@@ -1727,17 +1720,18 @@ export const s = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: p.line,
-    padding: 15,
+    padding: 12,
+    minHeight: 44,
     backgroundColor: "#ffffff04",
   },
-  optionSelected: { borderColor: p.gold, backgroundColor: "#d5b78212" },
+  optionSelected: { borderColor: p.gold, backgroundColor: `${p.gold}12` },
   material: {
     width: "30%",
     alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderRadius: 12,
     borderColor: p.line,
     borderWidth: 1,
   },
   sourceCard: { padding: 21, borderRadius: 15, backgroundColor: p.surface },
-});
+}));

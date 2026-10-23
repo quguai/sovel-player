@@ -1,6 +1,18 @@
 #import "SovelEqualizer.h"
 #import <MediaToolbox/MediaToolbox.h>
 #include "SovelEqualizerDSP.h"
+#import <objc/runtime.h>
+@interface SovelItemGain : NSObject { @public std::shared_ptr<std::atomic<double>> gain; }
+@end
+@implementation SovelItemGain
+- (instancetype)init { if ((self=[super init])) gain=std::make_shared<std::atomic<double>>(0); return self; }
+@end
+static char gainKey;
+static SovelItemGain* itemGain(AVPlayerItem* item) {
+  SovelItemGain* holder=objc_getAssociatedObject(item,&gainKey);
+  if (!holder) { holder=[SovelItemGain new]; objc_setAssociatedObject(item,&gainKey,holder,OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
+  return holder;
+}
 
 struct SovelTap {
   sovel::Equalizer engine;
@@ -54,6 +66,13 @@ static void tapProcess(MTAudioProcessingTapRef tap, CMItemCount requested, MTAud
   for (int i=0;i<sovel::bands && i<gains.count;++i) values[i]=gains[i].doubleValue;
   sovel::parameters().set(enabled,values,preamp,headroom);
 }
++ (void)configurePeq:(BOOL)enabled filters:(NSArray<NSNumber *> *)filters preamp:(double)preamp headroom:(BOOL)headroom {
+  double values[sovel::bands*4]{};
+  const int count=int(std::min(NSUInteger(sovel::bands*4),filters.count));
+  for (int i=0;i<count;++i) values[i]=filters[i].doubleValue;
+  sovel::parameters().setPeq(enabled,values,count,preamp,headroom);
+}
++ (void)setReplayGain:(double)db forItem:(AVPlayerItem *)item { itemGain(item)->gain->store(sovel::bounded(db,-60,24)); }
 + (NSDictionary<NSString *,id> *)status {
   auto& r=sovel::runtime();
   return @{ @"available":@YES, @"supported":@(r.supported.load()), @"processing":@(r.processing.load()),
@@ -68,6 +87,7 @@ static void tapProcess(MTAudioProcessingTapRef tap, CMItemCount requested, MTAud
     dispatch_async(dispatch_get_main_queue(), ^{
       if (error || !tracks.count || item.audioMix) return;
       auto* state=new SovelTap();
+      state->engine.setGainSource(itemGain(item)->gain);
       MTAudioProcessingTapCallbacks callbacks={kMTAudioProcessingTapCallbacksVersion_0,state,tapInit,tapFinalize,tapPrepare,tapUnprepare,tapProcess};
       MTAudioProcessingTapRef tap=nullptr;
       if (MTAudioProcessingTapCreate(kCFAllocatorDefault,&callbacks,kMTAudioProcessingTapCreationFlag_PostEffects,&tap)!=noErr) {

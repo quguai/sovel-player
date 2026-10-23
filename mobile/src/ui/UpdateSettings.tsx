@@ -1,4 +1,4 @@
-import React from "react";
+import { themeStyles } from "./themeStyles";
 import {
   ActivityIndicator,
   Pressable,
@@ -48,11 +48,6 @@ export function UpdateSettings() {
         </View>
         <Text style={s.brand}>Sovel HiFi</Text>
         <Text style={s.version}>当前版本 {installedApp.version}</Text>
-        <Text style={s.hint}>
-          {canInstallUpdates
-            ? "来自开源社区的每一份改进。"
-            : "在你的应用分发渠道获取新版本。"}
-        </Text>
       </LinearGradient>
       {canInstallUpdates ? (
         <>
@@ -219,9 +214,9 @@ export function UpdateSettings() {
     </View>
   );
 }
-const s = StyleSheet.create({
-  page: { gap: 16, paddingBottom: 20 },
-  hero: { padding: 22, borderRadius: 22, gap: 12 },
+const s = themeStyles(() => ({
+  page: { gap: 12, paddingBottom: 8 },
+  hero: { padding: 14, borderRadius: 16, gap: 6 },
   heroTop: {
     flexDirection: "row",
     alignItems: "center",
@@ -238,20 +233,19 @@ const s = StyleSheet.create({
   badgeText: { color: p.gold, fontSize: 11 },
   brand: {
     color: p.text,
-    fontSize: 29,
+    fontSize: 22,
     fontWeight: "600",
     letterSpacing: -0.6,
-    marginTop: 6,
+    marginTop: 2,
   },
   version: { color: p.gold, fontSize: 13, fontVariant: ["tabular-nums"] },
-  hint: { color: p.muted, fontSize: 12, marginTop: 8, lineHeight: 20 },
   release: {
-    padding: 20,
-    borderRadius: 20,
+    padding: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#cbae7638",
     backgroundColor: "#cbae7608",
-    gap: 14,
+    gap: 10,
   },
   releaseTitle: { color: p.text, fontSize: 23, fontWeight: "600" },
   small: { color: p.muted, fontSize: 11, lineHeight: 19 },
@@ -274,15 +268,15 @@ const s = StyleSheet.create({
     backgroundColor: "#ffffff05",
   },
   row: {
-    minHeight: 80,
+    minHeight: 60,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingVertical: 15,
+    paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: p.line,
   },
-  rowText: { flex: 1, gap: 5 },
+  rowText: { flex: 1, gap: 3 },
   title: { color: p.text, fontSize: 14, fontWeight: "500" },
   channel: {
     flexDirection: "row",
@@ -302,4 +296,4 @@ const s = StyleSheet.create({
   optionText: { color: p.muted, fontSize: 13 },
   footnote: { color: p.muted, fontSize: 11, lineHeight: 20 },
   checked: { color: p.muted, fontSize: 10, textAlign: "center", marginTop: 5 },
-});
+}));

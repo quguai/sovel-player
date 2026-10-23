@@ -1,6 +1,9 @@
 import { defaults, type Preferences } from "./types";
 import { normalizeEqualizer } from "./equalizer";
 import { normalizeScanRules } from "./scanRules";
+import { normalizeReplayGain } from "./replayGain";
+import { normalizeTheme } from "./theme";
+import { normalizePeq } from "./peq";
 import { normalizeDsd } from "./dsd";
 
 export function normalizePreferences(input: unknown): Preferences {
@@ -69,6 +72,9 @@ export function normalizePreferences(input: unknown): Preferences {
     ),
     scanRules: normalizeScanRules(p.scanRules || undefined),
     equalizer: normalizeEqualizer(p.equalizer),
+    peq: normalizePeq(p.peq),
+    theme: normalizeTheme(p.theme),
+    replayGain: normalizeReplayGain(p.replayGain),
     dsd: normalizeDsd(p.dsd),
   };
 }

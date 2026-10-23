@@ -1948,6 +1948,10 @@ PODS:
     - ReactNativeDependencies
   - SovelAccess (0.1.0):
     - ExpoModulesCore
+  - SovelNetwork (0.1.0):
+    - ExpoModulesCore
+    - SovelSMBClient
+  - SovelSMBClient (0.1.0)
   - Yoga (0.0.0):
     - React-Core-prebuilt
 
@@ -2058,6 +2062,8 @@ DEPENDENCIES:
   - RNSVG (from `../node_modules/react-native-svg`)
   - SocketRocket (from `build/rndeps-facades/SocketRocket`)
   - SovelAccess (from `../modules/sovel-access/ios`)
+  - SovelNetwork (from `../modules/sovel-network/ios`)
+  - SovelSMBClient (from `../modules/sovel-network/ios/SovelSMBClient.podspec`)
   - Yoga (from `build/rncore-facades/Yoga`)
 
 EXTERNAL SOURCES:
@@ -2272,6 +2278,10 @@ EXTERNAL SOURCES:
     :path: build/rndeps-facades/SocketRocket
   SovelAccess:
     :path: "../modules/sovel-access/ios"
+  SovelNetwork:
+    :path: "../modules/sovel-network/ios"
+  SovelSMBClient:
+    :podspec: "../modules/sovel-network/ios/SovelSMBClient.podspec"
   Yoga:
     :path: build/rncore-facades/Yoga
 
@@ -2281,7 +2291,7 @@ SPEC CHECKSUMS:
   EXConstants: ff5c226215048137ea31d39fa460027a6daeeadc
   Expo: e782a7e4540040ff71048f2ebde98e97eea54ba8
   ExpoAsset: 7c69bf16ddb143a238c9d6a55b9f699cc60b72cf
-  ExpoAudio: 396ea0ded93d430a61ef15b12454ee9e84a734c3
+  ExpoAudio: 1b117b1469621f74562b266b40918d0aa99cafa2
   ExpoBlur: fc9e98a643cf63e25c5a31360220970f63e68563
   ExpoDomWebView: b2a6d681b9d34c23b1f584321386ca8da1d36afb
   ExpoFileSystem: 1c31c9a87bbdf5877865be753f2b9aa1df9bd015
@@ -2381,8 +2391,10 @@ SPEC CHECKSUMS:
   RNSVG: c35beed3dcf6fd14b50ca1fc0d4214a17ec5334d
   SocketRocket: 37aec555668fb852ec12e3c0de59a86ca58f0871
   SovelAccess: 8bd42dbbf6b212808fe6289654a29ab3a8b2f469
+  SovelNetwork: 25a265ce0df962fc580020678323ae9b9fd217a4
+  SovelSMBClient: eb1bad3a8fd52a4533df8c5dc9c335031b86fb9b
   Yoga: d1c536142c5ff8ec8cd856ab2a7c227a1d875c8e
 
-PODFILE CHECKSUM: 726d7690e66f077517897fba1683701c89094543
+PODFILE CHECKSUM: f27af97d241e4854fd5c21db4f4fa7d60b577744
 
 COCOAPODS: 1.17.0

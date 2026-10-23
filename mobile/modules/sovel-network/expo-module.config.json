@@ -1,0 +1,17 @@
+{
+  "platforms": [
+    "ios",
+    "android"
+  ],
+  "ios": {
+    "modules": [
+      "SovelNetworkModule"
+    ],
+    "podspecPath": "ios/SovelNetwork.podspec"
+  },
+  "android": {
+    "modules": [
+      "expo.modules.sovelnetwork.SovelNetworkModule"
+    ]
+  }
+}

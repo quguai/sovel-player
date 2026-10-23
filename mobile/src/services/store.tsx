@@ -15,12 +15,14 @@ import {
   useAudioPlaylistStatus,
 } from "expo-audio";
 import type { CatalogQuery } from "../core/catalog";
+import { type ServerSession, type ServerLibrary } from "../core/mediaServer";
 import {
-  type ServerSession,
-  type ServerKind,
-  type ServerLibrary,
-} from "../core/mediaServer";
-import { saveSourceToken, sourceToken, remoteLyrics } from "./remoteSources";
+  prepareRemoteSources,
+  saveSourceToken,
+  sourceToken,
+  remoteLyrics,
+  syncClient,
+} from "./remoteSources";
 import type { RemoteProgress } from "../core/remoteSync";
 import { Library } from "../core/library";
 import { StartupAttempt } from "../core/startup";
@@ -30,6 +32,7 @@ import {
   defaults,
   isRemoteSource,
   type MusicSource,
+  type RemoteKind,
   playbackModes,
   type PlaybackMode,
   type Preferences,
@@ -43,7 +46,14 @@ import * as files from "./files";
 import { canPlay, supportsDsf, configureDsd } from "./playbackSupport";
 import { normalizeDsd, type PcmRate } from "../core/dsd";
 import { normalizeEqualizer, type EqualizerSettings } from "../core/equalizer";
-import { configureEqualizer, readEqStatus } from "./equalizer";
+import {
+  normalizeReplayGain,
+  replayGainDb,
+  type ReplayGainSettings,
+} from "../core/replayGain";
+import { applyTheme } from "../core/theme";
+import { normalizePeq, type PeqSettings } from "../core/peq";
+import { configurePeq, configureEqualizer, readEqStatus } from "./equalizer";
 import { normalizePreferences } from "../core/preferences";
 import { normalizeLyricOffset, currentLyric } from "../core/lyrics";
 import {
@@ -300,6 +310,7 @@ function useStore() {
       await stage("准备音频播放", async () => {
         eqSettings.current = normalizeEqualizer(saved.equalizer);
         if (readEqStatus().available) configureEqualizer(eqSettings.current);
+        configurePeq(saved.peq);
         if (supportsDsf) configureDsd(saved.dsd);
         await setAudioModeAsync({
           playsInSilentMode: true,
@@ -329,6 +340,7 @@ function useStore() {
           files.sourceStatus(t.sourceId)?.enabled !== false,
       }));
       library.current = lib;
+      applyTheme(saved.theme);
       prefsRef.current = saved;
       setPrefs(saved);
       setTracks(visible);
@@ -384,6 +396,7 @@ function useStore() {
   }, [startupAttempt]);
   const preferences = (patch: Partial<Preferences>) => {
     const next = normalizePreferences({ ...prefsRef.current, ...patch });
+    applyTheme(next.theme);
     prefsRef.current = next;
     setPrefs(next);
     const write = prefWrites.current
@@ -483,6 +496,8 @@ function useStore() {
       await library.current!.set("playbackSession", snapshot);
       if (revision !== queueRevision.current) return;
       if (!reuse) {
+        await prepareRemoteSources(ordered);
+        if (revision !== queueRevision.current) return;
         playlist.clear();
         if (
           !(await addQueueSources(
@@ -506,6 +521,11 @@ function useStore() {
       originalQueue.current = original.map(latestFavorite);
       activeSession.current = snapshot;
       playlist.loop = mode === "single" ? "single" : "all";
+      nativePlaylist.setSovelReplayGains?.(
+        ordered.map((t) =>
+          replayGainDb(t.replayGain, prefsRef.current.replayGain),
+        ),
+      );
       playlist.skipTo(ordered.findIndex((t) => t.id === track.id));
       nativePlaylist.setSovelQueueToken?.(snapshot.token);
       nativePlaylist.bindSovelListeningQueue?.(snapshot.nativeIds);
@@ -602,6 +622,8 @@ function useStore() {
     });
     if (next.equalizer.enabled && !readEqStatus().available)
       throw new Error("请安装新版应用后再恢复已开启的均衡器");
+    if (next.replayGain.mode !== "off" && !nativePlaylist.setSovelReplayGains)
+      throw new Error("请安装包含回放增益模块的新版应用");
     // Validate first; apply native side effects before committing the settings document.
     try {
       await setAudioModeAsync({
@@ -610,10 +632,17 @@ function useStore() {
         interruptionMode: "doNotMix",
       });
       if (readEqStatus().available) configureEqualizer(next.equalizer);
+      configurePeq(next.peq);
+      nativePlaylist.setSovelReplayGains?.(
+        queueRef.current.map((t) =>
+          replayGainDb(t.replayGain, next.replayGain),
+        ),
+      );
       if (supportsDsf) configureDsd(next.dsd);
       await prefWrites.current.catch(() => {});
       await library.current!.set("preferences", next);
       eqSettings.current = next.equalizer;
+      applyTheme(next.theme);
       prefsRef.current = next;
       setPrefs(next);
       if (previous.playbackMode !== next.playbackMode)
@@ -627,6 +656,12 @@ function useStore() {
         interruptionMode: "doNotMix",
       });
       if (readEqStatus().available) configureEqualizer(previous.equalizer);
+      configurePeq(previous.peq);
+      nativePlaylist.setSovelReplayGains?.(
+        queueRef.current.map((t) =>
+          replayGainDb(t.replayGain, previous.replayGain),
+        ),
+      );
       if (supportsDsf) configureDsd(previous.dsd);
       throw e;
     }
@@ -641,6 +676,33 @@ function useStore() {
       await preferences({ backgroundPlayback: enabled });
     } catch (e) {
       setError(String(e));
+    }
+  };
+  const setReplayGain = (patch: Partial<ReplayGainSettings>) => {
+    try {
+      const next = normalizeReplayGain({
+        ...prefsRef.current.replayGain,
+        ...patch,
+      });
+      if (next.mode !== "off" && !nativePlaylist.setSovelReplayGains)
+        throw new Error("请安装包含回放增益模块的新版应用");
+      nativePlaylist.setSovelReplayGains?.(
+        queueRef.current.map((t) => replayGainDb(t.replayGain, next)),
+      );
+      void preferences({ replayGain: next });
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+  const setPeq = (update: (previous: PeqSettings) => PeqSettings) => {
+    try {
+      const next = normalizePeq(update(prefsRef.current.peq));
+      configurePeq(next);
+      void preferences({ peq: next });
+      return true;
+    } catch (e) {
+      setError(String(e));
+      return false;
     }
   };
   const setEqualizer = (
@@ -1136,7 +1198,7 @@ function useStore() {
     }
   };
   const connectSource = async (
-    kind: ServerKind,
+    kind: RemoteKind,
     url: string,
     session: ServerSession,
     selected: ServerLibrary[],
@@ -1196,6 +1258,14 @@ function useStore() {
         sourceToken(id),
         controller.signal,
         setRemoteProgress,
+        await syncClient(source, prefs.scanRules, (done) =>
+          setRemoteProgress({
+            sourceId: id,
+            phase: "discovering",
+            done,
+            total: null,
+          }),
+        ),
       );
       await restoreSources();
       await refresh();
@@ -1341,6 +1411,8 @@ function useStore() {
     setBackgroundPlayback,
     eqStatus,
     setEqualizer,
+    setPeq,
+    setReplayGain,
     setDsdRate,
     restoreSettings,
     listeningAvailable: listeningAvailable(),

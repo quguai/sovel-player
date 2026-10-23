@@ -1,3 +1,4 @@
+import { validTheme } from "./theme";
 import { normalizePreferences } from "./preferences";
 import type { Preferences } from "./types";
 export type PortableSettings = Omit<Preferences, "lastTrack">;
@@ -101,6 +102,37 @@ export function parseSettingsBackup(text: string): SettingsBackup {
       eq.userPresets.length
   )
     throw new Error("均衡器参数或自定义预设无效");
+  if (p.peq !== undefined) {
+    const q = p.peq;
+    if (
+      !q ||
+      typeof q.enabled !== "boolean" ||
+      typeof q.headroom !== "boolean" ||
+      q.preamp !== normalized.peq.preamp ||
+      !Array.isArray(q.bands) ||
+      q.bands.length > 10 ||
+      q.bands.some(
+        (b: any, i: number) =>
+          !b ||
+          ["enabled", "type", "frequency", "gain", "q"].some(
+            (k) => b[k] !== (normalized.peq.bands[i] as any)?.[k],
+          ),
+      )
+    )
+      throw new Error("PEQ 参数无效");
+  }
+  if (p.replayGain !== undefined) {
+    const r = p.replayGain;
+    if (
+      !r ||
+      ["mode", "preamp", "preventClipping"].some(
+        (k) => r[k] !== (normalized.replayGain as any)[k],
+      )
+    )
+      throw new Error("回放增益参数无效");
+  }
+  if (p.theme !== undefined && !validTheme(p.theme))
+    throw new Error("主题配色无效");
   // Only exportable fields survive; paths, grants, queues and arbitrary keys never enter storage.
   return createSettingsBackup(
     normalized,

@@ -173,7 +173,7 @@ export class Catalog {
       sql: `WITH ranked AS (
       SELECT t.id,t.source_id,t.uri,t.path,t.size,t.mtime,${available} AS available,c.*,s.name,s.kind,${favorite} AS favorite,
       COUNT(*) OVER(PARTITION BY c.song_key) AS copy_count,
-      ROW_NUMBER() OVER(PARTITION BY c.song_key ORDER BY ${available} DESC, (${supported}) DESC, (t.id=COALESCE(p.preferred_copy,'')) DESC,c.lossless DESC,(s.kind NOT IN ('jellyfin','emby')) DESC,COALESCE(o.priority,100) ASC,COALESCE(json_extract(c.summary,'$.bits'),0) DESC,COALESCE(json_extract(c.summary,'$.sampleRate'),0) DESC,t.id ASC) AS rank
+      ROW_NUMBER() OVER(PARTITION BY c.song_key ORDER BY ${available} DESC, (${supported}) DESC, (t.id=COALESCE(p.preferred_copy,'')) DESC,c.lossless DESC,(s.kind IN ('managed','directory','file')) DESC,COALESCE(o.priority,100) ASC,COALESCE(json_extract(c.summary,'$.bits'),0) DESC,COALESCE(json_extract(c.summary,'$.sampleRate'),0) DESC,t.id ASC) AS rank
       FROM tracks t JOIN catalog_copies c ON c.track_id=t.id JOIN sources s ON s.id=t.source_id
       LEFT JOIN source_options o ON o.source_id=s.id LEFT JOIN song_preferences p ON p.song_key=c.song_key ${health}
       WHERE ${conditions.join(" AND ")}
@@ -241,14 +241,14 @@ export class Catalog {
     });
     const row = await this.db.getFirstAsync<{ source_id: string }>(
       sql +
-        `SELECT source_id,COUNT(DISTINCT song_key) AS n,MIN(lossless) AS quality FROM ranked WHERE available=1 AND format NOT IN (${dsf ? "'DFF','APE','WV'" : "'DSF','DFF','APE','WV'"}) GROUP BY source_id HAVING n=(SELECT COUNT(*) FROM chosen) ORDER BY quality DESC,(kind NOT IN ('jellyfin','emby')) DESC,COALESCE((SELECT priority FROM source_options WHERE source_id=ranked.source_id),100) ASC,source_id LIMIT 1`,
+        `SELECT source_id,COUNT(DISTINCT song_key) AS n,MIN(lossless) AS quality FROM ranked WHERE available=1 AND format NOT IN (${dsf ? "'DFF','APE','WV'" : "'DSF','DFF','APE','WV'"}) GROUP BY source_id HAVING n=(SELECT COUNT(*) FROM chosen) ORDER BY quality DESC,(kind IN ('managed','directory','file')) DESC,COALESCE((SELECT priority FROM source_options WHERE source_id=ranked.source_id),100) ASC,source_id LIMIT 1`,
       ...params,
     );
     return row?.source_id;
   }
   async copies(songKey: string) {
     const rows = await this.db.getAllAsync<Row>(
-      `SELECT t.*,c.summary,c.song_key,c.release_key,s.name,s.kind,EXISTS(SELECT 1 FROM favorites f JOIN catalog_copies fc ON fc.track_id=f.track_id WHERE fc.song_key=c.song_key) AS favorite FROM catalog_copies c JOIN tracks t ON t.id=c.track_id JOIN sources s ON s.id=t.source_id LEFT JOIN source_options o ON o.source_id=s.id WHERE c.song_key=? AND COALESCE(o.enabled,1)=1 ORDER BY t.available DESC,c.lossless DESC,(s.kind NOT IN ('jellyfin','emby')) DESC,COALESCE(o.priority,100),t.id`,
+      `SELECT t.*,c.summary,c.song_key,c.release_key,s.name,s.kind,EXISTS(SELECT 1 FROM favorites f JOIN catalog_copies fc ON fc.track_id=f.track_id WHERE fc.song_key=c.song_key) AS favorite FROM catalog_copies c JOIN tracks t ON t.id=c.track_id JOIN sources s ON s.id=t.source_id LEFT JOIN source_options o ON o.source_id=s.id WHERE c.song_key=? AND COALESCE(o.enabled,1)=1 ORDER BY t.available DESC,c.lossless DESC,(s.kind IN ('managed','directory','file')) DESC,COALESCE(o.priority,100),t.id`,
       songKey,
     );
     return rows.map((r) => this.track(r));

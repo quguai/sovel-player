@@ -10,8 +10,11 @@ web-build/
 artifacts/
 coverage/
 *.tsbuildinfo
+__pycache__/
 
 # Native build caches
+.build/
+.swiftpm/
 Pods/
 .gradle/
 .kotlin/

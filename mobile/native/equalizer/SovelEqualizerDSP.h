@@ -6,11 +6,14 @@
 #include <cstdint>
 #include <cstring>
 #include <mutex>
+#include <memory>
 
 // Sovel's streaming graphic EQ. Peaking biquads use the W3C Audio EQ Cookbook
 // equations. No NeriPlayer DSP code or preset coefficients are copied.
 namespace sovel {
 constexpr int bands = 10;
+constexpr int filters = bands * 2;
+struct ParametricBand { int type = 0; double frequency = 1000, gain = 0, q = 1; };
 constexpr int maxChannels = 8;
 constexpr double frequencies[bands] = {31.25, 62.5, 125, 250, 500, 1000, 2000, 4000, 8000, 16000};
 constexpr double pi = 3.14159265358979323846;
@@ -19,6 +22,10 @@ struct Settings {
   bool headroom = true;
   double preamp = 0;
   std::array<double, bands> gains{};
+  bool peqEnabled = false, peqHeadroom = true;
+  double peqPreamp = 0;
+  double replayGain = 0;
+  std::array<ParametricBand, bands> peq{};
   uint64_t revision = 1;
 };
 inline double bounded(double v, double low, double high) {
@@ -33,6 +40,20 @@ struct Parameters {
     value.headroom = headroom;
     value.preamp = bounded(preamp, -24, 0);
     for (int i = 0; i < bands; ++i) value.gains[i] = bounded(gains[i], -12, 12);
+    ++value.revision;
+  }
+  void setReplayGain(double db) {
+    std::lock_guard<std::mutex> guard(mutex);
+    value.replayGain=bounded(db,-60,24); ++value.revision;
+  }
+  void setPeq(bool enabled, const double* flat, int count, double preamp, bool headroom) {
+    std::lock_guard<std::mutex> guard(mutex);
+    value.peqEnabled = enabled; value.peqHeadroom = headroom;
+    value.peqPreamp = bounded(preamp, -24, 0); value.peq = {};
+    for (int i=0; i<std::min(bands,count/4); ++i) {
+      const double* b=flat+i*4;
+      value.peq[i]={int(bounded(b[0],0,3)), bounded(b[1],10,24000), bounded(b[2],-24,24), bounded(b[3],0.1,20)};
+    }
     ++value.revision;
   }
   // The render thread never waits on the settings/UI thread.
@@ -55,14 +76,28 @@ Runtime& runtime();
 struct Coefficients {
   double b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0;
 };
-inline Coefficients peak(double frequency, double gain, double rate) {
+inline Coefficients peak(double frequency, double gain, double rate, double q=std::sqrt(2.0)) {
   if (frequency >= rate * 0.49 || std::abs(gain) < 1e-9) return {};
   const double a = std::pow(10.0, gain / 40.0);
   const double w = 2 * pi * frequency / rate;
-  const double alpha = std::sin(w) / (2 * std::sqrt(2.0));
+  const double alpha = std::sin(w) / (2 * q);
   const double a0 = 1 + alpha / a;
   return {(1 + alpha * a) / a0, -2 * std::cos(w) / a0,
           (1 - alpha * a) / a0, -2 * std::cos(w) / a0, (1 - alpha / a) / a0};
+}
+inline Coefficients parametric(const ParametricBand& b, double rate) {
+  if (!b.type || b.frequency >= rate*0.49 || std::abs(b.gain)<1e-9) return {};
+  if (b.type==1) return peak(b.frequency,b.gain,rate,b.q);
+  const double a=std::pow(10.0,b.gain/40), w=2*pi*b.frequency/rate, c=std::cos(w);
+  const double beta=std::sqrt(a)*std::sin(w)/b.q;
+  if (b.type==2) {
+    const double a0=(a+1)+(a-1)*c+beta;
+    return {a*((a+1)-(a-1)*c+beta)/a0, 2*a*((a-1)-(a+1)*c)/a0,
+      a*((a+1)-(a-1)*c-beta)/a0, -2*((a-1)+(a+1)*c)/a0, ((a+1)+(a-1)*c-beta)/a0};
+  }
+  const double a0=(a+1)-(a-1)*c+beta;
+  return {a*((a+1)+(a-1)*c+beta)/a0, -2*a*((a-1)+(a+1)*c)/a0,
+    a*((a+1)+(a-1)*c-beta)/a0, 2*((a-1)-(a+1)*c)/a0, ((a+1)-(a-1)*c-beta)/a0};
 }
 inline double magnitudeSquared(const Coefficients& c, double w) {
   const double x = std::cos(w), y = std::sin(w), xx = std::cos(2*w), yy = std::sin(2*w);
@@ -97,21 +132,30 @@ class Equalizer {
   double rate_ = 0, wet_ = 0, wetTarget_ = 0, gain_ = 1, gainTarget_ = 1;
   int channels_ = 0, format_ = 0, ramp_ = 0, activeBands_ = 0;
   double effectivePreamp_ = 0;
-  std::array<Coefficients,bands> coefficients_{}, targets_{};
+  std::shared_ptr<std::atomic<double>> itemGain_;
+  double lastItemGain_ = 0;
+  std::array<Coefficients,filters> coefficients_{}, targets_{};
   struct Delay { double z1 = 0, z2 = 0; };
-  std::array<std::array<Delay,bands>,maxChannels> state_{};
+  std::array<std::array<Delay,filters>,maxChannels> state_{};
   uint64_t revision_ = 0;
   void update() {
     Settings next;
-    if (!parameters_.read(next) || next.revision == revision_) return;
+    if (!parameters_.read(next)) return;
+    const double itemGain=itemGain_ ? itemGain_->load() : next.replayGain;
+    if (next.revision == revision_ && itemGain == lastItemGain_) return;
+    lastItemGain_=itemGain;
     revision_ = next.revision; settings_ = next;
     double maxBoost = 0;
-    bool changed = std::abs(next.preamp) > 1e-9;
+    const double preamp=(next.enabled ? next.preamp : 0)+(next.peqEnabled ? next.peqPreamp : 0)+itemGain;
+    bool changed = std::abs(preamp)>1e-9;
     for (int i = 0; i < bands; ++i) {
-      targets_[i] = peak(frequencies[i], next.gains[i], rate_);
-      if (frequencies[i] < rate_*0.49) changed |= std::abs(next.gains[i]) > 1e-9;
+      targets_[i] = next.enabled ? peak(frequencies[i], next.gains[i], rate_) : Coefficients{};
+      targets_[bands+i] = next.peqEnabled ? parametric(next.peq[i],rate_) : Coefficients{};
+      if (next.enabled && frequencies[i]<rate_*0.49) changed |= std::abs(next.gains[i])>1e-9;
+      const auto& p=next.peq[i];
+      if (next.peqEnabled && p.type && p.frequency<rate_*0.49) changed |= std::abs(p.gain)>1e-9;
     }
-    if (next.headroom) {
+    if ((next.enabled && next.headroom) || (next.peqEnabled && next.peqHeadroom)) {
       // Estimate combined response, not just the highest individual slider.
       for (int i=0; i<512; ++i) {
         const double f = 10 * std::pow(rate_*0.049, i/511.0);
@@ -121,13 +165,14 @@ class Equalizer {
       }
       if (maxBoost > 0.01) maxBoost += 0.5; // small measurement-grid margin
     }
-    effectivePreamp_ = next.preamp-maxBoost;
+    effectivePreamp_ = preamp-maxBoost;
     gainTarget_ = std::pow(10.0,effectivePreamp_/20.0);
-    wetTarget_ = next.enabled && changed ? 1 : 0;
+    wetTarget_ = changed ? 1 : 0;
     ramp_ = std::max(1,int(rate_*0.04));
   }
 public:
   explicit Equalizer(Parameters& p=parameters(), Runtime& r=runtime()): parameters_(p),runtime_(r) {}
+  void setGainSource(std::shared_ptr<std::atomic<double>> gain) { itemGain_=std::move(gain); }
   bool configure(double rate, int channels, int format) {
     rate_=rate; channels_=channels; format_=format;
     const bool valid=std::isfinite(rate) && rate>=8000 && rate<=768000 && channels>0 && channels<=maxChannels && format>=1 && format<=4;
@@ -163,7 +208,7 @@ public:
       if (ramp_>0) {
         const double step=1.0/ramp_--;
         wet_+=(wetTarget_-wet_)*step; gain_+=(gainTarget_-gain_)*step;
-        for (int i=0;i<bands;++i) {
+        for (int i=0;i<filters;++i) {
           auto& c=coefficients_[i]; const auto& t=targets_[i];
           c.b0+=(t.b0-c.b0)*step; c.b1+=(t.b1-c.b1)*step; c.b2+=(t.b2-c.b2)*step;
           c.a1+=(t.a1-c.a1)*step; c.a2+=(t.a2-c.a2)*step;
@@ -174,7 +219,7 @@ public:
         auto* p=planar ? planes[channel]+frame*bytes : planes[0]+(frame*channels_+channel)*bytes;
         const double input=decode(p,format_);
         double output=input*gain_;
-        for (int i=0;i<bands;++i) {
+        for (int i=0;i<filters;++i) {
           const auto& c=coefficients_[i]; auto& d=state_[channel][i];
           const double y=c.b0*output+d.z1;
           d.z1=c.b1*output-c.a1*y+d.z2; d.z2=c.b2*output-c.a2*y;

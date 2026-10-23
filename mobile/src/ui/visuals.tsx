@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   Animated,
@@ -32,16 +32,13 @@ import {
   type Track,
 } from "../core/types";
 import { artUri } from "../services/files";
-import { albumPlaceholder, artistPlaceholder } from "../core/placeholderArtwork";
+import {
+  albumPlaceholder,
+  artistPlaceholder,
+} from "../core/placeholderArtwork";
 import { placeholderAssets } from "./placeholderAssets";
-export const palette = {
-  bg: "#17191c",
-  surface: "#24262b",
-  gold: "#d5b782",
-  text: "#f2f0eb",
-  muted: "#929398",
-  line: "#ffffff12",
-};
+import { palette } from "../core/theme";
+export { palette };
 const icons: Record<string, string> = {
   grid: "M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z",
   list: "M3 5h3v3H3Zm7 1h11M3 11h3v3H3Zm7 1h11M3 17h3v3H3Zm7 1h11",
@@ -99,11 +96,22 @@ export function Icon({
     </Svg>
   );
 }
-function ArtworkImage({ uri, fallback }: { uri?: string; fallback: ImageSourcePropType }) {
+function ArtworkImage({
+  uri,
+  fallback,
+}: {
+  uri?: string;
+  fallback: ImageSourcePropType;
+}) {
   const [failedUri, setFailedUri] = useState<string>();
   return (
     <>
-      <Image source={fallback} resizeMode="cover" style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]} accessible={false} />
+      <Image
+        source={fallback}
+        resizeMode="cover"
+        style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
+        accessible={false}
+      />
       {!!uri && failedUri !== uri && (
         <Image
           key={uri}
@@ -143,11 +151,23 @@ export function Cover({
       ]}
     >
       <Icon name="disc" size={size ? size * 0.35 : 48} color="#e2d0ad" />
-      <ArtworkImage key={uri || "default"} uri={uri} fallback={placeholderAssets[albumPlaceholder(track)]} />
+      <ArtworkImage
+        key={uri || "default"}
+        uri={uri}
+        fallback={placeholderAssets[albumPlaceholder(track)]}
+      />
     </View>
   );
 }
-export function ArtistAvatar({ artwork, name, size = 34 }: { artwork?: string; name?: string; size?: number }) {
+export function ArtistAvatar({
+  artwork,
+  name,
+  size = 34,
+}: {
+  artwork?: string;
+  name?: string;
+  size?: number;
+}) {
   const uri = artUri(artwork);
   return (
     <View
@@ -163,7 +183,11 @@ export function ArtistAvatar({ artwork, name, size = 34 }: { artwork?: string; n
       }}
     >
       <Icon name="artist" size={size * 0.45} color="#e2d0ad" />
-      <ArtworkImage key={uri || "default"} uri={uri} fallback={placeholderAssets[artistPlaceholder(name)]} />
+      <ArtworkImage
+        key={uri || "default"}
+        uri={uri}
+        fallback={placeholderAssets[artistPlaceholder(name)]}
+      />
     </View>
   );
 }
@@ -359,7 +383,9 @@ export function Record({
     : -7;
   const [rotation] = useState(() => new Animated.Value(0));
   const [arm] = useState(() => new Animated.Value(armAngle));
-  const [light] = useState(() => new Animated.Value(playing && stylusLight !== "off" ? 1 : 0));
+  const [light] = useState(
+    () => new Animated.Value(playing && stylusLight !== "off" ? 1 : 0),
+  );
   const armMotion = useRef({
     playing,
     progress,

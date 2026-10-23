@@ -40,7 +40,33 @@ static void integerGain(int format) {
   }
   assert(std::abs(10*std::log10(wet/dry)-6)<0.03);
 }
+static double parametricGain(int type, double hz, double center, double gain, double q, double replay=0, bool headroom=false) {
+  sovel::Parameters p; sovel::Runtime r; sovel::Equalizer eq(p,r);
+  const double filter[]={double(type),center,gain,q}; p.setPeq(true,filter,4,0,headroom); p.setReplayGain(replay);
+  assert(eq.configure(48000,1,4)); std::vector<float> pcm(48000);
+  for(int i=0;i<48000;++i) pcm[i]=float(.02*std::sin(2*sovel::pi*hz*i/48000));
+  auto* data=reinterpret_cast<uint8_t*>(pcm.data()); eq.process(&data,48000);
+  double dry=0,wet=0;
+  for(int i=24000;i<48000;++i) { double d=.02*std::sin(2*sovel::pi*hz*i/48000); dry+=d*d; wet+=pcm[i]*pcm[i]; }
+  return 10*std::log10(wet/dry);
+}
 int main() {
+  assert(std::abs(parametricGain(1,3000,3000,7,4)-7)<.03);
+  assert(std::abs(parametricGain(1,500,500,-10,.7)+10)<.03);
+  assert(std::abs(parametricGain(2,40,1000,6,.707)-6)<.03);
+  assert(std::abs(parametricGain(3,18000,1000,-8,.707)+8)<.03);
+  assert(parametricGain(1,1500,3000,7,4)<parametricGain(1,1500,3000,7,.5));
+  assert(std::abs(parametricGain(0,1000,1000,0,1,-6)+6)<.03);
+  assert(std::abs(parametricGain(0,1000,1000,0,1,6)-6)<.03);
+  assert(parametricGain(1,1000,1000,12,2,0,true)<0);
+  // Each iOS queued item owns its own gain, independent of the current item.
+  { sovel::Parameters p; sovel::Runtime r; sovel::Equalizer a(p,r), b(p,r);
+    auto gain=std::make_shared<std::atomic<double>>(-6); a.setGainSource(gain);
+    a.configure(48000,1,4); b.configure(48000,1,4);
+    std::vector<float> aa(48000,.1f),bb(48000,.1f); auto* pa=reinterpret_cast<uint8_t*>(aa.data()); auto* pb=reinterpret_cast<uint8_t*>(bb.data());
+    a.process(&pa,48000); b.process(&pb,48000); assert(std::abs(aa.back()-.0501187)<1e-5 && bb.back()==.1f);
+    gain->store(0); a.process(&pa,48000); }
+
   assert(std::abs(sineGain(1000,5,6)-6)<0.03);
   assert(std::abs(sineGain(1000,5,-9)+9)<0.03);
   assert(std::abs(sineGain(31.25,0,8)-8)<0.08);

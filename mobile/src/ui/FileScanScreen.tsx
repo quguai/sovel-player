@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { themeStyles } from "./themeStyles";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -6,12 +7,11 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
-  StyleSheet,
-} from "react-native";
+  } from "react-native";
 import { useMusic } from "../services/store";
 import { normalizeScanRules } from "../core/scanRules";
 import { isRemoteSource, type ScanRules } from "../core/types";
-import { Action, Button, navigationHeader } from "./components";
+import { Action, Button, navigationHeader, settingsContent } from "./components";
 import { SettingGroup, SettingRow, SettingSwitch } from "./SettingsPanels";
 import { palette as p } from "./visuals";
 export function FileScanScreen({ onBack }: { onBack: () => void }) {
@@ -59,13 +59,12 @@ export function FileScanScreen({ onBack }: { onBack: () => void }) {
       </View>
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={s.content}
+        contentContainerStyle={settingsContent}
       >
-        <Text style={s.intro}>把你的音乐，留在原来的位置。</Text>
         <Text style={s.note}>
-          仅建立曲库索引，不额外复制音频。先扫描并统计全部文件，再按总数显示导入进度。
+          原文件建立索引，不复制音频。先扫描，再导入。
         </Text>
-        <View style={[s.card, { marginVertical: 22 }]}>
+        <View style={[s.card, { marginVertical: 14 }]}>
           <Text style={s.title}>
             音乐来源{" "}
             <Text style={s.note}>
@@ -167,7 +166,7 @@ export function FileScanScreen({ onBack }: { onBack: () => void }) {
             />
           </SettingRow>
         </SettingGroup>
-        <Text style={[s.note, { marginTop: -10, marginBottom: 20 }]}>
+        <Text style={[s.note, { marginTop: -5, marginBottom: 12 }]}>
           规则只影响本次扫描范围，已入库但被过滤的歌曲会保留。
         </Text>
         <View style={s.actions}>
@@ -322,22 +321,21 @@ export function FileScanScreen({ onBack }: { onBack: () => void }) {
     </View>
   );
 }
-const s = StyleSheet.create({
+const s = themeStyles(() => ({
   heading: { color: p.text, fontSize: 19, fontWeight: "600" },
-  content: { padding: 24, paddingBottom: 50 },
-  intro: { color: p.text, fontSize: 19, fontWeight: "500", marginBottom: 10 },
-  note: { color: p.muted, fontSize: 12, lineHeight: 19 },
+  note: { color: p.muted, fontSize: 12, lineHeight: 17 },
   title: { color: p.text, fontSize: 15, fontWeight: "600" },
   gold: { color: p.gold, fontSize: 13, fontWeight: "600" },
-  card: { backgroundColor: "#ffffff05", padding: 17, borderRadius: 17 },
+  card: { backgroundColor: "#ffffff05", padding: 14, borderRadius: 14 },
   actions: { flexDirection: "row", gap: 10 },
   sourceButton: {
     flex: 1,
-    paddingVertical: 15,
+    minHeight: 44,
+    paddingVertical: 11,
     borderRadius: 10,
-    backgroundColor: "#d5b7820d",
+    backgroundColor: `${p.gold}0d`,
     alignItems: "center",
-    marginTop: 16,
+    marginTop: 10,
   },
   threshold: {
     flexDirection: "row",
@@ -355,7 +353,8 @@ const s = StyleSheet.create({
   },
   scanButton: {
     flex: 1,
-    padding: 18,
+    minHeight: 64,
+    padding: 14,
     borderRadius: 15,
     backgroundColor: p.surface,
   },
@@ -371,9 +370,9 @@ const s = StyleSheet.create({
     backgroundColor: p.surface,
     borderRadius: 2,
     overflow: "hidden",
-    marginVertical: 14,
+    marginVertical: 10,
   },
   fill: { height: 4, backgroundColor: p.gold },
-  metrics: { flexDirection: "row", marginVertical: 17 },
+  metrics: { flexDirection: "row", marginVertical: 10 },
   metric: { color: p.gold, fontSize: 23, fontVariant: ["tabular-nums"] },
-});
+}));

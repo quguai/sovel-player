@@ -1,4 +1,3 @@
-import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { cartridgeColors, type CartridgeColor } from "../core/types";

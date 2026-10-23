@@ -24,23 +24,33 @@ Source capabilities and released APKs can differ. The new Jellyfin / Emby integr
 - **Scan without rebuilding your library.** Discover files first, then import against a fixed total. Incremental and full scans preserve favorites and preferences, with filters for size, hidden files, and subfolders.
 - **Connect your music servers.** Sign in to Jellyfin or Emby, select music libraries, sync their indexes and play original audio. Source cards control aggregation and priority; duplicate copies stay selectable.
 - **Browse your collection.** Albums, songs, artists, folders, search, favorites, and independently remembered card/list views for albums and artists.
-- **Make playback your own.** Cover, vinyl, and immersive views; nine record materials, two tonearms, cartridge colors, stylus lighting, and three rotation speeds.
+- **Make playback your own.** Cover, vinyl, and immersive views; nine record materials, two tonearms, cartridge colors, stylus lighting, and three rotation speeds. The About page adds a touch-responsive 3D brand card with a static reduced-motion alternative.
 - **Read and adjust lyrics.** Separate lyrics and song-information pages, timestamp highlighting, tap-to-seek, and per-song timing adjustments.
 - **Pick up where you left off.** Restore the queue, order, track, and position after restart, initially paused. Background playback, lock-screen controls, and a native sleep timer are included.
-- **Shape the sound.** Native ten-band EQ, six built-in presets, custom presets, preamp control, and automatic headroom. iOS processing is verified; Android integration awaits validation.
+- **Shape the sound.** Native ten-band EQ, parametric EQ with AutoEQ text import, ReplayGain, presets, preamp control, and automatic headroom. iOS processing is verified; Android integration awaits validation.
 - **Keep preferences local.** SQLite stores the library and listening history. Export settings and EQ presets to JSON and restore after a preview. Local discovery uses library tags, favorites, and listening history.
 
 ## Music sources
 
-Open **设置 → 音乐来源** (Settings → Music sources), add a **Jellyfin** or **Emby** server using its full HTTP(S) address, sign in, and select the music libraries you want. Reverse-proxy path prefixes are supported. Each selected library becomes a separate source you can enable and prioritize. Tap **同步曲库** to discover the complete catalog first, then import metadata with a fixed-total progress indicator.
+Open **设置 → 音乐来源** (Settings → Music sources). Search the LAN for **Jellyfin / Emby / DLNA**, or enter an address manually. Select a discovered server, sign in when required, and check the music libraries or folders to use. **SMB, WebDAV and OpenSubsonic** connections are also available. Reverse-proxy path prefixes are supported. Each selected library becomes a separate source you can enable and prioritize. Sources use compact two-column cards. Tap a card for connection details, aggregation controls, priority and sync. Tap **同步曲库** to discover the complete catalog first, then import metadata with a fixed-total progress indicator.
 
 - **One collection, selectable versions.** Matching copies share a song row. Open the source/version selector to choose a copy and remember it, or restore automatic selection. Different Live, remastered and release editions are not merged by title alone.
 - **Predictable defaults.** Among available, supported copies: remembered choice → lossless → local → source priority. Without per-song overrides, album playback prefers a complete album from one source.
 - **Keep your collection.** Disabling a source retains its index and favorites. Upgrades migrate the existing database; do not delete it or rebuild it from scratch. SQLite pages and search indexes keep browsing separate from full metadata loading.
 - **Index, then stream.** Remote sync currently enumerates the complete library in pages and updates metadata; it is not a server-side incremental change feed. Playback streams the original file, with no automatic transcoding, audio download or persistent stream cache. Native codec support still applies.
-- **Local credentials and listening data.** Tokens use the system secure store; the app does not save passwords. Server files are read-only; favorites and listening history are local, not synchronized back to the server.
+- **Local credentials and listening data.** Jellyfin/Emby access tokens and SMB/WebDAV/OpenSubsonic credentials use the system secure store, never SQLite or settings exports. DLNA does not require credentials. Server files are read-only; favorites and listening history are local, not synchronized back to the server.
 
-Integration has been exercised on an **iOS simulator with a mock server**, with contract tests for both adapters. Real Jellyfin / Emby deployments and Android native playback of this integration still need validation. **DLNA / UPnP, SMB, WebDAV and OpenSubsonic remain planned.** For migration details and the mock test setup, see the [mobile guide](mobile/README.md#aggregated-libraries-and-media-servers).
+| Connection | Discovery and access |
+| --- | --- |
+| Jellyfin / Emby | LAN UDP discovery or manual HTTP(S) address; sign in and select music libraries |
+| DLNA / UPnP | SSDP discovery or device-description URL; select ContentDirectory folders; HTTP audio playback (not casting) |
+| SMB | Manual `smb://host/Music` shared-folder URL, optional port/account/domain; read-only SMB2+ access |
+| WebDAV | Manual HTTP(S) directory URL, optional Basic authentication; directory scanning and HTTP Range tag reads |
+| OpenSubsonic | Manual server URL, account and password; music folders, album indexing and original streams |
+
+Auto-discovery needs the same LAN, local-network permission and server discovery ports reachable; manual addresses remain available when routers or containers block broadcasts. iOS physical-device discovery also requires Apple's multicast entitlement in the signing profile. SMB/WebDAV scan rules apply before tag import; scanning first counts matching files, then reads embedded tags, lyrics and artwork against a fixed total. No audio copy is added to the library.
+
+These connections are implemented in **development source**, not a promise about an older APK. Protocol contract tests and native Swift/Kotlin SMB2 and Range-read tests use local fixtures. iOS simulator integration uses test servers; physical NAS deployments and the complete Android app still need integration validation. See the [mobile guide](mobile/README.md#aggregated-libraries-and-media-servers) for limits and reproducible checks.
 
 ## Capability status
 
@@ -48,13 +58,14 @@ Integration has been exercised on an **iOS simulator with a mock server**, with 
 | --- | --- |
 | Local files and folders | Implemented; iOS access-in-place and restart recovery verified |
 | WAV / FLAC | Metadata and iOS playback verified with development fixtures |
-| DSF | ID3 tags, artwork, and lyrics parsing verified; playback not enabled |
+| DSF | Native DSD-to-PCM on Android and iOS; iOS simulator playback and restored seeking verified; physical output unverified |
 | Other audio formats | Platform- and codec-dependent; no blanket compatibility claim |
 | Ten-band EQ | Native integration on both platforms; iOS processing and presets verified |
 | Background playback / sleep timer | Native implementation; iOS simulator checks passed; real-device checks remain |
 | Jellyfin / Emby | Source selection, paged sync, aggregation and original-file streaming implemented; real-server validation pending |
-| SMB / WebDAV / DLNA / OpenSubsonic | Planned |
-| PEQ / AutoEQ / ReplayGain | Planned |
+| LAN discovery / SMB / WebDAV / DLNA / OpenSubsonic | Implemented in development source; local protocol/native tests; real-device/NAS checks remain |
+| PEQ / AutoEQ / ReplayGain | Native DSP implemented; measured response and iOS simulator checks passed |
+| Theme colors | Four dark presets and custom background/accent, saved and included in backups |
 | USB exclusive output / DoP / native DSD | Planned; requires Android and DAC validation |
 | Bit-perfect / guaranteed gapless playback | Not verified or promised by the current build |
 
@@ -155,11 +166,11 @@ Contributions are welcome. Include reproduction steps and device, OS, and audio-
 
 ## Roadmap
 
-- Connect remote libraries through SMB, WebDAV, DLNA/UPnP, and OpenSubsonic; evaluate additional server adapters separately.
+- Expand real-NAS/server compatibility testing and network interruption recovery; evaluate additional source adapters separately.
 - Validate Android playback, SAF/SD-card access, interruptions, and background behavior on real devices.
 - Extend decoding and output for DSD and additional lossless formats, with explicit per-device capabilities.
 - Develop and verify Android USB exclusive output and vendor-specific internal DAC paths.
-- Add PEQ, AutoEQ import, ReplayGain, playback transitions, and additional app languages.
+- Add playback transitions, per-output preset memory, and additional app languages.
 
 ## Credits and license
 

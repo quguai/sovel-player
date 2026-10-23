@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { themeStyles } from "./src/ui/themeStyles";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   BackHandler,
   Modal,
   Pressable,
   FlatList,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -333,7 +333,7 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
-const styles = StyleSheet.create({
+const styles = themeStyles(() => ({
   updateTrack: {
     height: 3,
     borderRadius: 3,
@@ -358,4 +358,4 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 45,
   },
-});
+}));

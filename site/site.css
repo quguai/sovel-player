@@ -361,7 +361,7 @@ html[lang="zh-CN"] .file-journey>div>span{font-size:9px}}
 .sources-intro p{margin:18px 0 0}
 .source-providers{display:flex;flex-wrap:wrap;align-items:center;gap:14px 32px;margin:38px 0 0;padding:22px 0;border-block:1px solid var(--line);color:var(--gold);font-size:14px}
 .source-providers>span{display:inline-flex;align-items:center;gap:10px}
-.source-providers>span+span{border-left:1px solid #dac39640;padding-left:32px}
+.source-providers>span{padding-block:4px}
 .sources-features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:36px;margin-block:36px}
 .sources-features .micro{font-size:9px;color:var(--gold)}
 .sources-features h3{font-size:19px;font-weight:500;margin:17px 0 12px}
@@ -371,7 +371,7 @@ html[lang="zh-CN"] .file-journey>div>span{font-size:9px}}
 .sources-foot a{font-size:11px;flex-shrink:0}
 .sources-validation{font-size:11px;line-height:1.9;color:var(--muted);max-width:880px;margin:20px 0 0}
 @media(max-width:800px){.sources-heading{gap:35px}.sources-features{gap:24px}.sources-foot{align-items:flex-start;flex-direction:column;gap:16px}}
-@media(max-width:620px){.sources-heading{grid-template-columns:1fr;gap:24px}.sources-badge{font-size:8px}.sources-features{grid-template-columns:1fr;gap:28px;margin-block:30px}.sources-features h3{font-size:18px;margin-top:10px}.sources-features p{max-width:none}.source-providers{font-size:12px;gap:16px;margin-top:28px}.source-providers>span+span{padding-left:16px}.sources-validation{font-size:10px}}
+@media(max-width:620px){.sources-heading{grid-template-columns:1fr;gap:24px}.sources-badge{font-size:8px}.sources-features{grid-template-columns:1fr;gap:28px;margin-block:30px}.sources-features h3{font-size:18px;margin-top:10px}.sources-features p{max-width:none}.source-providers{font-size:12px;gap:16px;margin-top:28px}.source-providers>span{padding-block:2px}.sources-validation{font-size:10px}}
 .header-github{min-width:44px;justify-content:center}
 .material-swatch{min-width:44px;min-height:44px}
 .not-found{min-height:100vh;justify-content:center}

@@ -57,10 +57,24 @@ final class SovelUITests: XCTestCase {
     let readyToAdd = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true AND enabled == true"), object: addLibrary)
     _ = XCTWaiter.wait(for: [readyToAdd], timeout: 3)
     tap("添加 1 个音乐库")
+    let cards = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND label ENDSWITH %@", "查看 ", " 详情"))
+    XCTAssertGreaterThanOrEqual(cards.count, 2)
+    let firstCard = cards.element(boundBy: 0).frame
+    let secondCard = cards.element(boundBy: 1).frame
+    XCTAssertEqual(firstCard.minY, secondCard.minY, accuracy: 1, "Music sources should use two columns")
+    XCTAssertLessThan(firstCard.maxX, secondCard.minX)
+    XCTAssertFalse(element("联调示例 · 模拟曲库 同步曲库").exists, "Source actions belong in details")
+    capture("sources-compact-grid")
+    tap("查看 联调示例 · 模拟曲库 详情")
     tap("联调示例 · 模拟曲库 同步曲库")
     XCTAssertTrue(app.staticTexts["联调示例 · 模拟曲库 同步完成"].waitForExistence(timeout: 30), app.debugDescription)
     capture("sources-remote-connected")
     if element("联调示例 · 模拟曲库 提高优先级").isEnabled { tap("联调示例 · 模拟曲库 提高优先级") }
+    tap("重新登录 / 选择音乐库")
+    XCTAssertTrue(element("服务器地址").waitForExistence(timeout: 10))
+    tap("取消添加")
+    tap("查看 联调示例 · 模拟曲库 详情")
+    tap("关闭来源详情")
     tap("返回设置"); tap("返回音乐库"); tap("按歌曲浏览")
     tap("选择 初见 的来源")
     capture("sources-duplicate-versions")
@@ -70,15 +84,89 @@ final class SovelUITests: XCTestCase {
     capture("sources-native-remote-playback")
     tap("暂停")
     tap("返回音乐库"); tap("设置"); tap("音乐来源")
+    tap("查看 联调示例 · 模拟曲库 详情")
     tap("联调示例 · 模拟曲库 参与聚合")
     capture("sources-disabled-keeps-index")
+    tap("关闭来源详情")
     tap("返回设置"); tap("返回音乐库"); tap("按歌曲浏览")
     XCTAssertFalse(element("播放 云端来信").exists, app.debugDescription)
     XCTAssertTrue(element("播放 初见").exists)
     app.terminate(); app.launch()
     tap("设置"); tap("音乐来源")
+    XCTAssertTrue(element("查看 联调示例 · 模拟曲库 详情").exists)
+    tap("查看 联调示例 · 模拟曲库 详情")
     XCTAssertTrue(element("联调示例 · 模拟曲库 参与聚合").exists)
     capture("sources-restart-preserves-choices")
+    tap("关闭来源详情")
+  }
+  func testNetworkSourcesDiscoveryAndPlayback() throws {
+    try runNetworkSources(discovery: true, protocols: ["DLNA", "WebDAV", "SMB", "OpenSubsonic"])
+  }
+  func testNetworkFileStreams() throws {
+    try runNetworkSources(discovery: false, protocols: ["WebDAV", "SMB"])
+  }
+  func fillNetworkCredential(_ label: String, _ text: String) {
+    tap(label)
+    let field = element(label)
+    if let existing = field.value as? String, existing != field.placeholderValue {
+      field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+    }
+    // Wait for the controlled TextInput to idle between characters.
+    for character in text { field.typeText(String(character)) }
+  }
+  func runNetworkSources(discovery: Bool, protocols: [String]) throws {
+    guard (try? Data(contentsOf: URL(string: "http://127.0.0.1:18768/description.xml")!)) != nil else { throw XCTSkip("Start tests/mock-network-sources.py") }
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("设置", timeout: 40); tap("音乐来源")
+    if discovery {
+    tap("添加远程来源")
+    capture("network-compact-connect")
+    tap("搜索局域网服务器")
+    XCTAssertTrue(element("选择 Sovel LAN Test").waitForExistence(timeout: 12), app.debugDescription)
+    capture("network-discovered-servers")
+    tap("选择 Sovel LAN Test")
+    XCTAssertEqual(element("服务器地址").value as? String, "http://127.0.0.1:18767")
+    tap("取消添加")
+    }
+    for (kind, address, name, song) in [
+      ("DLNA", "http://127.0.0.1:18768/description.xml", "Sovel DLNA Test", "DLNA 来信"),
+      ("WebDAV", "http://127.0.0.1:18768/dav", "dav", "初见"),
+      ("SMB", "smb://127.0.0.1:1445/MUSIC", "MUSIC", "微光"),
+      ("OpenSubsonic", "http://127.0.0.1:18768", "Subsonic 测试库", "Subsonic 来信")
+    ] where protocols.contains(kind) {
+      tap("添加远程来源"); tap(kind)
+      tap("服务器地址"); element("服务器地址").typeText(address)
+      if kind != "DLNA" {
+        fillNetworkCredential("服务器用户名", "demo")
+        fillNetworkCredential("服务器密码", "demo")
+      }
+      tap(kind == "DLNA" ? "读取音乐目录" : "连接并选择音乐库")
+      XCTAssertTrue(element("添加 1 个音乐库").waitForExistence(timeout: 20), app.debugDescription)
+      for surface in [app, XCUIApplication(bundleIdentifier: "com.apple.springboard")] {
+        for label in ["以后", "Not Now"] {
+          let later=surface.buttons[label].firstMatch
+          if later.waitForExistence(timeout: 1) { later.tap() }
+        }
+      }
+      capture("network-\(kind)-libraries")
+      tap("添加 1 个音乐库")
+      tap("查看 \(name) 详情"); tap("\(name) 同步曲库")
+      XCTAssertTrue(app.staticTexts["\(name) 同步完成"].waitForExistence(timeout: 40), app.debugDescription)
+      capture("network-\(kind)-synced")
+      for _ in 0..<8 { if !element("\(name) 提高优先级").isEnabled { break }; tap("\(name) 提高优先级") }
+      tap("关闭来源详情"); tap("返回设置"); tap("返回音乐库"); tap("按歌曲浏览")
+      if kind == "SMB" || kind == "WebDAV" {
+        tap("选择 \(song) 的来源")
+        tap("使用 \(name) 的 \(kind == "SMB" ? "FLAC" : "WAV") 版本")
+      } else { tap("播放 \(song)") }
+      assertClockAdvanced(2); capture("network-\(kind)-playback"); tap("暂停")
+      tap("返回音乐库"); tap("设置"); tap("音乐来源")
+      tap("查看 \(name) 详情"); tap("\(name) 参与聚合"); tap("关闭来源详情")
+    }
+    app.terminate(); app.launch(); tap("设置"); tap("音乐来源")
+    XCTAssertTrue(element("查看 MUSIC 详情").waitForExistence(timeout: 10))
+    capture("network-sources-restart")
   }
   func testColdStartRestoresPlaybackAfterLibraryOpens() {
     continueAfterFailure = false
@@ -178,12 +266,44 @@ final class SovelUITests: XCTestCase {
     XCTAssertEqual(element("返回音乐库").frame.minX, closeX, accuracy: 1)
     capture("aligned-settings-back")
   }
+  func testAboutBrandCardAndScrolling() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("设置", timeout: 30); tap("关于 Sovel HiFi")
+    let card = element("about-brand-card")
+    XCTAssertTrue(card.waitForExistence(timeout: 5))
+    XCTAssertLessThanOrEqual(card.frame.width, app.frame.width - 24)
+    XCTAssertTrue(card.label.contains("Sovel HiFi"))
+    capture("about-brand-card-portrait")
+    let detail = XCTAttachment(screenshot: card.screenshot()); detail.name = "about-brand-card-detail"; detail.lifetime = .keepAlways; add(detail)
+    // A drag beginning on the decorative card must still scroll the page.
+    card.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.8)).press(forDuration:0.1,thenDragTo:card.coordinate(withNormalizedOffset:CGVector(dx:0.6,dy:0.2)))
+    tap("第三方开源许可")
+    capture("about-brand-card-scroll-and-licenses")
+    tap("第三方开源许可")
+    app.swipeDown()
+    card.coordinate(withNormalizedOffset:CGVector(dx:0.2,dy:0.5)).press(forDuration:0.1,thenDragTo:card.coordinate(withNormalizedOffset:CGVector(dx:0.8,dy:0.5)))
+    XCTAssertTrue(element("返回设置").isHittable)
+    tap("返回设置")
+  }
+  func testAboutBrandCardLandscape() throws {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    defer { XCUIDevice.shared.orientation = .portrait }
+    app.launch(); tap("设置", timeout: 30); tap("关于 Sovel HiFi")
+    XCUIDevice.shared.orientation = .landscapeLeft
+    let rotated = NSPredicate { _,_ in self.app.frame.width > self.app.frame.height }
+    guard XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:rotated,object:app)],timeout:5) == .completed else { throw XCTSkip("Simulator did not rotate its app window; landscape remains unverified") }
+    let card = element("about-brand-card")
+    XCTAssertTrue(card.waitForExistence(timeout:5)); XCTAssertLessThanOrEqual(card.frame.width,520)
+    capture("about-brand-card-landscape")
+  }
   func testUpdateSettingsOnIOS() {
     continueAfterFailure = false
     XCUIDevice.shared.orientation = .portrait
     app.launch(); tap("设置", timeout: 30); tap("版本更新")
     XCTAssertTrue(app.staticTexts["Sovel HiFi"].exists)
-    XCTAssertTrue(element("查看 GitHub 发布记录").exists)
+    XCTAssertTrue(app.staticTexts["iOS 版本请通过 App Store 或 TestFlight 更新。"].exists)
     XCTAssertFalse(element("下载更新").exists)
     capture("updates-ios-channel")
     tap("返回设置")
@@ -254,7 +374,7 @@ final class SovelUITests: XCTestCase {
     tap("按专辑浏览")
     XCUIDevice.shared.orientation = .landscapeLeft
     let landscape = NSPredicate { _, _ in
-      self.app.frame.width > self.app.frame.height && self.element("音乐精选卡片").frame.width > 500
+      self.app.windows.firstMatch.frame.width > self.app.windows.firstMatch.frame.height && self.element("音乐精选卡片").frame.width > 500
     }
     XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: landscape, object: app)], timeout: 6), .completed)
     capture("discovery-landscape")
@@ -452,7 +572,7 @@ final class SovelUITests: XCTestCase {
   func testLandscapeLayout() {
     app.launch();tap("打开播放页面",timeout:30)
     XCUIDevice.shared.orientation = .landscapeLeft
-    let landscape = NSPredicate { _, _ in self.app.frame.width > self.app.frame.height }
+    let landscape = NSPredicate { _, _ in self.app.windows.firstMatch.frame.width > self.app.windows.firstMatch.frame.height }
     XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: landscape, object: app)], timeout: 6), .completed, "App must actually rotate into landscape")
     let play=element("播放")
     XCTAssertTrue(play.isHittable)
@@ -643,11 +763,18 @@ final class SovelUITests: XCTestCase {
     app.launch()
     tap("设置", timeout: 30)
     capture("settings-root-compact")
+    XCTAssertTrue(element("PEQ").isHittable, "Common settings should be visible without scrolling on a small screen")
+    XCTAssertGreaterThanOrEqual(element("音乐来源").frame.height, 44, "Compact rows must remain easy to tap")
+    tap("样式管理")
+    capture("settings-appearance-compact")
+    tap("返回设置")
     tap("均衡器")
     XCTAssertTrue(app.switches["启用均衡器"].isEnabled)
+    capture("settings-equalizer-compact")
     tap("返回设置"); tap("PEQ")
     XCTAssertFalse(app.switches["PEQ 尚未接入"].isEnabled)
     tap("返回设置"); tap("定时时长"); tap("睡眠定时 30 分钟")
+    capture("settings-sleep-compact")
     XCTAssertEqual(app.switches["定时停止播放"].value as? String, "1")
     app.switches["定时停止播放"].tap()
     tap("返回设置"); tap("文件扫描")
@@ -677,6 +804,71 @@ final class SovelUITests: XCTestCase {
     tap("返回设置"); tap("返回音乐库")
   }
 
+  func testThemePersistence() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("设置", timeout: 30); tap("样式管理"); tap("深海配色")
+    XCTAssertTrue(element("深海配色").isSelected)
+    capture("theme-deep-sea-settings")
+    tap("返回设置"); tap("返回音乐库"); capture("theme-deep-sea-library")
+    app.terminate(); app.launch(); tap("设置"); tap("样式管理")
+    XCTAssertTrue(element("深海配色").isSelected)
+    tap("黑金配色")
+    XCTAssertTrue(element("黑金配色").isSelected)
+  }
+  func testPeqReplayGainAndPersistence() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("按歌曲浏览", timeout: 30); tap("播放 初见"); assertClockAdvanced()
+    tap("返回音乐库"); tap("设置"); tap("PEQ / AutoEQ"); tap("导入 AutoEQ")
+    let input = element("AutoEQ 参数文本")
+    tap("AutoEQ 参数文本")
+    input.typeText("Preamp: -6 dB\nFilter 1: ON LSC Fc 105 Hz Gain 5 dB Q 0.71\nFilter 2: ON PK Fc 3000 Hz Gain -3 dB Q 2")
+    tap("应用参数")
+    XCTAssertTrue(element("滤波器 2").waitForExistence(timeout: 5))
+    let processed = NSPredicate { _,_ in self.element("PEQ 运行状态").value as? String == "处理中" }
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:processed,object:app)],timeout:12),.completed,app.debugDescription)
+    capture("peq-autoeq-native-processing")
+    app.terminate(); app.launch(); tap("设置"); tap("PEQ / AutoEQ")
+    XCTAssertEqual(app.switches["启用 PEQ"].value as? String,"1")
+    XCTAssertTrue(element("滤波器 2").exists)
+    tap("启用 PEQ"); tap("返回设置"); tap("高级设置"); tap("按专辑")
+    capture("replaygain-album-settings")
+    app.terminate(); app.launch(); tap("设置"); tap("高级设置")
+    XCTAssertEqual(element("按专辑").value as? String,"已选择")
+    tap("关闭")
+  }
+  // Run scripts/prepare-dsf-ui-fixture.mjs first. Fixture stays in the simulator, never APK assets.
+  func testTaggedDsfReplayGainProcessing() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("设置", timeout: 30); tap("均衡器")
+    if app.switches["启用均衡器"].value as? String == "1" { tap("启用均衡器") }
+    tap("返回设置"); tap("PEQ / AutoEQ")
+    if app.switches["启用 PEQ"].value as? String == "1" { tap("启用 PEQ") }
+    tap("返回设置"); tap("高级设置"); tap("按专辑")
+    tap("返回设置"); tap("返回音乐库"); tap("按专辑浏览"); tap("打开 DSD Fixture"); tap("播放 DSF PCM Test")
+    assertClockAdvanced(3); tap("返回音乐库"); tap("设置"); tap("均衡器")
+    let album=NSPredicate { _,_ in self.element("处理链前级").value as? String == "-4.0 dB" }
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:album,object:app)],timeout:10),.completed,app.debugDescription)
+    tap("返回设置"); tap("高级设置"); tap("按歌曲"); tap("返回设置"); tap("均衡器")
+    let track=NSPredicate { _,_ in self.element("处理链前级").value as? String == "-6.0 dB" }
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:track,object:app)],timeout:10),.completed,app.debugDescription)
+    capture("replaygain-tagged-native-dsf")
+    tap("返回设置"); tap("高级设置"); tap("关闭"); tap("返回设置"); tap("返回音乐库"); tap("打开播放页面"); tap("暂停")
+  }
+  func testNativeDsfPlaybackAndSeek() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+    app.launch(); tap("设置", timeout: 30); tap("文件扫描"); tap("增量扫描")
+    XCTAssertTrue(app.staticTexts["扫描完成"].waitForExistence(timeout: 20),app.debugDescription)
+    tap("返回设置"); tap("返回音乐库"); tap("按歌曲浏览"); tap("播放 DSF PCM Test")
+    assertClockAdvanced(3); capture("dsf-ios-streaming-playback")
+    tap("暂停"); app.terminate(); app.launch(); tap("打开播放页面", timeout: 30)
+    assertClockAdvanced(3); XCTAssertTrue(element("播放").exists)
+    tap("播放"); assertClockAdvanced(5); tap("暂停")
+    capture("dsf-ios-seek-and-restore")
+  }
   func testNativeEqualizerAndPresets() {
     continueAfterFailure = false
     XCUIDevice.shared.orientation = .portrait

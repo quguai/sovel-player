@@ -122,3 +122,48 @@ test("LRC supports repeated timestamps, offsets and plain lyrics", () => {
     { time: null, text: "第二句" },
   ]);
 });
+test("ReplayGain text tags retain signed dB gains and linear peaks for playback", async () => {
+  const dsf = await readFile("tests/tagged.dsf");
+  const sync = (n: number) =>
+    Buffer.from([(n >>> 21) & 127, (n >>> 14) & 127, (n >>> 7) & 127, n & 127]);
+  const body = Buffer.concat(
+    Object.entries({
+      REPLAYGAIN_TRACK_GAIN: "-6.25 dB",
+      REPLAYGAIN_TRACK_PEAK: "0.85",
+      REPLAYGAIN_ALBUM_GAIN: "-4.00 dB",
+      REPLAYGAIN_ALBUM_PEAK: "0.99",
+    }).map(([name, value]) => {
+      const text = Buffer.concat([
+        Buffer.from([3]),
+        Buffer.from(name + "\0" + value),
+      ]);
+      return Buffer.concat([
+        Buffer.from("TXXX"),
+        sync(text.length),
+        Buffer.alloc(2),
+        text,
+      ]);
+    }),
+  );
+  const bytes = Buffer.concat([
+    dsf.subarray(0, Number(dsf.readBigUInt64LE(20))),
+    Buffer.from([73, 68, 51, 4, 0, 0]),
+    sync(body.length),
+    body,
+  ]);
+  bytes.writeBigUInt64LE(BigInt(bytes.length), 12);
+  const result = await readMetadata(
+    {
+      size: bytes.length,
+      read: async (o, n) => bytes.subarray(o, o + n),
+      close: () => {},
+    },
+    "gain.dsf",
+  );
+  assert.deepEqual(result.metadata.replayGain, {
+    trackGain: -6.25,
+    trackPeak: 0.85,
+    albumGain: -4,
+    albumPeak: 0.99,
+  });
+});

@@ -266,3 +266,35 @@ test("album-level MusicBrainz IDs are mapped to audio so local and remote releas
   );
   assert.equal(page.items[0].metadata.releaseId, "release-123");
 });
+
+test("remote file tag hydration is staged in bounded batches; failure or cancellation preserves the old snapshot and favorites", async () => {
+  for (const interrupted of ["failure", "cancel"] as const) {
+    const { db, lib, sql } = setup();
+    await lib.init();
+    const smb: MusicSource = { ...source, kind: "smb" };
+    await lib.saveSource(smb);
+    let count = 1, hydrated = 0;
+    const controller = new AbortController();
+    const client = {
+      items: async (_config: unknown, _token: string, offset: number) => ({ total: count, items: Array.from({length: Math.min(100,count-offset)},(_,i)=>({id:`file-${i+offset}`,path:`file-${i+offset}.wav`,size:1000,mtime:1,metadata:{title:`Song ${i+offset}`,artist:"Artist",album:"Album",format:"WAV",duration:120,lyrics:[]}})) }),
+      stream: (_config: unknown, id: string) => `smb://nas/Music/${id}`,
+      hydrate: async (item: any) => {
+        hydrated++;
+        if(count>1 && hydrated===66) {
+          if(interrupted==="cancel") controller.abort(); else throw new Error("Connection interrupted");
+        }
+        return item;
+      },
+    };
+    await syncMediaSource(db,smb,"",new AbortController().signal,()=>{},client);
+    await lib.favorite("remote:file-0",true);
+    const before=sql.prepare("SELECT metadata,available FROM tracks WHERE id='remote:file-0'").get();
+    count=70;hydrated=0;
+    await assert.rejects(syncMediaSource(db,smb,"",controller.signal,()=>{},client));
+    assert.deepEqual(sql.prepare("SELECT metadata,available FROM tracks WHERE id='remote:file-0'").get(),before);
+    assert.equal((sql.prepare("SELECT COUNT(*) n FROM tracks").get() as any).n,1);
+    assert.equal((sql.prepare("SELECT COUNT(*) n FROM favorites").get() as any).n,1);
+    assert.equal((sql.prepare("SELECT COUNT(*) n FROM remote_stage").get() as any).n,0);
+    sql.close();
+  }
+});

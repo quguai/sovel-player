@@ -16,6 +16,8 @@ import java.nio.ByteOrder
 internal object SovelEqualizer {
   val available = runCatching { System.loadLibrary("sovel_equalizer"); true }.getOrDefault(false)
   external fun configure(enabled: Boolean, gains: DoubleArray, preamp: Double, headroom: Boolean)
+  external fun configurePeq(enabled: Boolean, filters: DoubleArray, preamp: Double, headroom: Boolean)
+  external fun setReplayGain(db: Double)
   private external fun readStatus(): DoubleArray
   external fun create(rate: Int, channels: Int, format: Int): Long
   external fun process(handle: Long, buffer: ByteBuffer, frames: Int)

@@ -9,7 +9,7 @@ import {
   type ScanRules,
 } from "./types";
 import { excludesEntry } from "./scanRules";
-import { syncMediaSource, type RemoteProgress } from "./remoteSync";
+import { syncMediaSource, type RemoteProgress, type RemoteClient } from "./remoteSync";
 import { Catalog } from "./catalog";
 import { ListeningHistory } from "./listeningHistory";
 import { atomic, type Database } from "./database";
@@ -59,11 +59,12 @@ export class Library {
     token: string,
     signal: AbortSignal,
     progress: (p: RemoteProgress) => void,
+    client?: RemoteClient,
   ) {
     if (this.scanning) throw new Error("扫描正在进行");
     this.scanning = true;
     try {
-      return await syncMediaSource(this.db, source, token, signal, progress);
+      return await syncMediaSource(this.db, source, token, signal, progress, client);
     } finally {
       this.scanning = false;
     }

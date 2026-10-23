@@ -87,11 +87,24 @@ patch(
     SovelEqualizer.attach(to: item)
     return item`,
 );
+const installedSpec = resolve(audio, "ios/ExpoAudio.podspec");
+writeFileSync(
+  installedSpec,
+  readFileSync(installedSpec, "utf8")
+    .replace(
+      's.source_files = "**/*.{h,m,mm,cpp,swift}"',
+      's.source_files = "**/*.{h,m,mm,c,cpp,swift}"',
+    )
+    .replace(
+      's.private_header_files = "**/SovelEqualizerDSP.h"\n',
+      's.private_header_files = "**/SovelEqualizerDSP.h", "**/SovelDsdDecoder.h", "**/SovelDsfPcmStream.h", "**/third_party/**/*.h"\n',
+    ),
+);
 patch(
   "ios/ExpoAudio.podspec",
   's.source_files = "**/*.{h,m,swift}"',
-  `s.source_files = "**/*.{h,m,mm,cpp,swift}"
-  s.private_header_files = "**/SovelEqualizerDSP.h"
+  `s.source_files = "**/*.{h,m,mm,c,cpp,swift}"
+  s.private_header_files = "**/SovelEqualizerDSP.h", "**/SovelDsdDecoder.h", "**/SovelDsfPcmStream.h", "**/third_party/**/*.h"
   s.libraries = 'c++'
   s.frameworks = 'MediaToolbox'`,
 );
@@ -134,4 +147,60 @@ patch(
   externalNativeBuild { cmake { path 'src/main/cpp/sovel/CMakeLists.txt' } }
 `,
 );
-console.log("Sovel native EQ integration applied to expo-audio 58.0.9");
+
+patch(
+  "ios/AudioModule.swift",
+  "    OnDestroy {",
+  `    Function("configureSovelPeq") { (enabled: Bool, filters: [Double], preamp: Double, headroom: Bool) in
+      SovelEqualizer.configurePeq(enabled, filters: filters.map { NSNumber(value: $0) }, preamp: preamp, headroom: headroom)
+    }
+    OnDestroy {`,
+);
+patch(
+  "android/src/main/java/expo/modules/audio/AudioModule.kt",
+  "    OnDestroy {",
+  `    Function("configureSovelPeq") { enabled: Boolean, filters: List<Double>, preamp: Double, headroom: Boolean ->
+      check(SovelEqualizer.available) { "Sovel DSP is unavailable" }
+      SovelEqualizer.configurePeq(enabled, filters.toDoubleArray(), preamp, headroom)
+    }
+    OnDestroy {`,
+);
+
+for (const file of [
+  "SovelDsdDecoder.cpp",
+  "SovelDsdDecoder.h",
+  "SovelDsfPcmStream.cpp",
+  "SovelDsfPcmStream.h",
+  "third_party/dsd2pcm/dsd2pcm.c",
+  "third_party/dsd2pcm/dsd2pcm.h",
+  "third_party/dsd2pcm/LICENSE.txt",
+]) {
+  const path = resolve(audio, "ios", file);
+  mkdirSync(dirname(path), { recursive: true });
+  copyFileSync(resolve(root, "native/dsd", file), path);
+}
+for (const file of ["SovelDsfAsset.h", "SovelDsfAsset.mm"])
+  copyFileSync(
+    resolve(root, "native/dsd/ios", file),
+    resolve(audio, "ios", file),
+  );
+patch(
+  "ios/AudioSource.swift",
+  "  var name: String?",
+  "  var name: String?\n\n  @Field var sovelDsf: Bool = false",
+);
+patch(
+  "ios/AudioUtils.swift",
+  "    let asset = AVURLAsset(url: finalUrl, options: options)",
+  `    let asset = source.sovelDsf ? SovelDsfAsset.asset(with: finalUrl, headers: source.headers) : AVURLAsset(url: finalUrl, options: options)`,
+);
+patch(
+  "ios/AudioModule.swift",
+  "    OnCreate {",
+  `    Function("getSovelDsfSupport") { true }
+    Function("configureSovelDsf") { (rate: Int) in SovelDsfAsset.configure(rate) }
+    OnCreate {`,
+);
+console.log(
+  "Sovel native EQ / PEQ and DSF integration applied to expo-audio 58.0.9",
+);

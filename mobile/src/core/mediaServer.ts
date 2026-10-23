@@ -3,6 +3,8 @@ import {
   type Metadata,
   type RemoteSourceConfig,
 } from "./types";
+import type { Picture } from "./metadata";
+
 export type ServerKind = "jellyfin" | "emby";
 export type ServerSession = {
   token: string;
@@ -17,6 +19,8 @@ export type RemoteItem = {
   size: number;
   mtime: number;
   metadata: Metadata;
+  picture?: Picture;
+  artistPicture?: Picture;
 };
 export const normalizeServerUrl = (value: string) => {
   let url: URL;

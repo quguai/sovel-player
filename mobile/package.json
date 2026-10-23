@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "main": "index.ts",
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "expo": "~58.0.14",
     "expo-asset": "^58.0.16",
     "expo-audio": "58.0.9",
@@ -13,6 +14,7 @@
     "expo-sharing": "~58.0.19",
     "expo-sqlite": "^58.0.13",
     "expo-status-bar": "~58.0.3",
+    "fast-xml-parser": "^5.11.2",
     "music-metadata": "^12.2.2",
     "react": "19.3.0",
     "react-native": "0.88.0",
@@ -47,7 +49,8 @@
     "prestart": "node scripts/patch-audio-equalizer.mjs && node scripts/patch-audio-playback.mjs",
     "preios": "node scripts/patch-audio-equalizer.mjs && node scripts/patch-audio-playback.mjs",
     "preandroid": "node scripts/patch-audio-equalizer.mjs && node scripts/patch-audio-playback.mjs",
-    "lint": "eslint src tests"
+    "lint": "eslint src tests",
+    "test:dsd:stream": "bash native/dsd/tests/run-stream.sh"
   },
   "private": true,
   "engines": {

@@ -1,5 +1,6 @@
-import React, { useEffect } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { themeStyles } from "./themeStyles";
+import { useEffect } from "react";
+import { View, Text, Pressable } from "react-native";
 import { useMusic } from "../services/store";
 import { Cover, palette as p } from "./visuals";
 import { Button } from "./components";
@@ -43,7 +44,7 @@ export function ListeningHistoryScreen() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
   return (
-    <View style={{ gap: 20 }}>
+    <View style={{ gap: 12 }}>
       <Text style={s.note}>
         {listeningAvailable
           ? "只保存在此设备，记录实际收听，而非播放进度。"
@@ -145,24 +146,24 @@ export function ListeningHistoryScreen() {
     </View>
   );
 }
-const s = StyleSheet.create({
+const s = themeStyles(() => ({
   summary: {
     flexDirection: "row",
     gap: 16,
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 6,
   },
   number: { fontSize: 20, color: p.gold, fontWeight: "600", marginBottom: 5 },
   unit: { fontSize: 11 },
   note: { color: p.muted, fontSize: 11, lineHeight: 18 },
   title: { color: p.text, fontSize: 14, fontWeight: "600" },
-  card: { backgroundColor: p.surface, borderRadius: 14, padding: 16, gap: 10 },
+  card: { backgroundColor: p.surface, borderRadius: 14, padding: 12, gap: 8 },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tag: {
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 14,
-    backgroundColor: "#d5b78215",
+    backgroundColor: `${p.gold}15`,
   },
   gold: { color: p.gold, fontSize: 12 },
   date: { color: p.muted, fontSize: 10 },
@@ -173,4 +174,4 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: p.line,
   },
-});
+}));

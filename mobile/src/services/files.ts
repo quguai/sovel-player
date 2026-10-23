@@ -34,10 +34,11 @@ export const artUri = (path?: string) =>
         : new File(art, path).uri
     : undefined;
 export function playbackSource(track: Track) {
+  const sovelDsf = track.format.toUpperCase() === "DSF";
   const source = roots.get(track.sourceId);
   if (source && isRemoteSource(source))
-    return { ...remotePlaybackSource(track), name: track.title };
-  return { uri: trackUri(track), name: track.title };
+    return { ...remotePlaybackSource(track), name: track.title, sovelDsf };
+  return { uri: trackUri(track), name: track.title, sovelDsf };
 }
 export function trackUri(track: Track): string {
   const source = roots.get(track.sourceId);
