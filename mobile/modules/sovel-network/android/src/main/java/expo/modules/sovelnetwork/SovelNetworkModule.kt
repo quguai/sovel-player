@@ -23,7 +23,7 @@ class SovelNetworkModule : Module() {
     Function("nonce") { java.util.UUID.randomUUID().toString().replace("-", "") }
     Function("cancelDiscovery") { cancel.set(true) }
     AsyncFunction("discover") Coroutine
-      {
+      { ->
         withContext(Dispatchers.IO) {
           check(discovering.compareAndSet(false, true)) { "搜索正在进行" }
           cancel.set(false)
