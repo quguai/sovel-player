@@ -6,6 +6,7 @@ import com.hierynomus.mssmb2.SMB2ShareAccess
 import com.hierynomus.smbj.SMBClient
 import com.hierynomus.smbj.SmbConfig
 import com.hierynomus.smbj.auth.AuthenticationContext
+import com.hierynomus.smbj.auth.NtlmAuthenticator
 import com.hierynomus.smbj.share.DiskShare
 import fi.iki.elonen.NanoHTTPD
 import java.io.InputStream
@@ -128,6 +129,7 @@ class SovelSmb {
     val client =
       SMBClient(
         SmbConfig.builder()
+          .withAuthenticators(NtlmAuthenticator.Factory())
           .withTimeout(20, TimeUnit.SECONDS)
           .withSoTimeout(20, TimeUnit.SECONDS)
           .build()

@@ -4,7 +4,10 @@ plugins {
 }
 group = 'expo.modules.sovelnetwork'
 version = '0.1.0'
-android { namespace 'expo.modules.sovelnetwork' }
+android {
+ namespace 'expo.modules.sovelnetwork'
+ defaultConfig { consumerProguardFiles 'consumer-rules.pro' }
+}
 dependencies {
  implementation 'com.hierynomus:smbj:0.13.0'
  implementation 'org.nanohttpd:nanohttpd:2.3.1'
