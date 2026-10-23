@@ -16,7 +16,7 @@ export const zh = {
   heroCta: '获取 Sovel', heroSecondary: '看看使用体验', preview: '开发预览版', heroPlatforms: 'iOS 与 Android · 开放构建中',
   objectEdition: 'SOVEL 聆听手记 / 001', makeItYours: '选一种你的风格', visualOnly: '外观交互预览，不播放音频。',
   qualityFiles: '原文件，原位置', qualityEq: '原生十段均衡器', qualityDesign: '属于你的聆听体验', qualityLicense: '开放源码 · MIT 许可',
-  stageCaption: '真实应用截图 · 金砖三代外形概念展示',
+  stageCaption: '真实应用截图 · 播放器概念展示',
   philosophyEyebrow: '02 / 一个简单的想法', philosophyTitle: '你的文件，<br /><em>你的音乐宇宙。</em>',
   philosophyIntro: '你已经拥有自己的音乐收藏。Sovel 为它提供一个用心整理的空间，也让原始文件留在你选择的位置。',
   journeyFiles: '原始音乐文件', journeyIndex: '本地曲库索引', journeyIndexNote: '标签、封面与偏好', journeyListen: '你的聆听空间', journeyListenNote: '按自己的方式',

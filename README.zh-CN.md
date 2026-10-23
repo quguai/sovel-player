@@ -146,7 +146,7 @@ npm run dev
 
 ```text
 mobile/       React Native 应用、原生工程、DSP 与测试
-docs/         实现说明、参考项目核查与截图
+docs/         实现说明与截图
 design/       图标和素材设计探索
 previews/     浏览器设计预览图片
 app.js        浏览器交互 DEMO
@@ -162,7 +162,7 @@ npm run lint     # ESLint
 
 运行以上命令查看当前测试数量与诊断结果。核心覆盖包括真实 SQLite 迁移与分页、聚合、来源选择及 Jellyfin / Emby HTTP 契约。iOS 模拟器覆盖本地聆听，以及使用模拟服务器的远程登录、同步、版本选择和播放。真实服务器部署、本次集成的 Android 验证和 USB DAC 输出仍待完成。原生测试命令见[开发说明](mobile/README.zh-CN.md)。
 
-欢迎贡献。反馈播放问题时，请提供复现步骤、设备、系统和音频格式；原生音频改动需附对应平台的验证结果。用于研究的参考仓库放在已忽略的 `repos/`，不作为依赖或子模块分发。
+欢迎贡献。反馈播放问题时，请提供复现步骤、设备、系统和音频格式；原生音频改动需附对应平台的验证结果。
 
 ## 后续计划
 
@@ -172,10 +172,8 @@ npm run lint     # ESLint
 - 实现并验证 Android USB 独占及厂商内置 DAC 输出链路。
 - 增加歌曲过渡、按输出设备记忆预设与更多应用语言。
 
-## 致谢与许可
+## 素材与许可
 
 项目使用 [MIT 许可证](LICENSE)，保留现有第三方声明，包括 [Expo 初始模板许可](mobile/LICENSE)。
-
-[NeriPlayer](https://github.com/cwuom/NeriPlayer)、[MusicFree](https://github.com/maotoumao/MusicFree)、[Auxio](https://github.com/oxycblt/auxio) 用于功能与行为研究，未复制其 GPL／AGPL 实现代码。[music-metadata](https://github.com/Borewit/music-metadata) 是实际依赖。范围与归属详见[参考仓库目录](docs/upstream-references.md)和[功能采用核查](docs/feature-adoption-review.md)。
 
 生成的图标、唱片和缺省图片在 [mobile/assets](mobile/assets) 中保留素材来源记录；试听曲由本项目合成。浏览器概念摄影来自 Unsplash：[海面](https://images.unsplash.com/photo-1475924156734-496f6cac6ec1)、[山景](https://images.unsplash.com/photo-1464822759023-fed622ff2c3b)、[森林](https://images.unsplash.com/photo-1441974231531-c6227db76b6e)、[沙丘](https://images.unsplash.com/photo-1509316785289-025f5b846b35)。

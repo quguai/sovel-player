@@ -146,7 +146,7 @@ The bilingual product website lives in [`site/`](site). Run `npm run site:dev` t
 
 ```text
 mobile/       React Native app, native projects, DSP, and tests
-docs/         Implementation notes, reference reviews, and screenshots
+docs/         Implementation notes and screenshots
 design/       Icon and artwork explorations
 previews/     Browser design-preview images
 app.js        Browser interaction demo
@@ -162,7 +162,7 @@ npm run lint     # ESLint
 
 Run the commands above for the current test count and diagnostics. Core coverage includes real SQLite migrations and paging, aggregation, source selection, and Jellyfin / Emby HTTP contracts. iOS simulator checks cover local listening and remote login, synchronization, version selection and playback against a mock server. Real media-server deployments, Android validation of the new integration and USB DAC output remain outstanding. Native test commands are in the [development guide](mobile/README.md).
 
-Contributions are welcome. Include reproduction steps and device, OS, and audio-format details for playback issues. Native audio changes should include platform-specific validation. Reference checkouts belong in the ignored `repos/` directory and are not dependencies or submodules.
+Contributions are welcome. Include reproduction steps and device, OS, and audio-format details for playback issues. Native audio changes should include platform-specific validation.
 
 ## Roadmap
 
@@ -172,10 +172,8 @@ Contributions are welcome. Include reproduction steps and device, OS, and audio-
 - Develop and verify Android USB exclusive output and vendor-specific internal DAC paths.
 - Add playback transitions, per-output preset memory, and additional app languages.
 
-## Credits and license
+## Assets and license
 
 Licensed under the [MIT License](LICENSE). Existing third-party notices, including the [Expo starter notice](mobile/LICENSE), are retained.
-
-[NeriPlayer](https://github.com/cwuom/NeriPlayer), [MusicFree](https://github.com/maotoumao/MusicFree), and [Auxio](https://github.com/oxycblt/auxio) informed feature and behavior research; their GPL/AGPL implementation code was not copied into this project. [music-metadata](https://github.com/Borewit/music-metadata) is an actual dependency. See the [reference inventory](docs/upstream-references.md) and [feature review](docs/feature-adoption-review.md) (Chinese).
 
 Generated icon, turntable, and placeholder assets include provenance records in [mobile/assets](mobile/assets). Listening samples are synthesized by this project. Browser concept photography comes from Unsplash: [ocean](https://images.unsplash.com/photo-1475924156734-496f6cac6ec1), [mountains](https://images.unsplash.com/photo-1464822759023-fed622ff2c3b), [forest](https://images.unsplash.com/photo-1441974231531-c6227db76b6e), and [desert](https://images.unsplash.com/photo-1509316785289-025f5b846b35).

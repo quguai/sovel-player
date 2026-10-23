@@ -9,7 +9,7 @@
 #include <memory>
 
 // Sovel's streaming graphic EQ. Peaking biquads use the W3C Audio EQ Cookbook
-// equations. No NeriPlayer DSP code or preset coefficients are copied.
+// equations.
 namespace sovel {
 constexpr int bands = 10;
 constexpr int filters = bands * 2;

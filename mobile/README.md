@@ -123,13 +123,13 @@ Settings → **PEQ / AutoEQ** supports up to ten peak, low-shelf and high-shelf 
 
 Settings → **高级设置** offers off/track/album ReplayGain, ±12 dB preamp and tag-peak protection. Album mode falls back to track tags; missing tags preserve original gain. Existing files need a full tag rescan to populate these fields. Local files and SMB/WebDAV file-tag scans provide the tags; server catalogs without ReplayGain data stay unnormalized. Native queue bindings apply gains without JS timers, including background transitions; iOS prebuffered items own independent gains. Peak protection uses stored peaks, not a true-peak limiter. Presets and settings migrate into older v1 backups without touching music or favorites.
 
-Per-output/device preset memory is not implemented. NeriPlayer informed preset/state behavior; its implementation or full effect presets were not copied. The DSP uses published W3C equations, and AutoEq is a text-format reference.
+Per-output/device preset memory is not implemented. The DSP uses published W3C equations.
 
 ## Custom theme colors
 
 Settings → **样式管理** provides black/gold, deep sea, pine and dusk presets. Custom six-digit hex background/accent colors have dark-background and contrast validation, apply immediately after saving, survive restarts and are included in settings backups. The cover-derived player background stays independent; light/image themes are not included.
 
-The About page uses `src/ui/AboutBrandCard.tsx`: bounded touch-driven tilt, layered parallax, a moving sheen and a spring return. It observes touch events without taking over vertical scrolling, respects reduced motion and has no idle animation or motion-sensor dependency. Version and license information remain outside the decorative card.
+The About page uses `src/ui/AboutBrandCard.tsx`: bounded touch-driven tilt, layered parallax, a moving sheen and a spring return. It observes touch events without taking over vertical scrolling, respects reduced motion and has no idle animation or motion-sensor dependency. The card displays the installed version; third-party licenses remain accessible below it.
 
 ## Listening history and local discovery
 
@@ -180,9 +180,7 @@ swiftc native/playback/ios/SovelPlaybackState.swift tests/native/main.swift -o /
 
 iOS UI tests live in `ios/SovelUITests`; open `ios/Sovel.xcworkspace`, choose the **Sovel** scheme and an available simulator, then run the relevant tests. `sh scripts/prepare-reference-fixture.sh` prepares the separate file-provider fixture for access-in-place tests. `ruby scripts/add-ios-uitests.rb` can restore the test target after regeneration and requires the `xcodeproj` gem. BlurView's built-in test guard is enabled only in UI-test processes to avoid animation-idling stalls. Build outputs and screenshots belong in ignored `artifacts/`.
 
-## Implementation references and assets
-
-The [feature review](../docs/feature-adoption-review.md), [settings/scan notes](../docs/settings-and-scan-references.md), [metadata review](../docs/music-metadata-review.md), and [reference inventory](../docs/upstream-references.md) are currently in Chinese. They distinguish upstream research, implemented features, and planned work. Reference GPL/AGPL code was not copied; `music-metadata` is an actual MIT-licensed dependency.
+## Assets and licenses
 
 Generated icons, turntable textures, and bundled placeholders retain provenance records beside their assets. Real embedded images take priority over the four default album covers and two neutral portraits. Defaults are shared packaged files, do not alter audio metadata, and are not presented as actual artist photographs. There is currently no manual placeholder-image picker or online artist-image service.
 

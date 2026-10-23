@@ -38,7 +38,7 @@ const icons = {
 const icon = (name, extra = '') => `<svg class="icon ${extra}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.disc}</svg>`;
 const button = (name, label, action, extra = '') => `<button class="icon-button ${extra}" data-action="${action}" aria-label="${label}" title="${label}">${icon(name)}</button>`;
 const themes = {
-  obsidian: { name: '唱片馆', index: '01', art: 'cover', description: '黑金音乐库，配合封面取色的播放页与独立歌词页。', note: '专辑封面优先 / 黑金曲库 / Apple Music 式播放与歌词' },
+  obsidian: { name: '唱片馆', index: '01', art: 'cover', description: '黑金音乐库，配合封面取色的播放页与独立歌词页。', note: '专辑封面优先 / 黑金曲库 / 独立播放与歌词' },
   paper: { name: '曲库', index: '02', art: 'cover', description: '歌曲、专辑、艺术家和文件夹，按你的习惯找到音乐。', note: '本地分类优先 / 黑金曲库 / 共用播放与独立歌词页面' },
   flow: { name: '静听', index: '03', art: 'cover', description: '减少入口和信息，打开播放器就能回到喜欢的声音。', note: '继续聆听优先 / 黑金曲库 / 共用播放与独立歌词页面' },
 };
@@ -564,7 +564,7 @@ function settingsInfo(kind) {
     peq: ['参数均衡器 · PEQ', settingsToggle('', '参数均衡器 · PEQ', '音频处理模块未接入', false, true)],
     usb: ['USB 输出', row('系统音频输出', '由设备系统选择当前输出设备', '使用中') + row('USB 独占', 'Android 专用输出模块尚未接入', '不可用') + row('DSD 直通 / DoP', '需要专用模块及兼容的 DAC', '不可用') + '<p class="dialog-caption">浏览器无法提供 USB 音频独占。连接 DAC 不代表已获得独占或 Bit-perfect 输出。</p>'],
     language: ['语言设置', row('简体中文', '其他语言将在完整翻译后提供', '当前语言')],
-    about: ['关于 Sovel HiFi', '<p class="settings-brand">Sovel</p><p class="settings-intro">收藏声音，慢慢聆听。</p>' + row('版本', '网页交互预览', '0.1.0') + row('移动端曲库', 'SQLite 本地索引，引用原音频文件') + row('实现参考', 'NeriPlayer · 扫描阶段与 USB 能力状态<br>Auxio · 索引、设置分组与 ReplayGain') + '<p class="dialog-caption">本次借鉴设计与行为，未拷入上述项目的 GPL 源码。</p>'],
+    about: ['关于 Sovel HiFi', '<p class="settings-brand">Sovel</p><p class="settings-intro">收藏声音，慢慢聆听。</p>' + row('版本', '网页交互预览', '0.1.0') + row('移动端曲库', 'SQLite 本地索引，引用原音频文件')],
   };
   const [title, content] = contents[kind]; showDialog(title, settingsBack() + content, 'dark-settings');
 }

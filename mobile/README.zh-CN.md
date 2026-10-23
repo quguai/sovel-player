@@ -123,13 +123,13 @@ npm run android
 
 「设置 → 高级设置」提供关闭／按歌曲／按专辑 ReplayGain、±12 dB 前级和标签峰值保护。缺少专辑标签时回退到歌曲标签，没有增益标签时保持原音量。已有文件需要全量扫描以读取新字段；本地及 SMB／WebDAV 文件标签扫描可提供这些信息，未返回增益标签的服务器曲库不做归一化。队列增益由原生层执行，不依赖 JS 定时器；iOS 提前缓冲的每个曲目使用独立增益。峰值保护依赖文件标签，不是实时真峰值限制器。新设置纳入备份，旧 v1 备份自动迁移，不改动音乐和收藏。
 
-按输出／设备记忆预设尚未实现。NeriPlayer 用于预设和生效状态的行为参考，未复制其实现或完整音效预设；DSP 使用公开的 W3C 公式，AutoEq 用于文本格式参考。
+按输出／设备记忆预设尚未实现。DSP 使用公开的 W3C 公式。
 
 ## 自定义主题配色
 
 「设置 → 样式管理」提供黑金／深海／松影／暮色四种预设。自定义六位十六进制背景色和强调色，检查深色背景与对比度；保存后立即生效，重启记忆并纳入设置备份。封面驱动的播放器背景保持独立，暂不包含浅色／图片主题。
 
-关于页使用 `src/ui/AboutBrandCard.tsx`：轻触倾斜、分层视差、随触点移动的高光与松手回弹。只观察触摸，不抢占页面纵向滚动；尊重减少动态效果，无闲置循环动画或运动传感器依赖。版本与开源许可仍独立展示。
+关于页使用 `src/ui/AboutBrandCard.tsx`：轻触倾斜、分层视差、随触点移动的高光与松手回弹。只观察触摸，不抢占页面纵向滚动；尊重减少动态效果，无闲置循环动画或运动传感器依赖。卡片内展示当前版本，第三方开源许可保留在下方。
 
 ## 收听历史与本地精选
 
@@ -180,9 +180,7 @@ swiftc native/playback/ios/SovelPlaybackState.swift tests/native/main.swift -o /
 
 iOS UI 测试位于 `ios/SovelUITests`。打开 `ios/Sovel.xcworkspace`，选择 **Sovel** Scheme 和可用模拟器，运行相关测试。`sh scripts/prepare-reference-fixture.sh` 为就地访问测试准备独立文件分享应用；重新生成工程后可用 `ruby scripts/add-ios-uitests.rb` 恢复测试目标，需要 `xcodeproj` gem。UI 测试进程启用 BlurView 内置测试保护，避免动画空闲等待阻塞。构建产物与截图放在忽略的 `artifacts/`。
 
-## 实现参考与素材
-
-[功能采用核查](../docs/feature-adoption-review.md)、[设置／扫描说明](../docs/settings-and-scan-references.md)、[元数据核查](../docs/music-metadata-review.md)和[参考仓库目录](../docs/upstream-references.md)区分上游研究、当前实现与规划，现为中文。未复制参考项目的 GPL／AGPL 实现；`music-metadata` 是实际使用的 MIT 依赖。
+## 素材与许可
 
 生成的图标、唱片贴图和缺省图片均保留相邻来源记录。真实内嵌图片优先于四张默认封面和两张中性头像。默认图片共用、不改写音频标签，也不冒充真实歌手照片；暂未提供手动挑选缺省图片或在线歌手图片服务。
 

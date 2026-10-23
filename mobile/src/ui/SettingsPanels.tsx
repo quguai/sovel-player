@@ -383,7 +383,6 @@ export function AdvancedAudioSettings() {
   );
 }
 export function SettingsInfo({ section }: { section: SettingsSection }) {
-  const [details, setDetails] = useState(false);
   const [licenses, setLicenses] = useState(false);
   if (section === "sources") return <MusicSourcesScreen />;
   if (section === "updates") return <UpdateSettings />;
@@ -432,26 +431,13 @@ export function SettingsInfo({ section }: { section: SettingsSection }) {
     <>
       <AboutBrandCard version={installedApp.version} />
       <SettingGroup title="应用信息">
-        <SettingRow title="版本" value={installedApp.version} />
         <SettingRow title="曲库" note="SQLite 本地索引；引用原音频文件" />
-        <SettingRow
-          title="设计与实现参考"
-          value={details ? "收起" : "展开"}
-          onPress={() => setDetails(!details)}
-        />
         <SettingRow
           title="第三方开源许可"
           value={licenses ? "收起" : "查看"}
           onPress={() => setLicenses(!licenses)}
         />
       </SettingGroup>
-      {details && (
-        <Text selectable style={s.note}>
-          NeriPlayer · 扫描阶段与 USB 能力状态{String.fromCharCode(10)}Auxio ·
-          索引、设置分组与 ReplayGain 处理{String.fromCharCode(10)}
-          本次借鉴设计与行为，未拷入上述项目的 GPL 源码。
-        </Text>
-      )}
       {licenses && (
         <Text selectable style={s.note}>
           {dsdLicense}

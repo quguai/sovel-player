@@ -86,7 +86,7 @@ The site fetches information when opened, so publishing a release does **not** r
 
 ## Screens and visual assets
 
-Inside is a seven-scene scroll presentation: library → classic black vinyl → smoked vinyl → ice blue vinyl → cover → immersive → lyrics. Native document scrolling advances the full-viewport stage; after the last scene, the page continues into downloads. The player shell stays in place as the app screens and accompanying text crossfade. There are no wheel/touch handlers or forced scroll snaps. The native screenshots are displayed in an original CSS mockup inspired by the [Sony NW-WM1ZM3](https://www.sony.com.cn/content/sonyportal/zh-cn/cms/newscenter/product/2026/20261016-1.html). The iOS status bar is cropped in CSS. This is a conceptual presentation, not a hardware compatibility test or a Sony affiliation. Vendor product photographs are not bundled.
+Inside is a seven-scene scroll presentation: library → classic black vinyl → smoked vinyl → ice blue vinyl → cover → immersive → lyrics. Native document scrolling advances the full-viewport stage; after the last scene, the page continues into downloads. The player shell stays in place as the app screens and accompanying text crossfade. There are no wheel/touch handlers or forced scroll snaps. The native screenshots are displayed in a CSS player mockup. The iOS status bar is cropped in CSS. This is a conceptual presentation, not a hardware compatibility test. Vendor product photographs are not bundled.
 
 - `screen-library.png`, `screen-player.png`, `screen-lyrics.png`: captured native application screens also used in `docs/images/`.
 - `screen-black.png`, `screen-blue.png`, `screen-cover.png`, `screen-immersive.png`: additional native iOS simulator captures of the project’s original listening samples, captured for this site.
@@ -104,7 +104,7 @@ The hero turntable is an appearance preview and does not play audio. Motion resp
 
 Star 数和 Android 下载入口实时读取公开 GitHub 数据，缓存五分钟。正式版优先；没有正式版时展示最新预览版并明确标识。尚无安装包时显示“首个版本准备中”，接口失败时保留 GitHub Releases 入口。发布新版本后，无需重建网站。
 
-Inside 通过原生滚动依次展示七幕真实应用截图：曲库、三种黑胶、封面、沉浸与歌词。画面固定在视口内，展示结束后继续进入下载区；支持向上回看与“展开全部画面”。关闭 JavaScript 或启用减少动态效果时，默认展示普通纵向排版。使用参考金砖三代外形的 CSS 概念机身。外壳仅用于展示，不代表已通过该设备兼容性测试。
+Inside 通过原生滚动依次展示七幕真实应用截图：曲库、三种黑胶、封面、沉浸与歌词。画面固定在视口内，展示结束后继续进入下载区；支持向上回看与“展开全部画面”。关闭 JavaScript 或启用减少动态效果时，默认展示普通纵向排版。使用 CSS 绘制的播放器概念机身。外壳仅用于展示，不代表已通过该设备兼容性测试。
 
 
 ## Music-source capability copy

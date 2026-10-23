@@ -36,7 +36,7 @@ Jellyfin/Emby 只保存访问 Token。SMB/WebDAV/OpenSubsonic 重连需要的账
 | fast-xml-parser 5.x | UPnP/WebDAV XML，禁用 DTD/自定义实体声明，限制文档大小 | [MIT](licenses/fast-xml-parser-MIT.txt) |
 | @noble/hashes 2.x | Subsonic 协议要求的 MD5 challenge 与封面缓存标识；不用作密码存储算法 | [MIT](licenses/noble-hashes-MIT.txt) |
 
-完整直接依赖许可随应用“设置 → 关于 → 第三方开源许可”分发。参考项目克隆位于忽略的 `repos/`，不是应用打包内容。SMB 原生依赖独立于 GPL/AGPL 播放器参考代码。
+完整直接依赖许可随应用“设置 → 关于 → 第三方开源许可”分发。
 
 协议资料：[Jellyfin networking](https://jellyfin.org/docs/general/post-install/networking/)、[Emby server discovery](https://dev.emby.media/doc/restapi/Locating-the-Server.html)、[OpenSubsonic API](https://opensubsonic.netlify.app/docs/)、[Apple multicast entitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.networking.multicast)。
 
