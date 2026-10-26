@@ -73,6 +73,7 @@ For this Workers deployment, bind `sovel.quguai.cn` under **Settings → Domains
 `github.js` reads the public GitHub API, with no token or build secrets:
 
 - Repository `stargazers_count` is displayed as the real Star count, including zero. Unknown or failed counts display `—`; the GitHub link still works.
+- The download section shows cumulative APK download counts across all published releases and architectures. It paginates the public Releases API in batches of 100 and sums only uploaded `.apk` assets, excluding manifests, checksums and drafts. Zero is displayed as zero; loading, invalid data or a failed page displays `—`, never a partial total. Counts include repeat and test downloads, not unique users or installations. No database or click tracking is used.
 - Prefer `/releases/latest` (latest stable release). If no stable release exists, read the newest published entry from the first 20 releases and clearly label prereleases **Preview**.
 - A published, uploaded universal `.apk` is the safe default. The Android package selector offers universal, ARM64, ARM32 and x86_64, enabling only files actually published in the selected release. Recognized architecture-specific packages require a user choice when no universal package exists; the site never infers the Android ABI from the browser. Legacy single APKs without a recognized suffix remain supported.
 - An explicit package choice is remembered locally and applies to every download button, filename and size. If that package is unavailable in a later release, fall back to universal when available and explain the fallback. Universal-only releases remain downloadable and are clearly identified. Duplicate ABI assets and links whose tag/filename do not match the release are not guessed.
@@ -80,7 +81,7 @@ For this Workers deployment, bind `sovel.quguai.cn` under **Settings → Domains
 - All “Get Sovel” entries download the APK directly in the current tab. Clicking while release information is loading waits for the resolved URL; it does not scroll to the download section. The buttons show “View releases” only when a direct APK is unavailable.
 - No release: show an explicit coming-soon state with Releases/source links. API timeout, rate limit or invalid response: show a GitHub fallback instead of claiming no release exists.
 - Each successful API response is cached in that browser tab’s session storage for five minutes. Failed requests are not cached. Changes may take up to five minutes to appear in an already-open session; reload after the cache expires.
-- The API timeout is eight seconds per request. Stars and release requests fail independently. Only HTTPS links under this repository’s GitHub Releases paths are accepted.
+- The API timeout is eight seconds per request. Stars, cumulative counts and release requests fail independently. Only HTTPS links under this repository’s GitHub Releases paths are accepted.
 
 The site fetches information when opened, so publishing a release does **not** require rebuilding the website. Public GitHub API availability and unauthenticated rate limits apply. iOS is linked to source build instructions; Android APKs are never presented as iOS downloads.
 

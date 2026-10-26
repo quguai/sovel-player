@@ -56,6 +56,7 @@ export const zh = {
 
 export const labels = {
   en: {
+    totalDownloads: 'total APK downloads', downloadsLoading: 'Loading GitHub download count…', downloadsUnavailable: 'GitHub download count is temporarily unavailable.', downloadsHint: 'All published versions and architectures on GitHub. Includes repeat downloads; not unique users or installs.',
     choosePackage: 'Choose an Android package below to download.',
     packageHelp: 'Choose the architecture supported by your Android system. Install one APK.', universalOnly: 'This release provides only a universal APK. It supports all three target architectures.', packageFallback: 'Your saved architecture is unavailable in this release. A universal APK is used when available; you can choose another package.',
     black: 'Classic black vinyl', smoke: 'Smoked vinyl', blue: 'Ice blue vinyl',
@@ -69,6 +70,7 @@ export const labels = {
     checkingRelease: 'Getting download…', loading: 'Loading material…', loadError: 'Could not load this material. Try again.',
   },
   zh: {
+    totalDownloads: '累计 APK 下载', downloadsLoading: '正在读取 GitHub 下载统计…', downloadsUnavailable: 'GitHub 下载统计暂不可用。', downloadsHint: 'GitHub 所有已发布版本与架构的 APK 下载次数，包含重复下载，不代表独立用户或安装量。',
     choosePackage: '请选择下方适合设备的安装包。',
     packageHelp: '按安卓系统支持的架构选择，安装一个 APK 即可；不确定时选通用版。', universalOnly: '此版本仅提供通用包，兼容三种目标架构。', packageFallback: '此版本未提供上次选择的架构；有通用包时将使用通用包，也可重新选择。',
     black: '纯黑胶', smoke: '烟熏透明', blue: '冰蓝反光',

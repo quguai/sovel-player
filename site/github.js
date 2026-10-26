@@ -55,6 +55,25 @@ async function request(path, allowMissing = false) {
   } finally { clearTimeout(timer); }
 }
 
+async function totalApkDownloads() {
+  let total = 0;
+  for (let page = 1; ; page++) {
+    const releases = await request(`/releases?per_page=100&page=${page}`);
+    if (!Array.isArray(releases)) throw new Error('Invalid release list');
+    for (const release of releases) {
+      if (release?.draft) continue;
+      if (!release?.published_at || !Array.isArray(release.assets)) throw new Error('Invalid published release');
+      for (const asset of release.assets) {
+        if (asset?.state !== 'uploaded' || typeof asset.name !== 'string' || !/\.apk$/i.test(asset.name)) continue;
+        if (!Number.isSafeInteger(asset.download_count) || asset.download_count < 0) throw new Error('Invalid download count');
+        total += asset.download_count;
+        if (!Number.isSafeInteger(total)) throw new Error('Invalid download total');
+      }
+    }
+    if (releases.length < 100) return total;
+  }
+}
+
 export async function loadGitHub(update) {
   await Promise.allSettled([
     (async () => {
@@ -63,6 +82,10 @@ export async function loadGitHub(update) {
         if (!Number.isSafeInteger(data?.stargazers_count) || data.stargazers_count < 0) throw new Error('Invalid star count');
         update({ stars: data.stargazers_count });
       } catch { update({ stars: null }); }
+    })(),
+    (async () => {
+      try { update({ downloads: await totalApkDownloads() }); }
+      catch { update({ downloads: null }); }
     })(),
     (async () => {
       try {

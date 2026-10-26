@@ -26,7 +26,7 @@ function savePreference(key, value) {
 }
 const requested = new URLSearchParams(location.search).get('lang');
 let language = (requested ?? readPreference('language')) === 'zh' ? 'zh' : 'en';
-let github = { stars: null, release: undefined, error: false };
+let github = { stars: null, downloads: undefined, release: undefined, error: false };
 let preferredAbi = readPreference('package');
 if (!packageAbis.includes(preferredAbi)) preferredAbi = 'universal';
 let playing = !reducedMotion.matches;
@@ -117,6 +117,15 @@ function refreshGitHub() {
   const count = document.querySelector('#star-count');
   count.textContent = github.stars === null ? '—' : new Intl.NumberFormat(language).format(github.stars);
   star.setAttribute('aria-label', `${copy.star}${github.stars === null ? '' : ` · ${github.stars} ${copy.starCount}`}`);
+  const total = document.querySelector('#download-total');
+  const downloads = github.downloads == null ? '—' : new Intl.NumberFormat(language).format(github.downloads);
+  const downloadHint = github.downloads === undefined ? copy.downloadsLoading
+    : github.downloads === null ? copy.downloadsUnavailable : copy.downloadsHint;
+  document.querySelector('#download-count').textContent = downloads;
+  document.querySelector('#download-total-label').textContent = copy.totalDownloads;
+  total.setAttribute('aria-busy', String(github.downloads === undefined));
+  total.setAttribute('aria-label', `${downloads} ${copy.totalDownloads}. ${downloadHint}`);
+  total.title = downloadHint;
   const view = releaseView(github, copy, language, preferredAbi);
   refreshDownloads(view, copy);
   const picker = document.querySelector('#package-picker');

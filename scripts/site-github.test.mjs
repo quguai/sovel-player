@@ -5,7 +5,7 @@ import { labels } from '../site/copy.js';
 
 test.beforeEach(() => { try { sessionStorage.clear(); } catch { /* Node without web storage. */ } });
 
-const apk = (name = 'sovel-universal.apk', url = `https://github.com/quguai/sovel-player/releases/download/v0.1.0/${name}`) => ({ name, state: 'uploaded', size: 10485760, browser_download_url: url });
+const apk = (name = 'sovel-universal.apk', url = `https://github.com/quguai/sovel-player/releases/download/v0.1.0/${name}`) => ({ name, state: 'uploaded', size: 10485760, download_count: 0, browser_download_url: url });
 const release = (changes = {}) => ({ tag_name: 'v0.1.0', published_at: '2026-10-20T00:00:00Z', html_url: 'https://github.com/quguai/sovel-player/releases/tag/v0.1.0', draft: false, prerelease: false, assets: [apk()], ...changes });
 
 test('downloads the published universal APK and renders its actual version and size', () => {
@@ -48,7 +48,8 @@ test('loads stars independently and falls back to preview releases when no stabl
     await loadGitHub(update => Object.assign(state, update));
     assert.equal(state.stars, 0);
     assert.equal(state.release.preview, true);
-    assert.equal(paths.length, 3);
+    assert.equal(state.downloads, 0);
+    assert.equal(paths.length, 4);
   } finally { globalThis.fetch = original; }
 });
 
@@ -60,7 +61,77 @@ test('rate limiting preserves working stars and provides a Releases fallback', a
     await loadGitHub(update => Object.assign(state, update));
     assert.equal(state.stars, 17);
     assert.equal(state.error, true);
+    assert.equal(state.downloads, null);
     assert.equal(releaseView(state, labels.en, 'en').href, 'https://github.com/quguai/sovel-player/releases');
+  } finally { globalThis.fetch = original; }
+});
+
+test('cumulative downloads span every release page and architecture but exclude drafts and metadata', async () => {
+  const original = globalThis.fetch;
+  const paths = [];
+  const firstPage = [
+    release({ assets: [{ ...apk('arm64.apk'), download_count: 7 }, apk('arm32.apk'), { ...apk('update.json'), download_count: 999 }] }),
+    release({ draft: true, assets: [{ ...apk(), download_count: 100 }] }),
+    ...Array.from({ length: 98 }, () => release({ assets: [] })),
+  ];
+  globalThis.fetch = async url => {
+    paths.push(url);
+    if (url.endsWith('page=1')) return Response.json(firstPage);
+    if (url.endsWith('page=2')) return Response.json([release({ prerelease: true, assets: [
+      { ...apk('legacy.APK'), download_count: 4 }, { ...apk(), state: 'open', download_count: 100 },
+    ] })]);
+    return Response.json(url.endsWith('/latest') ? release() : { stargazers_count: 17 });
+  };
+  try {
+    const state = {};
+    await loadGitHub(update => Object.assign(state, update));
+    assert.equal(state.downloads, 11);
+    assert.equal(state.stars, 17);
+    assert.equal(state.error, false);
+    assert.equal(paths.filter(url => url.includes('per_page=100')).length, 2);
+  } finally { globalThis.fetch = original; }
+});
+
+test('an empty published history displays a genuine zero', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async url => url.includes('per_page=100') ? Response.json([])
+    : Response.json(url.endsWith('/latest') ? release() : { stargazers_count: 0 });
+  try {
+    const state = {};
+    await loadGitHub(update => Object.assign(state, update));
+    assert.equal(state.downloads, 0);
+    assert.equal(state.error, false);
+  } finally { globalThis.fetch = original; }
+});
+
+test('a failed later page never publishes a partial count or disables a working APK link', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async url => {
+    if (url.endsWith('page=1')) return Response.json(Array.from({ length: 100 }, () => release({ assets: [{ ...apk(), download_count: 1 }] })));
+    if (url.endsWith('page=2')) return new Response(null, { status: 403 });
+    return Response.json(url.endsWith('/latest') ? release() : { stargazers_count: 17 });
+  };
+  try {
+    const updates = [];
+    const state = {};
+    await loadGitHub(update => { updates.push(update); Object.assign(state, update); });
+    assert.deepEqual(updates.filter(update => 'downloads' in update), [{ downloads: null }]);
+    assert.equal(releaseView(state, labels.en, 'en').href, apk().browser_download_url);
+    assert.equal(state.stars, 17);
+  } finally { globalThis.fetch = original; }
+});
+
+test('invalid counters or release lists remain unavailable instead of becoming zero', async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const data of [null, {}, ...[-1, '12', null, 0.5].map(download_count => [release({ assets: [{ ...apk(), download_count }] })])]) {
+      globalThis.fetch = async url => url.includes('per_page=100') ? Response.json(data)
+        : Response.json(url.endsWith('/latest') ? release() : { stargazers_count: 17 });
+      const state = {};
+      await loadGitHub(update => Object.assign(state, update));
+      assert.equal(state.downloads, null);
+      assert.equal(state.error, false);
+    }
   } finally { globalThis.fetch = original; }
 });
 
