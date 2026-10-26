@@ -35,6 +35,9 @@ export function parseSettingsBackup(text: string): SettingsBackup {
   if (!p || typeof p !== "object" || Array.isArray(p))
     throw new Error("备份缺少设置内容");
   const normalized = normalizePreferences(p);
+  // Cassette choices were added after the original v1 backup format.
+  if (p.cassette !== undefined && p.cassette !== normalized.cassette)
+    throw new Error("磁带样式无效");
   // Older v1 backups predate DSD settings; missing values migrate to defaults.
   if (
     p.dsd !== undefined &&

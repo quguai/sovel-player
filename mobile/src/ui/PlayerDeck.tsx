@@ -131,6 +131,7 @@ export function PlayerDeck({
               />
             ) : item === "player" ? (
               <PlayerScreen
+                active={active && panel === "player" && !appearance}
                 onClose={onClose}
                 onLyrics={() => onPanel("lyrics")}
                 onDetails={onDetails}

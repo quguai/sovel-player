@@ -8,7 +8,8 @@ import { defaultTheme, type ThemeSettings } from "./theme";
 import { defaultPeq, type PeqSettings } from "./peq";
 import { defaultDsd, type DsdSettings } from "./dsd";
 export type HomeStyle = "gallery" | "library" | "quiet";
-export type PlayerStyle = "cover" | "vinyl" | "immersive";
+export type PlayerStyle = "cover" | "vinyl" | "immersive" | "cassette";
+export type CassetteStyle = "noir" | "classic" | "studio" | "pop";
 export type RecordStyle =
   | "black"
   | "clear"
@@ -203,6 +204,7 @@ export type Preferences = {
   home: HomeStyle;
   theme: ThemeSettings;
   player: PlayerStyle;
+  cassette: CassetteStyle;
   record: RecordStyle;
   recordSpeed: RecordSpeed;
   tonearmStyle: TonearmStyle;
@@ -224,6 +226,7 @@ export const defaults: Preferences = {
   home: "gallery",
   theme: defaultTheme,
   player: "cover",
+  cassette: "noir",
   record: "clear",
   recordSpeed: "standard",
   tonearmStyle: "simple",

@@ -16,7 +16,16 @@ export function normalizePreferences(input: unknown): Preferences {
   ): T => (values.includes(v as T) ? (v as T) : fallback);
   return {
     home: choice(p.home, ["gallery", "library", "quiet"], defaults.home),
-    player: choice(p.player, ["cover", "vinyl", "immersive"], defaults.player),
+    player: choice(
+      p.player,
+      ["cover", "vinyl", "immersive", "cassette"],
+      defaults.player,
+    ),
+    cassette: choice(
+      p.cassette,
+      ["noir", "classic", "studio", "pop"],
+      defaults.cassette,
+    ),
     record: choice(
       p.record,
       [

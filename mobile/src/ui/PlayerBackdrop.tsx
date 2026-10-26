@@ -18,10 +18,12 @@ const textureSize = 128;
 export const PlayerBackdrop = memo(function PlayerBackdrop({
   uri,
   immersive,
+  cassette = false,
   active,
 }: {
   uri?: string;
   immersive: boolean;
+  cassette?: boolean;
   active: boolean;
 }) {
   const { width, height } = useWindowDimensions();
@@ -149,7 +151,9 @@ export const PlayerBackdrop = memo(function PlayerBackdrop({
         colors={
           immersive
             ? ["#48444835", "#39313570", "#292b36c9"]
-            : ["#12152252", "#18152238", "#14131fbb"]
+            : cassette
+              ? ["#242d34ed", "#1c2933dd", "#11171dfa"]
+              : ["#12152252", "#18152238", "#14131fbb"]
         }
         locations={[0, 0.45, 1]}
         style={StyleSheet.absoluteFill}

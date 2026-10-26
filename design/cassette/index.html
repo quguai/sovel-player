@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sovel · 磁带播放页 DEMO</title>
+<link rel="icon" href="/assets/favicon.png">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#161c20;color:#e2e9ed;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;min-height:100svh}header{max-width:1000px;margin:auto;padding:24px 30px 18px;display:flex;align-items:center;justify-content:space-between;gap:20px}h1{margin:0;font-size:17px;font-weight:500;letter-spacing:.5px}h1 span{color:#a7b9c4;font:10px ui-monospace,monospace;letter-spacing:2px;display:block;margin-bottom:7px}.sizes{display:flex;gap:4px;padding:4px;border-radius:9px;background:#ffffff06}.sizes button{background:none;border:0;color:#9ba2a3;padding:9px 12px;font:11px inherit;border-radius:6px;cursor:pointer}.sizes button[aria-pressed=true]{color:#e0e9ef;background:#ffffff0d}main{display:grid;place-items:center;padding:10px 16px 16px}.device{width:360px;height:640px;border-radius:26px;padding:5px;background:linear-gradient(135deg,#77808166,#1b2327,#77808144);box-shadow:0 28px 70px #0005;max-width:100%}.device iframe{border:0;border-radius:22px;display:block;width:100%;height:100%;background:#51606a}.device[data-size=regular]{width:390px;height:780px}.device[data-size=wide]{width:720px;height:400px}footer{font-size:11px;line-height:1.9;color:#8a9495;text-align:center;margin:4px 20px 20px}footer strong{color:#bbcbd5;font-weight:400}.note{display:block;font-size:9px;color:#68777c;margin-top:5px}button:focus-visible{outline:2px solid #b6cbd9;outline-offset:2px}@media(max-width:540px){header{padding:20px 18px;align-items:flex-start;flex-direction:column;gap:14px}.sizes{width:100%;justify-content:space-around}.device[data-size=wide]{width:100%;height:280px}.device[data-size=regular]{height:730px}main{padding-top:0}}@media(prefers-reduced-motion:no-preference){.device{transition:width .35s ease,height .35s ease}}
+</style>
+</head>
+<body>
+<header><h1><span>SOVEL · ANALOG COLLECTION</span>磁带播放 · 四种设计</h1><nav class="sizes" aria-label="预览屏幕尺寸"><button data-size="small" aria-pressed="true">小屏 360</button><button data-size="regular" aria-pressed="false">标准 390</button><button data-size="wide" aria-pressed="false">横屏</button></nav></header>
+<main><div class="device" data-size="small"><iframe title="磁带播放器交互预览" src="/?device=1&page=player&art=cassette"></iframe></div></main>
+<footer><strong>横屏</strong> 左侧磁带 · 右侧同步歌词 · 操作按钮在磁带下方 · 衣服图标选择 4 款设计<span class="note">交互设计 DEMO · 示例曲目无声演示 · 原生 App 使用真实曲库与播放进度</span></footer>
+<script>document.querySelectorAll('button[data-size]').forEach(button=>button.addEventListener('click',()=>{document.querySelector('.device').dataset.size=button.dataset.size;document.querySelectorAll('button[data-size]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));}));</script>
+</body></html>

@@ -1,3 +1,4 @@
+import { Cassette, CassetteOptions } from "./Cassette";
 import { useEffect, useState } from "react";
 import {
   AccessibilityInfo,
@@ -69,7 +70,13 @@ export function PlayerAppearanceSheet({
           style={[
             styles.sheet,
             {
-              maxHeight: height * (width > height ? 0.92 : 0.57),
+              maxHeight:
+                height *
+                (width > height
+                  ? 0.92
+                  : prefs.player === "cassette"
+                    ? 0.8
+                    : 0.57),
               width: width > height ? Math.min(420, width * 0.52) : "100%",
               alignSelf: "flex-end",
               paddingBottom: Math.max(16, insets.bottom),
@@ -95,6 +102,7 @@ export function PlayerAppearanceSheet({
                   ["cover", "专辑封面"],
                   ["vinyl", "唱片"],
                   ["immersive", "沉浸大图"],
+                  ["cassette", "磁带"],
                 ] as [PlayerStyle, string][]
               ).map(([key, name]) => (
                 <Pressable
@@ -105,30 +113,34 @@ export function PlayerAppearanceSheet({
                   onPress={() => preferences({ player: key })}
                   style={[styles.mode, prefs.player === key && styles.selected]}
                 >
-                  <View style={styles.modeArt}>
-                    {key === "vinyl" ? (
-                      <Record
-                        track={current}
-                        material={prefs.record}
-                        size={48}
-                        mini
-                      />
-                    ) : (
-                      <Cover
-                        track={current}
-                        size={key === "cover" ? 42 : 56}
-                        style={{
-                          borderRadius: 6,
-                          opacity: key === "immersive" ? 0.65 : 1,
-                        }}
-                      />
-                    )}
-                    {key === "immersive" && (
-                      <View style={styles.immersiveIcon}>
-                        <Icon name="play" size={18} />
-                      </View>
-                    )}
-                  </View>
+                  {!(width > height && prefs.player === "cassette") && (
+                    <View style={styles.modeArt}>
+                      {key === "cassette" ? (
+                        <Cassette width={56} finish={prefs.cassette} />
+                      ) : key === "vinyl" ? (
+                        <Record
+                          track={current}
+                          material={prefs.record}
+                          size={48}
+                          mini
+                        />
+                      ) : (
+                        <Cover
+                          track={current}
+                          size={key === "cover" ? 42 : 56}
+                          style={{
+                            borderRadius: 6,
+                            opacity: key === "immersive" ? 0.65 : 1,
+                          }}
+                        />
+                      )}
+                      {key === "immersive" && (
+                        <View style={styles.immersiveIcon}>
+                          <Icon name="play" size={18} />
+                        </View>
+                      )}
+                    </View>
+                  )}
                   <Text
                     style={[
                       styles.label,
@@ -140,6 +152,12 @@ export function PlayerAppearanceSheet({
                 </Pressable>
               ))}
             </View>
+            {prefs.player === "cassette" && (
+              <>
+                <Text style={styles.section}>磁带样式</Text>
+                <CassetteOptions />
+              </>
+            )}
             {prefs.player === "vinyl" && (
               <>
                 <Text style={styles.section}>唱片材质</Text>

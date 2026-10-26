@@ -226,6 +226,9 @@ function Shell() {
           {(dismiss, panHandlers) => (
             <>
               <PlayerBackdrop
+                cassette={
+                  prefs.player === "cassette" && playerPanel === "player"
+                }
                 uri={uri}
                 immersive={
                   prefs.player === "immersive" && playerPanel === "player"

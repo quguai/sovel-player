@@ -1,3 +1,4 @@
+import { cassetteArtwork, cassetteStyles, cassettePreview } from './design/cassette/cassette.js';
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const escape = (value) => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -45,6 +46,7 @@ const themes = {
 const playbackStyles = {
   cover: { name: '专辑封面', description: '留白与大封面' },
   vinyl: { name: '唱片', description: '旋转唱片与唱臂' },
+  cassette: { name: '磁带', description: '双卷轴与复古标签' },
   immersive: { name: '沉浸大图', description: '封面铺满背景' },
 };
 const playbackModes = { repeat: { name: '列表循环', icon: 'repeat' }, single: { name: '单曲循环', icon: 'repeat-one' }, shuffle: { name: '随机播放', icon: 'shuffle' } };
@@ -114,6 +116,7 @@ const state = {
   device: params.get('device') === '1',
   focus: params.get('page') === 'about' ? 'player' : ['library', 'player', 'lyrics'].includes(params.get('page')) ? params.get('page') : 'library',
   pages: { library: 'library', player: params.get('page') === 'about' ? 'about' : 'player', lyrics: 'lyrics' },
+  cassetteStyle: Object.hasOwn(cassetteStyles, params.get('tape')) ? params.get('tape') : Object.hasOwn(cassetteStyles, stored.cassetteStyle) ? stored.cassetteStyle : 'noir',
   art: '', playing: false, current: 0, position: 94, mode: Object.hasOwn(playbackModes, stored.mode) ? stored.mode : 'repeat',
   backgroundPlayback: stored.backgroundPlayback !== false,
   scanRules: { filterSmall: false, minSizeKB: 100, ignoreHidden: true, includeSubfolders: true, ...stored.scanRules },
@@ -126,7 +129,7 @@ const state = {
   albumLayout: stored.albumLayout === 'list' ? 'list' : 'cards', artistLayout: stored.artistLayout === 'list' ? 'list' : 'cards', collectionFilter: '', discoveryMix: null, queueIds: null,
   libraryTab: 'albums', filter: 'all', query: '', lyricSize: stored.lyricSize === 1 ? 1 : 0, sleepEnd: null, sleepMinutes: 0,
 };
-state.art = ['cover', 'vinyl', 'immersive'].includes(params.get('art') || stored.art) ? (params.get('art') || stored.art) : themes[state.theme].art;
+state.art = ['cover', 'vinyl', 'cassette', 'immersive'].includes(params.get('art') || stored.art) ? (params.get('art') || stored.art) : themes[state.theme].art;
 state.libraryTab = state.theme === 'obsidian' ? 'albums' : 'tracks';
 if (state.device) {
   state.view = 'focus';
@@ -139,11 +142,12 @@ audio.volume = .7;
 const currentTrack = () => tracks[state.current];
 const time = seconds => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 const save = () => {
-  try { localStorage.setItem('sovel-preferences', JSON.stringify({ theme: state.theme, albumLayout: state.albumLayout, artistLayout: state.artistLayout, art: state.art, recordStyle: state.recordStyle, recordSpeed: state.recordSpeed, stylusLight: state.stylusLight, tonearmStyle: state.tonearmStyle, cartridgeColor: state.cartridgeColor, lyricSize: state.lyricSize, mode: state.mode, backgroundPlayback: state.backgroundPlayback, scanRules: state.scanRules, favorites: [...state.favorites] })); } catch { /* Private mode may disable storage. */ }
+  try { localStorage.setItem('sovel-preferences', JSON.stringify({ theme: state.theme, albumLayout: state.albumLayout, artistLayout: state.artistLayout, art: state.art, cassetteStyle: state.cassetteStyle, recordStyle: state.recordStyle, recordSpeed: state.recordSpeed, stylusLight: state.stylusLight, tonearmStyle: state.tonearmStyle, cartridgeColor: state.cartridgeColor, lyricSize: state.lyricSize, mode: state.mode, backgroundPlayback: state.backgroundPlayback, scanRules: state.scanRules, favorites: [...state.favorites] })); } catch { /* Private mode may disable storage. */ }
   // Keep an explicitly styled preview link consistent with later choices on that page.
   const url = new URL(location.href);
   if (url.searchParams.has('theme')) url.searchParams.set('theme', state.theme);
   if (url.searchParams.has('art')) url.searchParams.set('art', state.art);
+  if (url.searchParams.has('tape')) url.searchParams.set('tape', state.cassetteStyle);
   if (url.href !== location.href) history.replaceState(null, '', url);
 };
 const placeholderNames = { album: ['album-amber', 'album-tidal', 'album-dusk', 'album-dune'], artist: ['artist-bronze', 'artist-slate'] };
@@ -307,11 +311,14 @@ function libraryCollections(filtered, albums, layout) {
       return `<button class="collection-item" data-library-album="${escape(contextAlbumKey(song))}" aria-label="打开 ${escape(song.album)}"><span class="collection-sleeve">${albumArt(song)}<span class="collection-count">${icon('disc')}${count} 首</span></span><span class="collection-copy"><strong>${escape(song.album)}</strong><small>${escape(song.albumArtist || song.artist)}</small></span>${layout === 'list' ? `<span class="collection-list-count">${count} 首</span>${icon('forward')}` : ''}</button>`;
     }).join('')}</div>`;
 }
+function cassetteLyrics(song) {
+  return `<section class="cassette-lyrics" aria-label="横屏歌词"><header><h2>${escape(song.title)}</h2><p>${escape(song.artist)}${song.album ? ` · ${escape(song.album)}` : ''}</p></header>${song.lines?.length ? `<div class="lyrics-scroll" tabindex="0" aria-label="歌词，点击可跳转播放位置"><div class="lyrics-spacer"></div>${song.lines.map((line, i) => `<button class="lyric-line" data-lyric="${i}"><span>${escape(line)}</span></button>`).join('')}<div class="lyrics-spacer end-spacer"></div></div>` : '<div class="cassette-no-lyrics"><strong>此刻，专注聆听</strong><span>这首音乐还没有歌词</span></div>'}</section>`;
+}
 function player() {
   const song = currentTrack();
   return `<div class="player-page art-${state.art}" style="--track-color:${song.color}"><div class="ambient-cover" style="background-image:url('${escape(coverUrl(song))}')"></div>
-    <div class="player-body"><div class="art-stage"><div class="cover-stage">${albumArt(song, 'main-album')}</div>${vinylArtwork(song)}</div>
-    <section class="player-info"><div class="song-heading"><div><h2>${escape(song.title)}</h2><p>${escape(song.artist)}${song.album ? ` <span>· ${escape(song.album)}</span>` : ''}</p></div>${favorite()}</div><button class="quality-pill" data-action="output"><span>${song.url ? 'LOCAL' : 'Hi-Res'}</span>${song.format} <i>·</i> ${song.url ? '文件试听' : song.detail}${icon('forward')}</button>${lyricPreview(song)}${playbackControls()}</section></div></div>`;
+    <div class="player-body"><div class="art-stage"><div class="cover-stage">${albumArt(song, 'main-album')}</div>${vinylArtwork(song)}${state.art === 'cassette' ? cassetteArtwork({ title: escape(song.title), artist: escape(song.artist), cover: escape(coverUrl(song)), finish: state.cassetteStyle }) : ''}</div>
+    ${state.art === 'cassette' && state.orientation === 'landscape' ? cassetteLyrics(song) : ''}<section class="player-info"><div class="song-heading"><div><h2>${escape(song.title)}</h2><p>${escape(song.artist)}${song.album ? ` <span>· ${escape(song.album)}</span>` : ''}</p></div>${favorite()}</div><button class="quality-pill" data-action="output"><span>${song.url ? 'LOCAL' : 'Hi-Res'}</span>${song.format} <i>·</i> ${song.url ? '文件试听' : song.detail}${icon('forward')}</button>${lyricPreview(song)}${playbackControls()}</section></div></div>`;
 }
 function lyrics() {
   const song = currentTrack();
@@ -364,10 +371,18 @@ function songContext() {
 const pageFunctions = { library, player, lyrics, about: songContext };
 function renderPage(page) {
   if (page === 'library') return library();
-  return `<div class="playback-deck" style="--deck-art:url('${escape(coverUrl(currentTrack()))}')"><header class="page-header">${button('down', '返回音乐库', 'navigate-library')}<nav class="player-page-dots" aria-label="播放分页">${playerPages.map((p, i) => `<button data-action="navigate-${p}" aria-label="${playerPageLabels[i]}" aria-current="${p === page ? 'page' : 'false'}"><i class="${p === page ? 'is-current' : ''}"></i></button>`).join('')}</nav>${button('shirt', '打开播放外观', 'open-player-appearance')}</header><div class="playback-host">${pageFunctions[page]()}</div></div>`;
+  return `<div class="playback-deck ${page === 'player' && state.art === 'cassette' ? 'deck-cassette' : ''}" style="--deck-art:url('${escape(coverUrl(currentTrack()))}')"><header class="page-header">${button('down', '返回音乐库', 'navigate-library')}<nav class="player-page-dots" aria-label="播放分页">${playerPages.map((p, i) => `<button data-action="navigate-${p}" aria-label="${playerPageLabels[i]}" aria-current="${p === page ? 'page' : 'false'}"><i class="${p === page ? 'is-current' : ''}"></i></button>`).join('')}</nav>${button('shirt', '打开播放外观', 'open-player-appearance')}</header><div class="playback-host">${pageFunctions[page]()}</div></div>`;
 }
 const pageNames = { library: ['我的音乐', 'LIBRARY'], player: ['正在播放', 'NOW PLAYING'], lyrics: ['独立歌词', 'LYRICS'] };
+function centerCassetteLyric(list, instant = false) {
+  const line = $('.lyric-line.active', list);
+  if (!line) return;
+  list.scrollTo({ top: line.offsetTop - list.clientHeight * .43 + line.clientHeight / 2,
+    behavior: instant || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+}
+const cassetteLyricResize = new ResizeObserver(entries => entries.forEach(({target}) => centerCassetteLyric(target, true)));
 function render() {
+  cassetteLyricResize.disconnect();
   const railOffsets = new Map($$('.highlights-rail').map(rail => [rail.closest('[data-panel]').dataset.panel, rail.scrollLeft]));
   clearSwipe();
   document.body.dataset.theme = state.theme;
@@ -390,6 +405,7 @@ function render() {
   $('#view-toggle').setAttribute('aria-pressed', state.view === 'focus');
   $('#fullscreen-link').href = `?device=1&theme=${state.theme}&page=${state.focus}&art=${state.art}`;
   updatePlaybackUI(true);
+  $$('.cassette-lyrics .lyrics-scroll').forEach(list => cassetteLyricResize.observe(list));
 }
 function lyricTime(index) { return Math.round(index / 8 * currentTrack().duration); }
 let activeLyric = -1;
@@ -402,6 +418,15 @@ function updatePlaybackUI(force = false) {
   $$('[data-progress]').forEach(el => { if (document.activeElement !== el) el.value = state.position; el.style.setProperty('--progress', `${state.position / song.duration * 100}%`); });
   const index = Math.min(7, Math.floor(state.position / song.duration * 8));
   updateTonearms();
+  const tapeProgress = Math.max(0, Math.min(1, state.position / song.duration));
+  for (const [side, fraction] of [['left', 1 - tapeProgress], ['right', tapeProgress]]) {
+    $$(`.cassette-tape-${side}`).forEach(el => {
+      const inner = Number(el.dataset.tapeMin || 30);
+      const outer = Number(el.dataset.tapeMax || 54);
+      // Wound tape length is proportional to annular area, not its radius.
+      el.setAttribute('r', Math.sqrt(inner ** 2 + fraction * (outer ** 2 - inner ** 2)));
+    });
+  }
   $$('[data-action="mode"].mode-button').forEach(el => {
     el.innerHTML = icon(playbackModes[state.mode].icon);
     el.setAttribute('aria-label', `${playbackModes[state.mode].name}，点击切换播放方式`);
@@ -414,7 +439,10 @@ function updatePlaybackUI(force = false) {
     $$('.lyrics-scroll').forEach(list => {
       $$('.lyric-line', list).forEach((el, i) => { el.classList.toggle('active', i === index); el.classList.toggle('past', i < index); el.setAttribute('aria-current', i === index ? 'true' : 'false'); });
       const line = $('.lyric-line.active', list);
-      if (line) list.scrollTop = line.offsetTop - list.offsetTop - list.clientHeight * .43 + line.clientHeight / 2;
+      if (line) {
+        if (list.closest('.cassette-lyrics')) centerCassetteLyric(list, force);
+        else list.scrollTop = line.offsetTop - list.offsetTop - list.clientHeight * .43 + line.clientHeight / 2;
+      }
     });
   }
 }
@@ -498,12 +526,13 @@ function positionPlayerSheet() {
   dialog.style.setProperty('--sheet-left', `${Math.max(0, landscape ? rect.right - sheetWidth : rect.left)}px`);
   dialog.style.setProperty('--sheet-width', `${Math.min(sheetWidth, innerWidth)}px`);
   dialog.style.setProperty('--sheet-bottom', `${Math.max(0, innerHeight - rect.bottom)}px`);
-  dialog.style.setProperty('--sheet-height', `${Math.min(rect.height * (landscape ? .92 : .57), innerHeight * .92)}px`);
+  const heightRatio = landscape ? .92 : state.art === 'cassette' ? .8 : .57;
+  dialog.style.setProperty('--sheet-height', `${Math.min(rect.height * heightRatio, innerHeight * .92)}px`);
 }
 function playerAppearance(panel) {
   appearancePanel = panel;
   if (!state.device) $(`[data-panel="${panel}"] .screen`)?.scrollIntoView({ block: 'center', behavior: 'instant' });
-  showDialog('播放外观', `<section class="sheet-section"><h3>播放画面</h3><div class="sheet-player-modes">${Object.entries(playbackStyles).map(([key, style]) => `<button data-player-art="${key}" aria-label="播放画面：${style.name}" aria-pressed="${state.art === key}"><span class="sheet-mode-preview mode-${key}">${key === 'vinyl' ? `<span class="record-sample">${recordTexture(state.recordStyle)}<i class="sample-label" style="background-image:url('${escape(coverUrl(currentTrack()))}')"></i></span>` : `<img src="${escape(coverUrl(currentTrack()))}" data-fallback="${albumFallback(currentTrack())}" alt=""/>`}</span><small>${style.name}</small></button>`).join('')}</div></section><div class="sheet-vinyl-options" ${state.art !== 'vinyl' ? 'hidden' : ''}><section class="sheet-section"><h3>唱片材质</h3><div class="sheet-records" role="group" aria-label="唱片材质">${Object.entries(recordStyles).map(([key, style]) => `<button data-record-choice="${key}" aria-label="${style.name}" aria-pressed="${state.recordStyle === key}"><span class="sheet-record-ring" data-record-style="${key}"><span class="record-sample">${recordTexture(key)}<i class="sample-label" style="background-image:url('${escape(coverUrl(currentTrack()))}')"></i></span></span><small>${style.name}</small></button>`).join('')}</div></section>
+  showDialog('播放外观', `<section class="sheet-section"><h3>播放画面</h3><div class="sheet-player-modes">${Object.entries(playbackStyles).map(([key, style]) => `<button data-player-art="${key}" aria-label="播放画面：${style.name}" aria-pressed="${state.art === key}"><span class="sheet-mode-preview mode-${key}">${key === 'cassette' ? cassettePreview(state.cassetteStyle) : key === 'vinyl' ? `<span class="record-sample">${recordTexture(state.recordStyle)}<i class="sample-label" style="background-image:url('${escape(coverUrl(currentTrack()))}')"></i></span>` : `<img src="${escape(coverUrl(currentTrack()))}" data-fallback="${albumFallback(currentTrack())}" alt=""/>`}</span><small>${style.name}</small></button>`).join('')}</div></section><section class="sheet-cassette-options sheet-section" ${state.art !== 'cassette' ? 'hidden' : ''}><h3>磁带设计</h3><div class="cassette-finishes">${Object.entries(cassetteStyles).map(([key, name]) => `<button data-cassette-choice="${key}" aria-pressed="${key === state.cassetteStyle}">${cassettePreview(key)}<small>${name}</small></button>`).join('')}</div><p class="cassette-sheet-note">播放时转动，暂停时停留。让音乐慢慢卷进记忆。</p></section><div class="sheet-vinyl-options" ${state.art !== 'vinyl' ? 'hidden' : ''}><section class="sheet-section"><h3>唱片材质</h3><div class="sheet-records" role="group" aria-label="唱片材质">${Object.entries(recordStyles).map(([key, style]) => `<button data-record-choice="${key}" aria-label="${style.name}" aria-pressed="${state.recordStyle === key}"><span class="sheet-record-ring" data-record-style="${key}"><span class="record-sample">${recordTexture(key)}<i class="sample-label" style="background-image:url('${escape(coverUrl(currentTrack()))}')"></i></span></span><small>${style.name}</small></button>`).join('')}</div></section>
     <section class="sheet-section"><h3>唱臂</h3><div class="sheet-arms" role="group" aria-label="唱臂">${Object.entries(tonearmStyles).map(([key, style]) => `<button data-tonearm-choice="${key}" aria-pressed="${state.tonearmStyle === key}"><span class="sheet-arm-preview">${tonearmSprite(key)}</span><span>${style.name}</span></button>`).join('')}</div></section>
     <section class="sheet-section"><h3>唱头颜色</h3>${cartridgeColorOptions()}</section>
     <section class="sheet-section"><h3>唱头灯光</h3><div class="sheet-lights" role="group" aria-label="唱头灯光">${Object.entries(stylusLights).map(([key, light]) => `<button data-stylus-choice="${key}" aria-pressed="${state.stylusLight === key}"><i style="border-color:${light.color};background:${key === 'off' ? 'transparent' : light.color}"></i><span>${light.name}</span></button>`).join('')}</div></section>${recordSpeedSettings()}</div>`, 'player-appearance-sheet');
@@ -660,7 +689,8 @@ document.addEventListener('click', async event => {
   const panel = el.closest('[data-panel]')?.dataset.panel || state.focus;
   if (el.dataset.contextAlbum) { contextCollection = { kind: 'album', key: el.dataset.contextAlbum, from: el.dataset.albumFrom }; render(); return; }
   if (el.dataset.contextCollection) { contextCollection = el.dataset.contextCollection === 'all' ? null : el.dataset.contextCollection === 'artist' ? { kind: 'artist' } : { kind: 'album', key: contextAlbumKey(currentTrack()), from: 'details' }; render(); return; }
-  if (el.dataset.playerArt && Object.hasOwn(playbackStyles, el.dataset.playerArt)) { state.art = el.dataset.playerArt; save(); render(); $$('[data-player-art]', dialog).forEach(option => option.setAttribute('aria-pressed', option.dataset.playerArt === state.art)); $('.sheet-vinyl-options', dialog).hidden = state.art !== 'vinyl'; return; }
+  if (el.dataset.cassetteChoice && Object.hasOwn(cassetteStyles, el.dataset.cassetteChoice)) { state.cassetteStyle = el.dataset.cassetteChoice; save(); render(); $('.mode-cassette', dialog).innerHTML = cassettePreview(state.cassetteStyle); $$('[data-cassette-choice]', dialog).forEach(option => option.setAttribute('aria-pressed', option.dataset.cassetteChoice === state.cassetteStyle)); return; }
+  if (el.dataset.playerArt && Object.hasOwn(playbackStyles, el.dataset.playerArt)) { state.art = el.dataset.playerArt; save(); render(); $$('[data-player-art]', dialog).forEach(option => option.setAttribute('aria-pressed', option.dataset.playerArt === state.art)); $('.sheet-vinyl-options', dialog).hidden = state.art !== 'vinyl'; $('.sheet-cassette-options', dialog).hidden = state.art !== 'cassette'; positionPlayerSheet(); return; }
   if (el.dataset.modeChoice && Object.hasOwn(playbackModes, el.dataset.modeChoice)) {
     setPlaybackMode(el.dataset.modeChoice); return;
   }

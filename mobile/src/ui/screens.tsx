@@ -1,3 +1,5 @@
+import { CassetteOptions, PlayingCassette } from "./Cassette";
+import { CassetteLandscapePlayer } from "./CassetteLandscapePlayer";
 import { ThemeSettings } from "./ThemeSettings";
 import { themeStyles } from "./themeStyles";
 import React, {
@@ -715,19 +717,22 @@ function LyricPreview({ showNext }: { showNext: boolean }) {
 }
 
 export function PlayerScreen({
+  active = true,
   onClose,
   onLyrics,
   onQueue,
   onDetails,
   dismissPanHandlers,
 }: {
+  active?: boolean;
   onClose: () => void;
   onLyrics: () => void;
   onQueue: () => void;
   onDetails: () => void;
   dismissPanHandlers?: GestureResponderHandlers;
 }) {
-  const { current } = useMusic();
+  const { current, prefs } = useMusic();
+  const { width, height } = useWindowDimensions();
   if (!current)
     return (
       <View style={s.center}>
@@ -735,10 +740,20 @@ export function PlayerScreen({
         <Button onPress={onClose}>返回音乐库</Button>
       </View>
     );
+  if (prefs.player === "cassette" && width > height)
+    return (
+      <CassetteLandscapePlayer
+        track={current}
+        active={active}
+        onQueue={onQueue}
+        dismissPanHandlers={dismissPanHandlers}
+      />
+    );
   return (
     <View style={{ flex: 1, backgroundColor: "transparent" }}>
       <View style={{ flex: 1, paddingHorizontal: 28 }} {...dismissPanHandlers}>
         <PlayerTrackContent
+          active={active}
           current={current}
           onLyrics={onLyrics}
           onDetails={onDetails}
@@ -752,10 +767,12 @@ export function PlayerScreen({
 }
 
 function PlayerTrackContent({
+  active,
   current,
   onLyrics,
   onDetails,
 }: {
+  active: boolean;
   current: Track;
   onLyrics: () => void;
   onDetails: () => void;
@@ -826,6 +843,15 @@ function PlayerTrackContent({
               size={artSize}
             />
           </View>
+        ) : prefs.player === "cassette" ? (
+          <PlayingCassette
+            track={current}
+            active={active}
+            width={Math.max(
+              0,
+              Math.min(width - 56, ((artHeight || 200) * 420) / 270),
+            )}
+          />
         ) : prefs.player === "cover" ? (
           <Cover
             track={current}
@@ -1358,6 +1384,8 @@ function AppearanceSettings() {
           </Pressable>
         ))}
       </View>
+      <Text style={s.section}>磁带样式</Text>
+      <CassetteOptions />
       <Text style={s.section}>唱片样式</Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         {(Object.keys(materials) as RecordStyle[]).map((key) => (
