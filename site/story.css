@@ -36,7 +36,7 @@
 [data-mood="immersive"] .scene-glow { background: radial-gradient(ellipse at 73% 51%, #8e572c36, transparent 57%); }
 [data-mood="words"] .scene-glow { background: radial-gradient(ellipse at 73% 51%, #3b668b38, transparent 57%); }
 .story-foot { display: none; }
-.story-ready { height: 590svh; }
+.story-ready { height: 660svh; }
 .story-ready .story-stage { position: sticky; top: 0; height: 100svh; }
 .story-ready .story-head { position: absolute; top: 0; left: 0; right: 0; }
 .story-ready .story-scenes { height: 100%; }

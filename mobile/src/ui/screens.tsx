@@ -126,6 +126,15 @@ export function LibraryScreen({
     [filter, setFilter] = useState(""),
     [favorites, setFavorites] = useState(false);
   const [sourceFilter, setSourceFilter] = useState("");
+  const populatedSources = sources.filter(
+    (source) => source.enabled !== false && (source.trackCount ?? 0) > 0,
+  );
+  if (
+    sourceFilter &&
+    !populatedSources.some((source) => source.id === sourceFilter)
+  ) {
+    setSourceFilter("");
+  }
   const [versionTrack, setVersionTrack] = useState<Track | null>(null);
   const [filterTitle, setFilterTitle] = useState("");
   const page = useCatalogPage({
@@ -293,8 +302,7 @@ export function LibraryScreen({
             </View>
           </View>
         )}
-      {(sourceFilter ||
-        sources.filter((source) => source.enabled !== false).length > 1) && (
+      {(sourceFilter || populatedSources.length > 1) && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -302,7 +310,7 @@ export function LibraryScreen({
         >
           {[
             { id: "", name: "全部来源" },
-            ...sources.filter((source) => source.enabled !== false),
+            ...populatedSources,
           ].map((source) => (
             <Pressable
               key={source.id}

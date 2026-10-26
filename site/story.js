@@ -1,4 +1,4 @@
-/** Map native scroll distance to seven equal chapters, including both end holds. */
+/** Map native scroll distance to equal chapters, including both end holds. */
 export function storyPosition(distance, travel, count) {
   const progress = travel > 0 ? Math.min(1, Math.max(0, distance / travel)) : 0;
   return { progress, index: Math.min(count - 1, Math.floor(progress * count)) };
@@ -36,7 +36,7 @@ export function initStory() {
         scene.inert = i !== index;
         scene.setAttribute('aria-hidden', String(i !== index));
       });
-      count.textContent = `${String(index + 1).padStart(2, '0')} / 07`;
+      count.textContent = `${String(index + 1).padStart(2, '0')} / ${String(scenes.length).padStart(2, '0')}`;
     }
     bars.forEach((bar, i) => {
       bar.style.transform = `scaleX(${Math.max(0, Math.min(1, progress * scenes.length - i))})`;
